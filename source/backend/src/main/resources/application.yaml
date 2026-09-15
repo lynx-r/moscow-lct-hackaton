@@ -18,6 +18,11 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         "[format_sql]": true
 
+app:
+  cors:
+    allowed-origins:
+    allow-credentials: true
+
 springdoc:
   api-docs:
     enabled: true

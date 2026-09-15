@@ -7,5 +7,15 @@
     {
       "path": "./tsconfig.app.json"
     }
-  ]
+  ],
+  "include": [
+    // other files...
+    "./typed-router.d.ts"
+  ],
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }

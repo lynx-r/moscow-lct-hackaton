@@ -1,0 +1,15 @@
+package com.ultra.dit.service;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class RoutingOrchestratorService {
+
+  public String processRouting() {
+
+    return """
+        {  "type": "FeatureCollection",  "features": [    {      "type": "Feature",      "geometry": {"type": "LineString", "coordinates": [[37.60,55.75],[37.601,55.751]]},      "properties": {        "id": "new_1", "object_type": "heat_network", "variant_id": "1",        "start_node_id": "tie_1", "end_node_id": "node_1",        "flow_tph": 80.0, "diameter": 200, "length": 145.2,        "laying_method": "special", "depth_start": 3.0, "depth_end": 3.0,        "cost": 27942307      }    },    {      "type": "Feature",      "geometry": {"type": "Point", "coordinates": [37.60,55.75]},      "properties": {        "id": "tie_1", "object_type": "tie_in", "variant_id": "1",        "existing_object_id": "net_12", "existing_object_type": "heat_network",        "existing_diameter": 150, "required_diameter": 200, "cost": 5000000      }    },    {      "type": "Feature",      "geometry": {"type": "LineString", "coordinates": [[37.599,55.749],[37.60,55.75]]},      "properties": {        "id": "recon_1", "object_type": "heat_network_reconstruction", "variant_id": "1",        "existing_object_id": "net_12", "existing_flow_tph": 100.0,        "added_flow_tph": 80.0, "calculated_flow_tph": 180.0,        "existing_diameter": 150, "required_diameter": 250,        "length": 75.0, "cost": 15152283      }    },    {      "type": "Feature",      "geometry": {"type": "Point", "coordinates": [37.601,55.751]},      "properties": {        "id": "node_1", "object_type": "technical_node", "variant_id": "1"      }    },    {      "type": "Feature",      "geometry": {"type": "Point", "coordinates": [37.602,55.752]},      "properties": {        "id": "ch_1", "object_type": "heat_chamber", "variant_id": "1",        "diameter": 200, "cost": 3000000      }    },    {      "type": "Feature",      "geometry": null,      "properties": {        "id": "summary_1", "object_type": "variant_summary", "variant_id": "1",        "rank": 1, "construction_cost": 27942307, "chamber_construction_cost": 3000000,        "tie_in_cost": 5000000, "reconstruction_cost": 15152283,        "chamber_reconstruction_cost": 0,        "unconnected_penalty": 0, "calculated_cost": 51094590,        "new_network_length": 145.2, "reconstruction_length": 75.0,        "length": 220.2, "score": 2.091, "unconnected_oks_ids": []      }    }  ]}
+        """;
+
+  }
+}
