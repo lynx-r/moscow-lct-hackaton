@@ -10,7 +10,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -19,16 +19,42 @@ repositories {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.0'
+	
+	// Source: https://mvnrepository.com/artifact/org.hibernate/hibernate-spatial
+	implementation "org.hibernate:hibernate-spatial:7.4.8.Final"
+
+	// Source: https://mvnrepository.com/artifact/org.locationtech.jts/jts-core
+	implementation "org.locationtech.jts:jts-core:1.20.0"
+
+	// Source: https://mvnrepository.com/artifact/org.jgrapht/jgrapht-core
+	implementation "org.jgrapht:jgrapht-core:1.5.3"
+	
+	// Source: https://mvnrepository.com/artifact/org.n52.jackson/jackson-datatype-jts
+	implementation "org.n52.jackson:jackson-datatype-jts:3.0.4"
+
 	compileOnly 'org.projectlombok:lombok'
+
 	runtimeOnly 'org.postgresql:postgresql'
+	
 	annotationProcessor 'org.projectlombok:lombok'
+	
 	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat-runtime'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	
 	testCompileOnly 'org.projectlombok:lombok'
+	
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
