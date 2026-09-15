@@ -1,0 +1,14 @@
+{
+  "name": "database",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "dump": "zx scripts/db.mjs dump",
+    "restore": "zx scripts/db.mjs restore"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1"
+}
