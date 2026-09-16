@@ -14,7 +14,7 @@ workflows:
     tasks:
       - name: build-and-deploy
         cubes:
-          # 1. Авторизация в Yandex Cloud через сервисное подключение
+          # Заменяем нативное подключение ручным логином через Docker-плагин
           - name: registry-login
             action: docker/login-action@v3
             with:
@@ -22,29 +22,21 @@ workflows:
               username: json_key
               password: ${{ secrets.YC_KEY_JSON }} # Используем секрет вместо connection
 
-          # 2. Настройка сборщика Docker Buildx
+          # Настройка сборщика Docker Buildx
           - name: setup-buildx
             action: docker/setup-buildx-action@v3
 
-          # 3. Логин в Yandex Container Registry
-          - name: registry-login
-            action: docker/login-action@v3
-            with:
-              registry: cr.yandex/crp357kesevoc357mb8a
-              username: iam
-              password: ${{ cubes.get-iam-token.outputs.IAM_TOKEN }}
-
-          # 4. Сборка и пуш образа (заменяем ghcr.io на cr.yandex)
+          # Сборка и пуш образа (заменяем ghcr.io на cr.yandex)
           - name: build-and-push
             action: docker/build-push-action@v6
             with:
               context: .
-              file: ./source/backend/Dockerfile  # Путь к вашему Dockerfile
+              file: ./source/backend/Dockerfile # Путь к вашему Dockerfile
               push: true
               # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
               tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
 
-          # 5. Деплой на вашу ВМ через SSH
+          # Деплой на вашу ВМ через SSH
           - name: deploy-via-ssh
             action: appleboy/ssh-action@master
             with:
@@ -55,7 +47,7 @@ workflows:
                 # Авторизуем Docker на ВМ для скачивания из вашего приватного реестра
                 # (Для этого на ВМ должен быть установлен и настроен Yandex Cloud CLI)
                 yc container registry configure-docker --quiet
-                
+
                 cd ~/dit
 
                 git pull
