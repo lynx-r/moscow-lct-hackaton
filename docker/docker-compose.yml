@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   backend:
@@ -10,7 +10,7 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - database-dev
+      - database
     # Ограничения памяти в v1 пишутся напрямую в корень сервиса
     mem_limit: 512m
 
