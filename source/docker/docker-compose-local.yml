@@ -1,0 +1,32 @@
+backend:
+  build: ../
+  dockerfile: backend/Dockerfile
+  container_name: backend
+  restart: unless-stopped
+  env_file:
+    - ../backend/.env
+  ports:
+    - "8080:8080"
+  depends_on:
+    - database-dev
+  # Ограничения памяти в v1 пишутся напрямую в корень сервиса
+  mem_limit: 512m
+  mem_reservation: 256m
+
+database-dev:
+  image: postgres:18-alpine
+  container_name: database-dev
+  restart: always
+  command: postgres -c random_page_cost=1.1 -c shared_buffers=128MB -c max_connections=100 -c work_mem=4MB
+  env_file:
+    - ../database/.env
+  ports:
+    - "5432:5432"
+  # Именованные тома (как pg_data) в v1 не поддерживаются. 
+  # Используем локальную папку на компьютере (например, ./pg_data) для сохранения данных базы.
+  volumes:
+    - ../database/backup/full_backup.sql:/backup/full_backup.sql
+    - ../database/pg_data:/var/lib/postgresql
+  # Ограничения памяти для базы
+  mem_limit: 512m
+  mem_reservation: 256m

@@ -17,24 +17,6 @@ services:
         reservations:
           memory: 256M # Гарантированный объем при старте
 
-  frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
-    container_name: frontend
-    restart: unless-stopped
-    env_file:
-      - ../frontend/.env
-    expose:
-      - "3000:3000"
-    depends_on:
-      redis:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 1G # Максимум, который может взять контейнер
-        reservations:
-          memory: 512M # Гарантированный объем при старте
-
   database:
     image: postgres:18-alpine
     container_name: database

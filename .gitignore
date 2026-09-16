@@ -143,3 +143,9 @@ vite.config.ts.timestamp-*
 .vite/
 
 .DS_Store
+
+# Игнорируем абсолютно все файлы и папки внутри pg_data
+source/database/pg_data/*
+
+# Делаем исключение для файла .gitkeep, чтобы папка попала в Git
+!source/database/pg_data/.gitkeep

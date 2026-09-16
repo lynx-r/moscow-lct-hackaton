@@ -1,0 +1,11 @@
+.github
+.vscode
+
+bin
+target
+
+.dockerignore
+Dockerfile
+.git*
+
+*.md
