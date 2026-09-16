@@ -48,7 +48,7 @@ workflows:
               script: |
                 # Авторизуем Docker на ВМ для скачивания из вашего приватного реестра
                 # (Для этого на ВМ должен быть установлен и настроен Yandex Cloud CLI)
-                yc container registry configure-docker --quiet
+                /home/ubuntu/yandex-cloud/bin/yc container registry configure-docker --quiet
 
                 cd ~/dit
 
