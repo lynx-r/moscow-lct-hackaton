@@ -1,0 +1,66 @@
+on:
+  push:
+    - workflows: [deploy-to-yc-vm]
+      filter:
+        branches: ["main"]
+
+tokens:
+  SERVICE_CONNECTION:
+    service_connection: default-service-connection
+    scope: org
+
+workflows:
+  deploy-to-yc-vm:
+    tasks:
+      - name: build-and-deploy
+        cubes:
+          # 1. Авторизация в Yandex Cloud через сервисное подключение
+          - name: get-iam-token
+            env:
+              ID_TOKEN: ${{ tokens.SERVICE_CONNECTION.id_token }}
+              YC_SA_ID: ${{ tokens.SERVICE_CONNECTION.service_account_id }}
+            image: cr.yandex/sourcecraft/yc-iam:latest
+
+          # 2. Настройка сборщика Docker Buildx
+          - name: setup-buildx
+            action: docker/setup-buildx-action@v3
+
+          # 3. Логин в Yandex Container Registry
+          - name: registry-login
+            action: docker/login-action@v3
+            with:
+              registry: cr.yandex/crp357kesevoc357mb8a
+              username: iam
+              password: ${{ cubes.get-iam-token.outputs.IAM_TOKEN }}
+
+          # 4. Сборка и пуш образа (заменяем ghcr.io на cr.yandex)
+          - name: build-and-push
+            action: docker/build-push-action@v6
+            with:
+              context: .
+              file: ./Dockerfile  # Путь к вашему Dockerfile
+              push: true
+              # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
+              tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
+
+          # 5. Деплой на вашу ВМ через SSH
+          - name: deploy-via-ssh
+            action: appleboy/ssh-action@master
+            with:
+              host: ${{ secrets.HOST }}
+              username: ${{ secrets.USERNAME }}
+              key: ${{ secrets.SSH_KEY }}
+              script: |
+                # Авторизуем Docker на ВМ для скачивания из вашего приватного реестра
+                # (Для этого на ВМ должен быть установлен и настроен Yandex Cloud CLI)
+                yc container registry configure-docker --quiet
+                
+                cd ~/dit
+
+                git pull
+
+                # Переходим в папку с docker-compose.yml
+                cd source/docker
+                docker compose pull
+                docker compose up -d
+                docker image prune -f
