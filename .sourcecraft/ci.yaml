@@ -4,11 +4,6 @@ on:
       filter:
         branches: ["main"]
 
-tokens:
-  SERVICE_CONNECTION:
-    service_connection: default-service-connection
-    scope: org
-
 workflows:
   deploy-to-yc-vm:
     tasks:
