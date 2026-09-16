@@ -18,7 +18,6 @@ public class RoutingController {
 
   @GetMapping("process")
   public String process() {
-
     return routingOrchestratorService.processRouting();
   }
 

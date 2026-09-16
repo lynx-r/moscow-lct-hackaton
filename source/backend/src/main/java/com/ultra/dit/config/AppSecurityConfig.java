@@ -2,18 +2,16 @@ package com.ultra.dit.config;
 
 import java.util.List;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @EnableWebSecurity
 @Configuration
-public class AppSecurityConfig {
+public class AppSecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsProperties corsProperties;
 
@@ -21,14 +19,16 @@ public class AppSecurityConfig {
         this.corsProperties = corsProperties;
     }
 
-    @Bean
-    @Order(1)
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable());
-        return http.build();
+                // В старых версиях вместо securityMatcher используется antMatcher
+                .antMatcher("/**")
+                // Настройка CORS без лямбда-выражений
+                .cors().configurationSource(corsConfigurationSource())
+                .and()
+                // Отключение CSRF в старом стиле
+                .csrf().disable();
     }
 
     private CorsConfigurationSource corsConfigurationSource() {
