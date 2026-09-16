@@ -30,6 +30,11 @@ workflows:
               push: true
               # ОТКЛЮЧАЕМ ПРОВЕНАНС (АТТЕСТАЦИЮ), ЧТОБЫ ЯНДЕКС НЕ ПРИНИМАЛ ОБРАЗ ЗА ОШИБКУ
               provenance: false
+
+              # Cache
+              cache-from: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/backend:buildcache
+              cache-to: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/backend:buildcache,mode=max
+
               # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
               tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
 
@@ -50,7 +55,7 @@ workflows:
                 git pull
 
                 # Переходим в папку с docker-compose.yml
-                cd source/docker
+                cd docker
                 docker compose pull
                 docker compose up -d
                 docker image prune -f

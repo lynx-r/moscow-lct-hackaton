@@ -8,11 +8,13 @@ WORKDIR /build
 # Если код изменится, а зависимости нет — Docker не будет качать их заново.
 COPY .mvn/ .mvn
 COPY mvnw mvnw.cmd pom.xml ./
-RUN ./mvnw dependency:go-offline
+
+# Переносим скачивание зависимостей на кэшируемый диск BuildKit
+RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:go-offline
 
 # Теперь копируем исходный код и собираем проект
 COPY src ./src
-RUN ./mvnw clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
 
 # Образ запуска приложения
 FROM bellsoft/liberica-openjre-alpine:11 AS runner
