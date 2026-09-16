@@ -28,6 +28,8 @@ workflows:
               context: ./backend
               file: ./backend/Dockerfile # Путь к вашему Dockerfile
               push: true
+              # ОТКЛЮЧАЕМ ПРОВЕНАНС (АТТЕСТАЦИЮ), ЧТОБЫ ЯНДЕКС НЕ ПРИНИМАЛ ОБРАЗ ЗА ОШИБКУ
+              provenance: false
               # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
               tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
 
