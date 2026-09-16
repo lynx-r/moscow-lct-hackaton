@@ -26,7 +26,7 @@ workflows:
             action: docker/build-push-action@v6
             with:
               context: ./backend
-              file: ./Dockerfile # Путь к вашему Dockerfile
+              file: ./backend/Dockerfile # Путь к вашему Dockerfile
               push: true
               # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
               tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
