@@ -42,11 +42,12 @@ springdoc:
     defaultModelExpandDepth: 2
     persistAuthorization: true
   packages-to-scan:
-    - com.example.bankcards.controller
+    - com.ultra.dit.controller
   show-actuator: true
 
 logging:
   level:
     "[com.ultra.dit]": DEBUG
     "[org.springframework.web.filter]": DEBUG
-    "[org.hotswap.agent]": INFO
+    "[org.postgresql]": DEBUG
+    "[org.hibernate]": DEBUG
