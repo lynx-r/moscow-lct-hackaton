@@ -28,7 +28,6 @@ springdoc:
     enabled: true
   swagger-ui:
     path: /swagger-ui.html
-    url: /openapi.yaml
     enabled: true
     operations-sorter: method
     tags-sorter: alpha
