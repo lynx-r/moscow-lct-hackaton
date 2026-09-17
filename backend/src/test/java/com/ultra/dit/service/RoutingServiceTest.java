@@ -9,23 +9,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.core.io.ClassPathResource;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
 public class RoutingServiceTest {
 
   private InputStream datasetInputStream;
 
+  @Spy
+  private ObjectMapper objectMapper = new ObjectMapper()
+      .registerModule(new JtsModule()); // Регистрируем ваш JtsModule
+
+  @Spy
+  private ParseService parserService = new ParseService(objectMapper);
+
+  @Spy
+  private TransformService transformService = new TransformService();
+
   @InjectMocks
   private RoutingService routingService;
-
-  @Mock
-  private ParseService parserService;
-
-  @Mock
-  private TransformService transformService;
 
   @BeforeEach
   public void setUp() throws IOException {
