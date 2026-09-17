@@ -1,4 +1,4 @@
-package com.ultra.exception;
+package com.ultra.dit.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

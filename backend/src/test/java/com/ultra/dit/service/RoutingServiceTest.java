@@ -1,20 +1,15 @@
 package com.ultra.dit.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryCollection;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ClassPathResource;
 
@@ -26,8 +21,11 @@ public class RoutingServiceTest {
   @InjectMocks
   private RoutingService routingService;
 
-  @InjectMocks
+  @Mock
   private ParseService parserService;
+
+  @Mock
+  private TransformService transformService;
 
   @BeforeEach
   public void setUp() throws IOException {

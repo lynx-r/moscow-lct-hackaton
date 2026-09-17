@@ -1,4 +1,4 @@
-package com.ultra.exception;
+package com.ultra.dit.exception;
 
 public class ParseException extends RuntimeException {
   public ParseException(String message) {

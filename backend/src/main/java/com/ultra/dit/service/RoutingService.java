@@ -9,14 +9,14 @@ import org.springframework.stereotype.Service;
 public class RoutingService {
 
   private final TransformService transformService;
-  private final ParserService parserService;
+  private final ParseService parserService;
 
-  RoutingService(TransformService transformService, ParserService parserService) {
+  RoutingService(TransformService transformService, ParseService parserService) {
     this.transformService = transformService;
     this.parserService = parserService;
   }
 
-  public GeometryCollection processRouting(InputStream inputStream) throws Exception {
+  public GeometryCollection processRouting(InputStream inputStream) {
     var featureCollection = parserService.parseFeatureCollection(inputStream);
 
     var transformedCollection = transformService.transformCollection(featureCollection);
