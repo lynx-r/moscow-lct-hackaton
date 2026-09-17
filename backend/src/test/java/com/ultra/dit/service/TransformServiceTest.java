@@ -23,6 +23,7 @@ public class TransformServiceTest {
   private ObjectMapper objectMapper = new ObjectMapper()
       .registerModule(new JtsModule()); // Регистрируем ваш JtsModule
 
+  @InjectMocks
   private TransformService transformService;
 
   @InjectMocks
@@ -37,8 +38,6 @@ public class TransformServiceTest {
 
     var datasetInputStream = datasetResource.getInputStream();
     geometryCollection = parseService.parseFeatureCollection(datasetInputStream);
-
-    transformService = new TransformService();
   }
 
   @Test
