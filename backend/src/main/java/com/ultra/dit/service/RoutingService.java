@@ -20,6 +20,10 @@ public class RoutingService {
     var featureCollection = parserService.parseFeatureCollection(inputStream);
 
     var transformedCollection = transformService.transformCollection(featureCollection);
+
+    // выполнение главной задачи по расчету выходного GeoJson
+    // return processService.process(transformedCollection)
+
     return transformedCollection;
   }
 }
