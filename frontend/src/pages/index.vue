@@ -1,7 +1,4 @@
-<script setup lang="ts">
-import MapViewer from '@/components/MapViewer.vue'
-import SidebarControls from '@/components/SidebarControls.vue'
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="flex">

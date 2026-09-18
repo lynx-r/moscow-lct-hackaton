@@ -1,13 +1,13 @@
-<script setup class="language-vue">
+<script setup lang="ts">
 import { ref } from 'vue'
-// Импорт компонентов из вашей папки shadcn
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 // Импорт иконок для красоты
+import { useTracingStore } from '@/stores/tracing'
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
+
+const tracingStore = useTracingStore()
+const { trace } = tracingStore
+
+const geojsonFile = ref<File>()
 
 // Состояние для выбранного варианта (по умолчанию Вариант 1)
 const selectedVariant = ref('variant-1')
@@ -23,13 +23,31 @@ const summaryData = ref({
 })
 
 // Функция обработки клика по кнопке расчета
-const handleStartTracing = () => {
+const onStartTracing = async () => {
   isCalculating.value = true
-  // Имитация запроса к бэкенду
-  setTimeout(() => {
+
+  const file = geojsonFile.value
+  if (!file) {
     isCalculating.value = false
-    alert(`Расчет трассировки запущен для: ${selectedVariant.value}`)
-  }, 1500)
+    throw 'Файл GeoJson не был загружен'
+  }
+
+  try {
+    await trace(file)
+  } catch (error) {
+    throw error
+  } finally {
+    isCalculating.value = false
+  }
+}
+
+const onFileUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const files = target.files
+  if (files && files.length > 0) {
+    geojsonFile.value = files[0]
+    console.log('Загружен geojson')
+  }
 }
 
 // Форматирование валюты (рубли)
@@ -53,6 +71,11 @@ const formatCurrency = (value) => {
         <p class="text-sm text-muted-foreground mt-1">Настройте параметры и запустите расчет</p>
       </div>
 
+      <div class="grid w-full max-w-sm items-center gap-1.5">
+        <Label for="geojson">Исходный GeoJson</Label>
+        <Input id="geojson" type="file" @change="onFileUpload" />
+      </div>
+
       <!-- Блок выбора вариантов -->
       <div class="space-y-2">
         <label class="text-sm font-medium text-foreground">Выберите вариант</label>
@@ -70,7 +93,7 @@ const formatCurrency = (value) => {
 
       <!-- Кнопка запуска расчета -->
       <Button
-        @click="handleStartTracing"
+        @click="onStartTracing"
         :disabled="isCalculating"
         class="w-full font-medium"
         size="lg"

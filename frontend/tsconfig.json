@@ -10,7 +10,8 @@
   ],
   "include": [
     // other files...
-    "./typed-router.d.ts"
+    "./typed-router.d.ts",
+    "./components.d.ts"
   ],
   "compilerOptions": {
     "moduleResolution": "Bundler",
