@@ -20,8 +20,9 @@ spring:
 
 app:
   cors:
-    allowed-origins:
-    allow-credentials: true
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+    allowed-methods: ${CORS_ALLOWED_METHODS:*}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:false}
 
 springdoc:
   api-docs:
@@ -48,5 +49,6 @@ logging:
   level:
     "[com.ultra.dit]": DEBUG
     "[org.springframework.web.filter]": DEBUG
+    "[org.springframework.security]": DEBUG
     "[org.postgresql]": DEBUG
     "[org.hibernate]": DEBUG
