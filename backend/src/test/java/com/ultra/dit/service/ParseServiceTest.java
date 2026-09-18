@@ -12,12 +12,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.n52.jackson.datatype.jts.JtsModule;
-import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
-public class ParseServiceTest {
+public class ParseServiceTest extends BaseTest {
 
   @Spy
   private ObjectMapper objectMapper = new ObjectMapper()
@@ -30,9 +29,6 @@ public class ParseServiceTest {
 
   @BeforeEach
   public void setUp() throws IOException {
-    var datasetResource = new ClassPathResource("files/dataset-15.09.26.geojson");
-    assert datasetResource.exists();
-
     datasetInputStream = datasetResource.getInputStream();
   }
 

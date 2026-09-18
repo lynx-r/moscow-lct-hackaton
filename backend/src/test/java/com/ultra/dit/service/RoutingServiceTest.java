@@ -12,12 +12,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.n52.jackson.datatype.jts.JtsModule;
-import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
-public class RoutingServiceTest {
+public class RoutingServiceTest extends BaseTest {
 
   private InputStream datasetInputStream;
 
@@ -31,13 +30,14 @@ public class RoutingServiceTest {
   @Spy
   private TransformService transformService = new TransformService();
 
+  @Spy
+  private RoutingProcessService routingProcessService = new RoutingProcessService();
+
   @InjectMocks
   private RoutingFlowService routingService;
 
   @BeforeEach
   public void setUp() throws IOException {
-    var datasetResource = new ClassPathResource("files/dataset-15.09.26.geojson");
-    assert datasetResource.exists();
 
     datasetInputStream = datasetResource.getInputStream();
   }

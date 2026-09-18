@@ -1,48 +1,37 @@
 package com.ultra.dit.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.locationtech.jts.geom.GeometryCollection;
 import org.mockito.InjectMocks;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.n52.jackson.datatype.jts.JtsModule;
-import org.springframework.core.io.ClassPathResource;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
-public class TransformServiceTest {
-
-  @Spy
-  private ObjectMapper objectMapper = new ObjectMapper()
-      .registerModule(new JtsModule()); // Регистрируем ваш JtsModule
+public class TransformServiceTest extends AbstractGeometryTest {
 
   @InjectMocks
   private TransformService transformService;
 
-  @InjectMocks
-  private ParseService parseService;
-
-  private GeometryCollection geometryCollection;
-
-  @BeforeEach
-  public void setUp() throws IOException {
-    var datasetResource = new ClassPathResource("files/dataset-15.09.26.geojson");
-    assert datasetResource.exists();
-
-    var datasetInputStream = datasetResource.getInputStream();
-    geometryCollection = parseService.parseFeatureCollection(datasetInputStream);
-  }
-
   @Test
   void testTransformFeatureCollection() {
-    var transformed = transformService.transformCollection(geometryCollection);
-    assertNotNull(transformed);
+    // 1. Прямой перевод 4326 -> 32637
+    var transformed4326To32637 = transformService.transform4326To32637(originGeometryCollection);
+    assertNotNull(transformed4326To32637);
+    assertEquals(32637, transformed4326To32637.getSRID());
+
+    // 2. Обратный перевод 32637 -> 4326
+    var transformed32637To4326 = transformService.transform32637To4326(transformed4326To32637);
+    assertNotNull(transformed32637To4326);
+    assertEquals(4326, transformed32637To4326.getSRID());
+
+    // 3. Каноническая ГИС-проверка на равенство с погрешностью (например, 10 знаков
+    // после запятой)
+    double tolerance = 1E-10;
+    boolean isExactlyEqual = originGeometryCollection.equalsExact(transformed32637To4326, tolerance);
+
+    assertTrue(isExactlyEqual, "Исходная и обратно-трансформированная геометрии не совпадают в пределах допуска");
   }
 }
