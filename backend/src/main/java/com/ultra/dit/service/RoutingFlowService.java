@@ -22,8 +22,11 @@ public class RoutingFlowService {
   public GeometryCollection buildRoute(InputStream inputStream) {
     var featureCollection = parserService.parseFeatureCollection(inputStream);
 
-    var epsg32637Collection = transformService.transformCollection(featureCollection);
+    var epsg32637Collection = transformService.transform4326To32637(featureCollection);
 
-    return routingProcessService.execute(epsg32637Collection);
+    var processedEpsg32637 = routingProcessService.execute(epsg32637Collection);
+
+    var result = transformService.transform32637To4326(processedEpsg32637);
+    return result;
   }
 }
