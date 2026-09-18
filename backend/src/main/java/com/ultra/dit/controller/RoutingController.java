@@ -11,27 +11,26 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ultra.dit.exception.ParseException;
-import com.ultra.dit.service.RoutingService;
+import com.ultra.dit.service.RoutingFlowService;
 
 @RestController
 @RequestMapping("routing")
 public class RoutingController {
 
-  private final RoutingService routingService;
+  private final RoutingFlowService routingFlowService;
 
-  public RoutingController(RoutingService routingService) {
-    this.routingService = routingService;
+  public RoutingController(RoutingFlowService routingFlowService) {
+    this.routingFlowService = routingFlowService;
   }
 
   @PostMapping("process")
   public ResponseEntity<GeometryCollection> process(@RequestParam MultipartFile file) {
     try {
-      var outputGeoJson = routingService.processRouting(file.getInputStream());
+      var outputGeoJson = routingFlowService.buildRoute(file.getInputStream());
       return ResponseEntity.ok(outputGeoJson);
     } catch (IOException e) {
       throw new ParseException("Не удалось разобрать GeoJson " + e.getMessage());
     }
-
   }
 
 }

@@ -32,7 +32,7 @@ public class RoutingServiceTest {
   private TransformService transformService = new TransformService();
 
   @InjectMocks
-  private RoutingService routingService;
+  private RoutingFlowService routingService;
 
   @BeforeEach
   public void setUp() throws IOException {
@@ -44,7 +44,7 @@ public class RoutingServiceTest {
 
   @Test
   void shouldProcessRouting() {
-    var result = routingService.processRouting(datasetInputStream);
+    var result = routingService.buildRoute(datasetInputStream);
     assertNotNull(result);
   }
 

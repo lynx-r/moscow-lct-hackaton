@@ -27,8 +27,8 @@ public class TransformService {
   }
 
   /**
-   * Сервис для преобразования геометрии в EPSG:32637 (WGS 84 / UTM zone 37N)
-   * чтобы рассчитывать длины, расстояния и буферы
+   * Сервис для преобразования геометрии из WGS 84 (EPSG:4326) в EPSG:32637 (WGS
+   * 84 / UTM zone 37N)
    * 
    * @param inputCollection
    * @return
