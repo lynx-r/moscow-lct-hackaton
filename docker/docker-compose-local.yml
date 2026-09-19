@@ -1,6 +1,19 @@
 # version: '3.8'
 
 services:
+  frontend-dev:
+    build: 
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend-dev
+    restart: unless-stopped
+    env_file:
+      - ../frontend/.env
+    ports:
+      - "80:80"
+    # Ограничения памяти в v1 пишутся напрямую в корень сервиса
+    mem_limit: 64m
+
   backend-dev:
     build: 
       context: ../backend
