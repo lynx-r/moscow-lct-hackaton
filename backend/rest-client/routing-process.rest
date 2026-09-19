@@ -1,0 +1,23 @@
+###
+GET http://localhost:8080
+
+###
+
+POST http://localhost:8080/routing/process-json
+Content-Type: application/json
+
+< ./data/dataset-19.09.26.geojson
+
+###
+
+POST http://localhost:8080/routing/process
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="dataset.geojson"
+Content-Type: image/png
+
+< ./data/dataset-19.09.26.geojson
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
