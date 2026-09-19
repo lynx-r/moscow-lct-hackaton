@@ -5,7 +5,7 @@ import { useTracingStore } from '@/stores/tracing'
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
 
 const tracingStore = useTracingStore()
-const { trace } = tracingStore
+const { trace, traceMock } = tracingStore
 
 const geojsonFile = ref<File>()
 
@@ -27,13 +27,13 @@ const onStartTracing = async () => {
   isCalculating.value = true
 
   const file = geojsonFile.value
-  if (!file) {
-    isCalculating.value = false
-    throw 'Файл GeoJson не был загружен'
-  }
 
   try {
-    await trace(file)
+    if (!file) {
+      await traceMock()
+    } else {
+      await trace(file)
+    }
   } catch (error) {
     throw error
   } finally {

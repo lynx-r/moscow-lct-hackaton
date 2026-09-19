@@ -1,11 +1,17 @@
 <!-- MapViewer.vue -->
 <script setup lang="ts">
 import { useTracingStore } from '@/stores/tracing'
-import type { GeometryCollection } from 'geojson'
-import { Map } from 'maplibre-gl'
+import { useColorMode } from '@vueuse/core'
+import type { FeatureCollection } from 'geojson'
+import { Map, type LngLatLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { storeToRefs } from 'pinia'
-import { onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
+
+const DEFAULT_ZOOM = 14
+const DEFAULT_CENTER: LngLatLike = [37.6173, 55.7558] // Координаты центра Москвы [lng, lat]
+
+const mode = useColorMode()
 
 const tracingStore = useTracingStore()
 const { data } = storeToRefs(tracingStore)
@@ -18,6 +24,13 @@ const props = defineProps({
 const mapContainer = useTemplateRef('mapContainer')
 const map = shallowRef<Map | null>(null) // Важно: shallowRef, чтобы не ломать WebGL-контекст реактивностью
 
+const mapStyle = computed(() =>
+  mode.value === 'light'
+    ? 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+    : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+)
+const mapStyleWithApiKey = computed(() => `${mapStyle.value}?${import.meta.env.VITE_CARTO_API_KEY}`)
+
 // Инициализация карты
 onMounted(() => {
   if (!mapContainer.value) {
@@ -26,10 +39,10 @@ onMounted(() => {
 
   map.value = new Map({
     container: mapContainer.value,
-    style: 'https://demotiles.maplibre.org/globe.json', // style URL
+    style: mapStyleWithApiKey.value, // style URL
     // style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json', // Темная подложка идеальна для инженерных сетей
-    center: [37.6173, 55.7558], // Центрируем на нужный регион
-    zoom: 1,
+    center: DEFAULT_CENTER, // Центрируем на нужный регион
+    zoom: DEFAULT_ZOOM,
   })
 
   // map.value.on('load', () => {
@@ -64,52 +77,52 @@ function initInfrastructureLayers() {
 }
 
 // Обновление слоев при расчете новой трассировки
-function updateRoutingLayers(geoJsonData: GeometryCollection) {
+function updateRoutingLayers(geoJsonData: FeatureCollection) {
   if (!map.value || !geoJsonData) {
     return
   }
 
-  const sourceCoordinates = geoJsonData.geometries.at(-1)
-  if (sourceCoordinates && sourceCoordinates.type === 'Point') {
-    console.log('new center', sourceCoordinates)
-    map.value.setCenter(sourceCoordinates.coordinates)
+  const source = geoJsonData.features.find((f) => f.properties?.object_type === 'source')
+  if (source) {
+    if (source.geometry.type === 'Point') {
+      map.value.setCenter(source.geometry.coordinates as [number, number])
+      map.value.setZoom(DEFAULT_ZOOM)
+    }
   }
 
   // Динамически обновляем или добавляем источник данных предложенных маршрутов
   if (map.value.getSource('proposed-routes')) {
-    map.value.getSource('proposed-routes').setData(geoJsonData)
+    map.value.getSource('proposed-routes')?.setData(geoJsonData)
   } else {
     map.value.addSource('proposed-routes', { type: 'geojson', data: geoJsonData })
-
-    // // Слой для отрисовки новых труб (например, красным/оранжевым цветом)
-    // map.value.addLayer({
-    //   id: 'proposed-pipes-line',
-    //   type: 'line',
-    //   source: 'proposed-routes',
-    //   paint: {
-    //     'line-color': [
-    //       'case',
-    //       ['boolean', ['feature-state', 'selected'], false],
-    //       '#ff4d4f',
-    //       '#ffa940',
-    //     ],
-    //     'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 5, 3],
-    //   },
-    // })
-
-    // // Слой для новых тепловых камер (круглые маркеры на изгибах)
-    // map.value.addLayer({
-    //   id: 'proposed-chambers-circle',
-    //   type: 'circle',
-    //   source: 'proposed-routes',
-    //   filter: ['==', ['get', 'type'], 'chamber'], // Фильтруем только камеры из GeoJSON
-    //   paint: {
-    //     'circle-radius': 6,
-    //     'circle-color': '#fff',
-    //     'circle-stroke-width': 2,
-    //     'circle-stroke-color': '#ff4d4f',
-    //   },
-    // })
+    // Слой для отрисовки новых труб (например, красным/оранжевым цветом)
+    map.value.addLayer({
+      id: 'proposed-pipes-line',
+      type: 'line',
+      source: 'proposed-routes',
+      paint: {
+        'line-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          '#ff4d4f',
+          '#ffa940',
+        ],
+        'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 5, 3],
+      },
+    })
+    // Слой для новых тепловых камер (круглые маркеры на изгибах)
+    map.value.addLayer({
+      id: 'proposed-chambers-circle',
+      type: 'circle',
+      source: 'proposed-routes',
+      filter: ['==', ['get', 'type'], 'chamber'], // Фильтруем только камеры из GeoJSON
+      paint: {
+        'circle-radius': 6,
+        'circle-color': '#fff',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ff4d4f',
+      },
+    })
   }
 }
 
