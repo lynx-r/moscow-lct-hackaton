@@ -5,9 +5,9 @@ spring:
   application:
     name: dit
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/dit_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/luna_db}
+    username: ${DB_USERNAME:luna_user}
+    password: ${DB_PASSWORD:mysecurepassword}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

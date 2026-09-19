@@ -2,7 +2,10 @@ package com.ultra.dit.controller;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.ultra.dit.dto.FeatureCollection;
 import org.locationtech.jts.geom.GeometryCollection;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,8 +26,8 @@ public class RoutingController {
     this.routingFlowService = routingFlowService;
   }
 
-  @PostMapping("process")
-  public ResponseEntity<GeometryCollection> process(@RequestParam MultipartFile file) {
+  @PostMapping(value = "process")
+  public ResponseEntity<JsonNode> process(@RequestParam MultipartFile file) {
     try {
       var outputGeoJson = routingFlowService.buildRoute(file.getInputStream());
       return ResponseEntity.ok(outputGeoJson);
