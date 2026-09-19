@@ -20,5 +20,5 @@ public abstract class BaseTest {
   // Кэшированная геометрия — распарсится один раз на все тесты!
   protected static FeatureCollection originFeatureCollection;
 
-  protected static final ClassPathResource datasetResource = new ClassPathResource("files/dataset-15.09.26.geojson");
+  protected static final ClassPathResource datasetResource = new ClassPathResource("files/dataset-19.09.26.geojson");
 }
