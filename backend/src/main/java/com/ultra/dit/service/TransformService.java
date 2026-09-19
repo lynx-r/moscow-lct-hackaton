@@ -1,9 +1,11 @@
 package com.ultra.dit.service;
 
-import org.locationtech.jts.geom.GeometryCollection;
+import javax.annotation.PreDestroy;
+
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.converter.GeometryCrsConverter;
+import com.ultra.dit.dto.FeatureCollection;
 
 @Service
 public class TransformService {
@@ -16,6 +18,12 @@ public class TransformService {
     this.toWgsTransform = new GeometryCrsConverter("EPSG:32637", "EPSG:4326");
   }
 
+  @PreDestroy
+  public void shutdown() {
+    toUtmTransform.close();
+    toWgsTransform.close();
+  }
+
   /**
    * Сервис для преобразования геометрии из WGS 84 (EPSG:4326) в EPSG:32637 (WGS
    * 84 / UTM zone 37N)
@@ -24,7 +32,7 @@ public class TransformService {
    * @return
    * @throws Exception
    */
-  public GeometryCollection transform4326To32637(GeometryCollection epsg4326Collection) {
+  public FeatureCollection transform4326To32637(FeatureCollection epsg4326Collection) {
     return toUtmTransform.convert(epsg4326Collection);
   }
 
@@ -36,7 +44,7 @@ public class TransformService {
    * @return
    * @throws Exception
    */
-  public GeometryCollection transform32637To4326(GeometryCollection epsg32637Collection) {
+  public FeatureCollection transform32637To4326(FeatureCollection epsg32637Collection) {
     return toWgsTransform.convert(epsg32637Collection);
   }
 

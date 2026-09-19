@@ -1,16 +1,24 @@
 package com.ultra.dit.converter;
 
-import org.locationtech.jts.geom.CoordinateFilter;
-import org.locationtech.jts.geom.GeometryCollection;
+import java.util.stream.Collectors;
+
+import org.locationtech.jts.geom.CoordinateSequence;
+import org.locationtech.jts.geom.CoordinateSequenceFilter;
 import org.locationtech.proj4j.CRSFactory;
 import org.locationtech.proj4j.CoordinateTransform;
 import org.locationtech.proj4j.CoordinateTransformFactory;
 import org.locationtech.proj4j.ProjCoordinate;
 
-public class GeometryCrsConverter {
+import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.FeatureCollection;
 
-  private final CoordinateTransform transform;
+public class GeometryCrsConverter implements AutoCloseable {
+
   private final int SRID;
+
+  // 1. Создаем ThreadLocal для потокобезопасного переиспользования тяжелых
+  // объектов внутри потоков
+  private final ThreadLocal<TransformContext> threadContext;
 
   public GeometryCrsConverter(String sourceCrsName, String targetCrsName) {
     this.SRID = Integer.valueOf(targetCrsName.split(":")[1].trim());
@@ -22,7 +30,13 @@ public class GeometryCrsConverter {
     var targetCrs = crsFactory.createFromName(targetCrsName);
 
     var transformFactory = new CoordinateTransformFactory();
-    transform = transformFactory.createTransform(sourceCrs, targetCrs);
+
+    threadContext = ThreadLocal.withInitial(() -> {
+      // Предполагается, что srcCrs и dstCrs объявлены на уровне класса и
+      // потокобезопасны
+      var localTransform = transformFactory.createTransform(sourceCrs, targetCrs);
+      return new TransformContext(localTransform);
+    });
   }
 
   /**
@@ -33,29 +47,65 @@ public class GeometryCrsConverter {
    * @return
    * @throws Exception
    */
-  public GeometryCollection convert(GeometryCollection inputCollection) {
-    // Делаем копию, чтобы не менять исходный объект (good practice)
-    var outputCollection = (GeometryCollection) inputCollection.copy();
+  public FeatureCollection convert(FeatureCollection inputCollection) {
 
-    final ProjCoordinate srcCoord = new ProjCoordinate();
-    final ProjCoordinate dstCoord = new ProjCoordinate();
+    final var transformedFeatures = inputCollection.getFeatures().parallelStream()
+        .map(feature -> {
+          var geometry = feature.getGeometry().copy();
 
-    // Проходим по всем координатам внутри коллекции и меняем их на месте
-    outputCollection.apply((CoordinateFilter) coordinate -> {
-      srcCoord.x = coordinate.x;
-      srcCoord.y = coordinate.y;
+          geometry.apply(new CoordinateSequenceFilter() {
+            @Override
+            public void filter(CoordinateSequence seq, int i) {
+              // Извлекаем контекст, выделенный специально для текущего потока
+              var ctx = threadContext.get();
 
-      transform.transform(srcCoord, dstCoord);
+              ctx.src.x = seq.getX(i);
+              ctx.src.y = seq.getY(i);
 
-      coordinate.x = dstCoord.x;
-      coordinate.y = dstCoord.y;
-    });
+              ctx.transform.transform(ctx.src, ctx.dst);
 
-    // Обновляем метаданные геометрии
-    outputCollection.geometryChanged();
-    outputCollection.setSRID(SRID);
+              seq.setOrdinate(i, CoordinateSequence.X, ctx.dst.x);
+              seq.setOrdinate(i, CoordinateSequence.Y, ctx.dst.y);
+            }
 
-    return outputCollection;
+            @Override
+            public boolean isDone() {
+              return false;
+            }
+
+            @Override
+            public boolean isGeometryChanged() {
+              return true;
+            }
+          });
+
+          geometry.geometryChanged();
+          geometry.setSRID(SRID);
+
+          return new Feature(geometry, feature.getProperties(), feature.getType());
+        })
+        .collect(Collectors.toList());
+
+    return new FeatureCollection(transformedFeatures, inputCollection.getType());
+  }
+
+  // Метод для очистки ресурсов текущего потока (или при уничтожении бина)
+  @Override
+  public void close() {
+    if (threadContext != null) {
+      threadContext.remove(); // Удаляет данные из текущего потока и предотвращает утечки
+    }
+  }
+
+  // Вспомогательный класс-контейнер для одного потока
+  private static class TransformContext {
+    final CoordinateTransform transform;
+    final ProjCoordinate src = new ProjCoordinate();
+    final ProjCoordinate dst = new ProjCoordinate();
+
+    TransformContext(CoordinateTransform transform) {
+      this.transform = transform;
+    }
   }
 
 }
