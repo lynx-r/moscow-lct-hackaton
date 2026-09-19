@@ -3,10 +3,16 @@
 import { useTracingStore } from '@/stores/tracing'
 import { useColorMode } from '@vueuse/core'
 import type { FeatureCollection } from 'geojson'
-import { Map, type LngLatLike } from 'maplibre-gl'
+import { Map, setWorkerUrl, type LngLatLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
+
+// ВАЖНО: Используем именно ?worker&url, а не просто ?url
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+
+// Устанавливаем воркер ДО создания объекта карты
+setWorkerUrl(maplibreWorkerUrl)
 
 const DEFAULT_ZOOM = 14
 const DEFAULT_CENTER: LngLatLike = [37.6173, 55.7558] // Координаты центра Москвы [lng, lat]
