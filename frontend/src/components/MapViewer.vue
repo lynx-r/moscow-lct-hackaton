@@ -92,7 +92,10 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
   // Динамически обновляем или добавляем источник данных предложенных маршрутов
   if (map.value.getSource('proposed-routes')) {
-    map.value.getSource('proposed-routes')?.setData(geoJsonData)
+    const source = map.value.getSource('proposed-routes') as any
+    if (source) {
+      source.setData(geoJsonData)
+    }
   } else {
     map.value.addSource('proposed-routes', { type: 'geojson', data: geoJsonData })
     // Слой для отрисовки новых труб (например, красным/оранжевым цветом)
@@ -130,6 +133,9 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 watch(
   data,
   (newData) => {
+    if (!newData) {
+      return
+    }
     updateRoutingLayers(newData)
   },
   { deep: false },

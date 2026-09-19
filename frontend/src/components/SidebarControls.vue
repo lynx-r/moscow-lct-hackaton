@@ -51,7 +51,7 @@ const onFileUpload = (event: Event) => {
 }
 
 // Форматирование валюты (рубли)
-const formatCurrency = (value) => {
+const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: 'RUB',
