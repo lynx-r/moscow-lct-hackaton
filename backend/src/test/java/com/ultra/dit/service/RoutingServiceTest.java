@@ -2,49 +2,33 @@ package com.ultra.dit.service;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.n52.jackson.datatype.jts.JtsModule;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ultra.dit.service.calculation.MockRoutingCalculationService;
+import com.ultra.dit.service.calculation.RoutingCalculationService;
 
 @ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
-public class RoutingServiceTest extends BaseTest {
-
-  private InputStream datasetInputStream;
+public class RoutingServiceTest extends BaseGeometryTest {
 
   @Spy
-  private ObjectMapper objectMapper = new ObjectMapper()
-      .registerModule(new JtsModule()); // Регистрируем ваш JtsModule
-
-  @Spy
-  private ParseService parserService = new ParseService(objectMapper);
+  private ParseService parserService = new ParseService(OBJECT_MAPPER);
 
   @Spy
   private TransformService transformService = new TransformService();
 
   @Spy
-  private RoutingProcessService routingProcessService = new RoutingProcessService();
+  private RoutingCalculationService routingCalculationService = new MockRoutingCalculationService();
 
   @InjectMocks
   private RoutingFlowService routingService;
 
-  @BeforeEach
-  public void setUp() throws IOException {
-
-    datasetInputStream = datasetResource.getInputStream();
-  }
-
   @Test
   void shouldProcessRouting() {
-    var result = routingService.buildRoute(datasetInputStream);
+    var result = routingService.buildRoute(originFeatureCollection);
     assertNotNull(result);
   }
 
