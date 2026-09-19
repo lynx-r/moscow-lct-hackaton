@@ -1,6 +1,17 @@
 # version: '3.8'
 
 services:
+  frontend:
+    image: cr.yandex/crp357kesevoc357mb8a/frontend:latest
+    container_name: frontend
+    restart: unless-stopped
+    env_file:
+      - ../frontend/.env
+    ports:
+      - "80:80"
+    # Ограничения памяти в v1 пишутся напрямую в корень сервиса
+    mem_limit: 64m
+
   backend:
     image: cr.yandex/crp357kesevoc357mb8a/backend:latest
     container_name: backend

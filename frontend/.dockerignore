@@ -1,0 +1,25 @@
+# Зависимости
+node_modules/
+npm-debug.log
+
+# Сборка
+dist/
+build/
+.output/
+
+# Docker-специфичные файлы
+Dockerfile*
+.dockerignore
+
+# Git
+.git
+.gitignore
+
+# Прочее
+README.md
+LICENSE
+.vscode/
+.idea/
+.prettierrc
+.eslintrc.js
+test/

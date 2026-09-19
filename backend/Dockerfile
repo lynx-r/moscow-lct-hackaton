@@ -10,11 +10,11 @@ COPY .mvn/ .mvn
 COPY mvnw mvnw.cmd pom.xml ./
 
 # Переносим скачивание зависимостей на кэшируемый диск BuildKit
-RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:go-offline
+RUN --mount=type=cache,id=mvn,target=/root/.m2 ./mvnw dependency:go-offline
 
 # Теперь копируем исходный код и собираем проект
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
+RUN --mount=type=cache,id=mvn,target=/root/.m2 ./mvnw package -DskipTests
 
 # Образ запуска приложения
 FROM bellsoft/liberica-openjre-alpine:11 AS runner

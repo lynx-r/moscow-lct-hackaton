@@ -1,0 +1,10 @@
+:80 {
+    # Указываем корневую директорию с файлами внутри контейнера
+    root * /usr/share/caddy
+    # Включаем сервер статических файлов
+    file_server
+
+    try_files {path} /index.html
+
+    encode gzip zstd
+}

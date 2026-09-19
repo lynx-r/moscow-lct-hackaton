@@ -22,7 +22,7 @@ workflows:
             action: docker/setup-buildx-action@v3
 
           # Сборка и пуш образа (заменяем ghcr.io на cr.yandex)
-          - name: build-and-push
+          - name: build-and-push-backend
             action: docker/build-push-action@v6
             with:
               context: ./backend
@@ -37,6 +37,22 @@ workflows:
 
               # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
               tags: cr.yandex/crp357kesevoc357mb8a/backend:latest
+
+          - name: build-and-push-frontend
+            action: docker/build-push-action@v6
+            with:
+              context: ./frontend
+              file: ./frontend/Dockerfile # Путь к вашему Dockerfile
+              push: true
+              # ОТКЛЮЧАЕМ ПРОВЕНАНС (АТТЕСТАЦИЮ), ЧТОБЫ ЯНДЕКС НЕ ПРИНИМАЛ ОБРАЗ ЗА ОШИБКУ
+              provenance: false
+
+              # Cache
+              cache-from: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/frontend:buildcache
+              cache-to: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/frontend:buildcache,mode=max
+
+              # Обязательно замените ID_РЕЕСТРА на ваш ID из Yandex Cloud
+              tags: cr.yandex/crp357kesevoc357mb8a/frontend:latest
 
           # Деплой на вашу ВМ через SSH
           - name: deploy-via-ssh
