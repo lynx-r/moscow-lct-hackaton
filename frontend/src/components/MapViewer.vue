@@ -76,9 +76,8 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
     // Слой пространственных ограничений. Полигоны (Polygon, MultiPolygon)
     map.value.addLayer({
       id: `layer-fill-${OBJECT_TYPES.restriction}`,
-      type: 'fill', // Используем 'fill' для полигонов
+      type: 'fill',
       source: DATA_SOURCE_NAME,
-      // ФИЛЬТР: рендерить только если object_type равен 'building'
       filter: [
         'all',
         ['==', ['get', 'object_type'], OBJECT_TYPES.restriction],
