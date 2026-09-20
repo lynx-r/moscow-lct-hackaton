@@ -21,6 +21,9 @@ public class RoutingServiceTest extends BaseGeometryTest {
   private TransformService transformService = new TransformService();
 
   @Spy
+  private SpatialIndexService spatialIndexService = new SpatialIndexService();
+
+  @Spy
   private RoutingCalculationService routingCalculationService = new MockRoutingCalculationService();
 
   @InjectMocks
@@ -28,7 +31,7 @@ public class RoutingServiceTest extends BaseGeometryTest {
 
   @Test
   void shouldProcessRouting() {
-    var result = routingService.buildRoute(originFeatureCollection);
+    var result = routingService.buildRoute(originFeatureStream);
     assertNotNull(result);
   }
 

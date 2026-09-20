@@ -1,5 +1,7 @@
 package com.ultra.dit.exception;
 
+import java.util.NoSuchElementException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +25,17 @@ public class GlobalExceptionHandler {
     // logger.error("Ошибка парсинга JSON", ex);
 
     String cleanMessage = "Неверный формат запроса (ошибка парсинга JSON).";
+
+    ErrorResponse error = new ErrorResponse(cleanMessage, HttpStatus.BAD_REQUEST.value());
+    return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST); // Возвращаем 400 Bad Request
+  }
+
+  @ExceptionHandler(NoSuchElementException.class)
+  public ResponseEntity<ErrorResponse> handleNoSuchElementException(NoSuchElementException ex) {
+    // Логируем для себя детальную ошибку
+    // logger.error("Ошибка парсинга JSON", ex);
+
+    String cleanMessage = "Нет такого элемента";
 
     ErrorResponse error = new ErrorResponse(cleanMessage, HttpStatus.BAD_REQUEST.value());
     return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST); // Возвращаем 400 Bad Request

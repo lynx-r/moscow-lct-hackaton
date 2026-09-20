@@ -1,6 +1,6 @@
 package com.ultra.dit.converter;
 
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.locationtech.jts.geom.CoordinateSequence;
 import org.locationtech.jts.geom.CoordinateSequenceFilter;
@@ -10,7 +10,6 @@ import org.locationtech.proj4j.CoordinateTransformFactory;
 import org.locationtech.proj4j.ProjCoordinate;
 
 import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
 
 public class GeometryCrsConverter implements AutoCloseable {
 
@@ -43,14 +42,17 @@ public class GeometryCrsConverter implements AutoCloseable {
    * Сервис для преобразования геометрии из CoordinateReferenceSystem
    * sourceCrsName в targetCrsName
    * 
-   * @param inputCollection
+   * @param inputStream
    * @return
    * @throws Exception
    */
-  public FeatureCollection convert(FeatureCollection inputCollection) {
-
-    final var transformedFeatures = inputCollection.getFeatures().parallelStream()
+  public Stream<Feature> convert(Stream<Feature> inputStream) {
+    return inputStream.parallel()
         .map(feature -> {
+          if (feature == null || feature.getGeometry() == null) {
+            return feature;
+          }
+
           var geometry = feature.getGeometry().copy();
 
           geometry.apply(new CoordinateSequenceFilter() {
@@ -83,10 +85,7 @@ public class GeometryCrsConverter implements AutoCloseable {
           geometry.setSRID(SRID);
 
           return new Feature(geometry, feature.getProperties(), feature.getType());
-        })
-        .collect(Collectors.toList());
-
-    return new FeatureCollection(transformedFeatures, inputCollection.getType());
+        });
   }
 
   // Метод для очистки ресурсов текущего потока (или при уничтожении бина)

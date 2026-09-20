@@ -39,10 +39,11 @@ public class RoutingController {
     }
   }
 
-  @PostMapping("process-json")
-  public ResponseEntity<RoutingResult> processJson(@RequestBody FeatureCollection featureCollection) {
-    var outputGeoJson = routingFlowService.buildRoute(featureCollection);
-    return ResponseEntity.ok(outputGeoJson);
-  }
+  // @PostMapping("process-json")
+  // public ResponseEntity<RoutingResult> processJson(@RequestBody
+  // FeatureCollection featureCollection) {
+  // var outputGeoJson = routingFlowService.buildRoute(featureCollection);
+  // return ResponseEntity.ok(outputGeoJson);
+  // }
 
 }

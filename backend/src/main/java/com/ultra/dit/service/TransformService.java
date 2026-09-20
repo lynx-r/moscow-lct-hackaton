@@ -1,11 +1,13 @@
 package com.ultra.dit.service;
 
+import java.util.stream.Stream;
+
 import javax.annotation.PreDestroy;
 
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.converter.GeometryCrsConverter;
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.Feature;
 
 @Service
 public class TransformService {
@@ -32,7 +34,7 @@ public class TransformService {
    * @return
    * @throws Exception
    */
-  public FeatureCollection transform4326To32637(FeatureCollection epsg4326Collection) {
+  public Stream<Feature> transform4326To32637(Stream<Feature> epsg4326Collection) {
     return toUtmTransform.convert(epsg4326Collection);
   }
 
@@ -44,7 +46,7 @@ public class TransformService {
    * @return
    * @throws Exception
    */
-  public FeatureCollection transform32637To4326(FeatureCollection epsg32637Collection) {
+  public Stream<Feature> transform32637To4326(Stream<Feature> epsg32637Collection) {
     return toWgsTransform.convert(epsg32637Collection);
   }
 

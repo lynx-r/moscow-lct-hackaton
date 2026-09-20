@@ -19,7 +19,8 @@ public abstract class BaseGeometryTest extends BaseTest {
 
     // Поток откроется, прочитается и закроется ровно один раз
     try (var datasetInputStream = datasetResource.getInputStream()) {
-      originFeatureCollection = PARSE_SERVICE.parseFeatureCollection(datasetInputStream);
+      // FIXME: исправить тесты
+      originFeatureStream = PARSE_SERVICE.parseFeatureCollection(datasetInputStream);
     }
   }
 

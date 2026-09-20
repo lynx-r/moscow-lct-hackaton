@@ -1,11 +1,14 @@
 package com.ultra.dit.service;
 
+import java.util.stream.Stream;
+
 import org.mockito.Spy;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
 
 public abstract class BaseTest {
@@ -19,6 +22,8 @@ public abstract class BaseTest {
 
   // Кэшированная геометрия — распарсится один раз на все тесты!
   protected static FeatureCollection originFeatureCollection;
+
+  protected static Stream<Feature> originFeatureStream;
 
   protected static final ClassPathResource datasetResource = new ClassPathResource("files/dataset-19.09.26.geojson");
 }
