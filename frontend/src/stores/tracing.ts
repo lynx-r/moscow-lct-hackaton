@@ -2,9 +2,10 @@ import { routingService } from '@/api/routingService'
 import type { FeatureCollection } from 'geojson'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import geojson from '../mock/dataset-default.json'
 
 export const useTracingStore = defineStore('tracing', () => {
-  const data = ref<FeatureCollection>()
+  const data = ref<FeatureCollection>(geojson as FeatureCollection)
 
   const trace = async (file: Blob) => {
     const result = await routingService.traceRoute(file)
