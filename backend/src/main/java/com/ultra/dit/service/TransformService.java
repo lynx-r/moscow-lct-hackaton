@@ -2,8 +2,6 @@ package com.ultra.dit.service;
 
 import java.util.stream.Stream;
 
-import javax.annotation.PreDestroy;
-
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.converter.GeometryCrsConverter;
@@ -18,12 +16,6 @@ public class TransformService {
   public TransformService() {
     this.toUtmTransform = new GeometryCrsConverter("EPSG:4326", "EPSG:32637");
     this.toWgsTransform = new GeometryCrsConverter("EPSG:32637", "EPSG:4326");
-  }
-
-  @PreDestroy
-  public void shutdown() {
-    toUtmTransform.close();
-    toWgsTransform.close();
   }
 
   /**

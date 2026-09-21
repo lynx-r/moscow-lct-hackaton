@@ -11,7 +11,7 @@ import org.locationtech.proj4j.ProjCoordinate;
 
 import com.ultra.dit.dto.Feature;
 
-public class GeometryCrsConverter implements AutoCloseable {
+public class GeometryCrsConverter {
 
   private final int SRID;
 
@@ -85,15 +85,15 @@ public class GeometryCrsConverter implements AutoCloseable {
           geometry.setSRID(SRID);
 
           return new Feature(geometry, feature.getProperties(), feature.getType());
+        })
+        .onClose(() -> {
+          // КРИТИЧЕСКИ ВАЖНО: Вешаем хук очистки ThreadLocal на закрытие самого Стрима.
+          // Когда Оркестратор закончит выполнение (.forEachOrdered()), Java автоматически
+          // вызовет этот коллбэк во ВСЕХ задействованных потоках пула.
+          if (threadContext != null) {
+            threadContext.remove();
+          }
         });
-  }
-
-  // Метод для очистки ресурсов текущего потока (или при уничтожении бина)
-  @Override
-  public void close() {
-    if (threadContext != null) {
-      threadContext.remove(); // Удаляет данные из текущего потока и предотвращает утечки
-    }
   }
 
   // Вспомогательный класс-контейнер для одного потока
