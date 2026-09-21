@@ -19,7 +19,7 @@ public class ParseService {
 
   private final ObjectMapper mapper;
 
-  ParseService(ObjectMapper mapper) {
+  public ParseService(ObjectMapper mapper) {
     this.mapper = mapper;
   }
 

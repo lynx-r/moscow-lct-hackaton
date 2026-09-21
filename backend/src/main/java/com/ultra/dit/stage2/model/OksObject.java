@@ -15,5 +15,5 @@ public class OksObject {
   private final String id;
   private final Point connectionPoint;
   private final Polygon buildingPolygon;
-  private final double flowTph;
+  private final Double flowTph;
 }

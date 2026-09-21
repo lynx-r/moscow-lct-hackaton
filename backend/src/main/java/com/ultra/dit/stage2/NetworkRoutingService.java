@@ -34,11 +34,12 @@ public class NetworkRoutingService {
 
   public NetworkRoutingService(OksClusteringService clusteringService,
       LocalBoundingBoxService boundingBoxService,
-      CollisionDetectionService collisionService) {
+      CollisionDetectionService collisionService,
+      NetworkTopologyGenerator topologyGenerator) {
     this.clusteringService = clusteringService;
     this.boundingBoxService = boundingBoxService;
     this.collisionService = collisionService;
-    this.topologyGenerator = new NetworkTopologyGenerator();
+    this.topologyGenerator = topologyGenerator;
   }
 
   /**

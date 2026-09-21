@@ -5,11 +5,14 @@ import org.jgrapht.alg.shortestpath.YenKShortestPath;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.*;
+import org.springframework.stereotype.Service;
 
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
+
+import lombok.NoArgsConstructor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,6 +22,8 @@ import java.util.stream.Collectors;
  * контроля валентности узлов и построения топологии GeoJSON-совместимых
  * объектов.
  */
+@Service
+@NoArgsConstructor
 public class NetworkTopologyGenerator {
 
   private final GeometryFactory geometryFactory = new GeometryFactory();
