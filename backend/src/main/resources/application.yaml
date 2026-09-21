@@ -24,6 +24,10 @@ app:
     allowed-methods: ${CORS_ALLOWED_METHODS:*}
     allow-credentials: ${CORS_ALLOW_CREDENTIALS:false}
 
+  solution:
+    stage2:
+      bufferMeters: 500
+
 springdoc:
   api-docs:
     enabled: true
