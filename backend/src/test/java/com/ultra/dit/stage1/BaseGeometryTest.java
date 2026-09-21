@@ -13,7 +13,10 @@ import org.locationtech.jts.geom.GeometryFactory;
 
 import com.ultra.dit.dto.FeatureCollection;
 
-public abstract class BaseGeometryTest extends BaseTest {
+public abstract class BaseGeometryTest extends BaseStage1Test {
+
+  // Кэшированная геометрия — распарсится один раз на все тесты!
+  protected static FeatureCollection originFeatureCollection;
 
   @BeforeAll
   public static void initAllTests() throws IOException {

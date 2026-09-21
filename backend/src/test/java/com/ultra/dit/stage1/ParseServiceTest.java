@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class ParseServiceTest extends BaseTest {
+public class ParseServiceTest extends BaseStage1Test {
 
   @InjectMocks
   private ParseService parseService;

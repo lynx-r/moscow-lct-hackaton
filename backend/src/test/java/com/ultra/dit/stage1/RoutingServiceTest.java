@@ -13,7 +13,7 @@ import com.ultra.dit.service.calculation.MockRoutingCalculationService;
 import com.ultra.dit.service.calculation.RoutingCalculationService;
 
 @ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
-public class RoutingServiceTest extends BaseGeometryTest {
+public class RoutingServiceTest extends BaseStage1Test {
 
   @Spy
   private ParseService parserService = new ParseService(OBJECT_MAPPER);
