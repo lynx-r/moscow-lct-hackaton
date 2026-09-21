@@ -1,6 +1,5 @@
 package com.ultra.dit.service;
 
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
@@ -26,8 +25,6 @@ public class RoutingFlowService {
 
   public RoutingResult buildRoute(Stream<Feature> featureCollection) {
     var readyCollection = transformService.transform4326To32637(featureCollection);
-    var l = readyCollection.collect(Collectors.toList());
-    System.out.println(l);
 
     var indexContainer = spatialIndexService.buildSpatialIndices(readyCollection);
 

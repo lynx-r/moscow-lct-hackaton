@@ -1,9 +1,11 @@
 package com.ultra.dit.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,9 @@ public class ParseServiceTest extends BaseTest {
 
   @Test
   void testParseFeatureCollection() {
-    var parsed = parseService.parseFeatureCollection(datasetInputStream);
-    assertNotNull(parsed);
+    var parsed = parseService.streamFeatures(datasetInputStream);
+    var features = parsed.collect(Collectors.toList());
+    assertNotNull(features);
+    assertEquals(features.size(), 144);
   }
 }

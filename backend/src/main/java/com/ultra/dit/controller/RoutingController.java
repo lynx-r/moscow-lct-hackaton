@@ -1,16 +1,15 @@
 package com.ultra.dit.controller;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.RoutingResult;
 import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.service.ParseService;
@@ -31,7 +30,7 @@ public class RoutingController {
   @PostMapping("process")
   public ResponseEntity<RoutingResult> process(@RequestParam MultipartFile file) {
     try {
-      var featureCollection = parserService.parseFeatureCollection(file.getInputStream());
+      var featureCollection = parserService.streamFeatures(file.getInputStream());
       var outputGeoJson = routingFlowService.buildRoute(featureCollection);
       return ResponseEntity.ok(outputGeoJson);
     } catch (IOException e) {
@@ -39,11 +38,11 @@ public class RoutingController {
     }
   }
 
-  // @PostMapping("process-json")
-  // public ResponseEntity<RoutingResult> processJson(@RequestBody
-  // FeatureCollection featureCollection) {
-  // var outputGeoJson = routingFlowService.buildRoute(featureCollection);
-  // return ResponseEntity.ok(outputGeoJson);
-  // }
+  @PostMapping("process-json")
+  public ResponseEntity<RoutingResult> processJson(InputStream inputStream) {
+    var featureCollection = parserService.streamFeatures(inputStream);
+    var outputGeoJson = routingFlowService.buildRoute(featureCollection);
+    return ResponseEntity.ok(outputGeoJson);
+  }
 
 }

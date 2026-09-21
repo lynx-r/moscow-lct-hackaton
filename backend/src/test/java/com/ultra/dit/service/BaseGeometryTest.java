@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 
@@ -19,9 +21,15 @@ public abstract class BaseGeometryTest extends BaseTest {
 
     // Поток откроется, прочитается и закроется ровно один раз
     try (var datasetInputStream = datasetResource.getInputStream()) {
-      // FIXME: исправить тесты
-      originFeatureStream = PARSE_SERVICE.parseFeatureCollection(datasetInputStream);
+      var originFeatureStream = PARSE_SERVICE.streamFeatures(datasetInputStream);
+      var features = originFeatureStream.collect(Collectors.toList());
+      originFeatureCollection = new FeatureCollection(features, "FeatureCollection");
     }
+  }
+
+  @BeforeEach
+  public void setUp() {
+    originFeatureStream = originFeatureCollection.getFeatures().stream();
   }
 
   void assertFeatureGeometriesEqual(FeatureCollection expected, FeatureCollection actual, double tolerance) {
