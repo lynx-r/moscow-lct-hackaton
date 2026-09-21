@@ -1,4 +1,4 @@
-package com.ultra.dit.service.stage2.graph;
+package com.ultra.dit.stage2.graph;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,12 +14,11 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
-import com.ultra.dit.dto.stage2.LocalIndexContainer;
-import com.ultra.dit.dto.stage2.NodeType;
-import com.ultra.dit.dto.stage2.OksObject;
-import com.ultra.dit.dto.stage2.Vector2D;
-import com.ultra.dit.dto.stage2.VirtualNode;
-import com.ultra.dit.service.stage2.CollisionDetectionService;
+import com.ultra.dit.stage2.model.LocalIndexContainer;
+import com.ultra.dit.stage2.model.NodeType;
+import com.ultra.dit.stage2.model.OksObject;
+import com.ultra.dit.stage2.model.Vector2D;
+import com.ultra.dit.stage2.model.VirtualNode;
 
 /**
  * Шаг 2.2. Класс-строитель безопасного ориентированного каркаса путей

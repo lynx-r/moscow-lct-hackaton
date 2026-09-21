@@ -1,10 +1,10 @@
-package com.ultra.dit.service.stage2.graph;
+package com.ultra.dit.stage2.graph;
 
 import org.locationtech.jts.geom.Coordinate;
 
-import com.ultra.dit.dto.stage2.NodeType;
-import com.ultra.dit.dto.stage2.Vector2D;
-import com.ultra.dit.dto.stage2.VirtualNode;
+import com.ultra.dit.stage2.model.NodeType;
+import com.ultra.dit.stage2.model.Vector2D;
+import com.ultra.dit.stage2.model.VirtualNode;
 
 /**
  * Шаг 2.3. Калькулятор весов ребер (Edge Weight) с матрицей приоритетов углов

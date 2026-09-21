@@ -1,4 +1,4 @@
-package com.ultra.dit.service.stage2;
+package com.ultra.dit.stage2.graph;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.YenKShortestPath;
@@ -6,10 +6,10 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.*;
 
-import com.ultra.dit.dto.stage2.NodeType;
-import com.ultra.dit.dto.stage2.OksObject;
-import com.ultra.dit.dto.stage2.RoutingResult;
-import com.ultra.dit.dto.stage2.VirtualNode;
+import com.ultra.dit.stage2.model.NodeType;
+import com.ultra.dit.stage2.model.OksObject;
+import com.ultra.dit.stage2.model.RoutingResult;
+import com.ultra.dit.stage2.model.VirtualNode;
 
 import java.util.*;
 import java.util.stream.Collectors;

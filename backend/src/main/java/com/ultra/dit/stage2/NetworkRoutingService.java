@@ -1,21 +1,21 @@
-package com.ultra.dit.service.stage2;
-
-import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.jgrapht.graph.DirectedWeightedMultigraph;
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.springframework.stereotype.Service;
-
-import com.ultra.dit.dto.IndexContainer;
-import com.ultra.dit.dto.stage2.LocalIndexContainer;
-import com.ultra.dit.dto.stage2.OksObject;
-import com.ultra.dit.dto.stage2.RoutingResult;
-import com.ultra.dit.dto.stage2.VirtualNode;
-import com.ultra.dit.service.stage2.graph.DirectedRoadmapBuilder;
-import com.ultra.dit.service.stage2.graph.IntegratedEdgeWeightCalculator;
+package com.ultra.dit.stage2;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.DirectedWeightedMultigraph;
+import org.locationtech.jts.geom.Envelope;
+import org.springframework.stereotype.Service;
+
+import com.ultra.dit.dto.IndexContainer;
+import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
+import com.ultra.dit.stage2.graph.IntegratedEdgeWeightCalculator;
+import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
+import com.ultra.dit.stage2.model.LocalIndexContainer;
+import com.ultra.dit.stage2.model.OksObject;
+import com.ultra.dit.stage2.model.RoutingResult;
+import com.ultra.dit.stage2.model.VirtualNode;
 
 /**
  * Главный сервис-оркестратор пространственного анализа и трассировки тепловой
@@ -34,12 +34,11 @@ public class NetworkRoutingService {
 
   public NetworkRoutingService(OksClusteringService clusteringService,
       LocalBoundingBoxService boundingBoxService,
-      CollisionDetectionService collisionService,
-      NetworkTopologyGenerator topologyGenerator) {
+      CollisionDetectionService collisionService) {
     this.clusteringService = clusteringService;
     this.boundingBoxService = boundingBoxService;
     this.collisionService = collisionService;
-    this.topologyGenerator = topologyGenerator;
+    this.topologyGenerator = new NetworkTopologyGenerator();
   }
 
   /**

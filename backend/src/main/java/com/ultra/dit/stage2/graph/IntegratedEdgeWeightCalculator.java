@@ -1,4 +1,4 @@
-package com.ultra.dit.service.stage2.graph;
+package com.ultra.dit.stage2.graph;
 
 import java.util.List;
 
@@ -7,9 +7,9 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 
-import com.ultra.dit.dto.stage2.OksObject;
-import com.ultra.dit.dto.stage2.VirtualNode;
-import com.ultra.dit.service.stage2.CollisionDetectionService;
+import com.ultra.dit.stage2.CollisionDetectionService;
+import com.ultra.dit.stage2.model.OksObject;
+import com.ultra.dit.stage2.model.VirtualNode;
 
 /**
  * Модернизированный калькулятор весов ребер (Шаг 2.3 + Шаг 2.4).

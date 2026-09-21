@@ -1,6 +1,4 @@
-package com.ultra.dit.service;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+package com.ultra.dit.stage1;
 
 import java.util.stream.Collectors;
 

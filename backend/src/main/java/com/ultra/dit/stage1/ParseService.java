@@ -1,8 +1,7 @@
-package com.ultra.dit.service;
+package com.ultra.dit.stage1;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;

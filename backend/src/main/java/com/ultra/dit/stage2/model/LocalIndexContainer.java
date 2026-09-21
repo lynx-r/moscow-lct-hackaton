@@ -1,4 +1,4 @@
-package com.ultra.dit.dto.stage2;
+package com.ultra.dit.stage2.model;
 
 import java.util.Collections;
 import java.util.List;

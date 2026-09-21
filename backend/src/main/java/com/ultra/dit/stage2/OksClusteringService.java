@@ -1,4 +1,4 @@
-package com.ultra.dit.service.stage2;
+package com.ultra.dit.stage2;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.locationtech.jts.geom.Point;
+import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.stage2.OksObject;
+import com.ultra.dit.stage2.model.OksObject;
 
 /**
  * Шаг 2.0. Автоматическая кластеризация ОКС по пространственной близости.
  */
+@Service
 public class OksClusteringService {
   /**
    * Если целевые точки подключения двух ОКС находятся на расстоянии <= 100

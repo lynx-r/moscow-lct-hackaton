@@ -1,4 +1,4 @@
-package com.ultra.dit.service;
+package com.ultra.dit.stage1;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

@@ -1,4 +1,4 @@
-package com.ultra.dit.service.stage2;
+package com.ultra.dit.stage2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.IndexContainer;
-import com.ultra.dit.dto.stage2.LocalIndexContainer;
-import com.ultra.dit.dto.stage2.OksObject;
+import com.ultra.dit.stage2.model.LocalIndexContainer;
+import com.ultra.dit.stage2.model.OksObject;
 
 /**
  * Шаг 2.1. Сервис динамической локализации геоданных.

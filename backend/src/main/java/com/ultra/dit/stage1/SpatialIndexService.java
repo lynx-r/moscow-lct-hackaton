@@ -1,4 +1,4 @@
-package com.ultra.dit.service;
+package com.ultra.dit.stage1;
 
 import java.util.stream.Stream;
 

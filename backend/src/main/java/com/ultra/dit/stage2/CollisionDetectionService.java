@@ -1,11 +1,11 @@
-package com.ultra.dit.service.stage2;
+package com.ultra.dit.stage2;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.stage2.OksObject;
+import com.ultra.dit.stage2.model.OksObject;
 
 import java.util.List;
 

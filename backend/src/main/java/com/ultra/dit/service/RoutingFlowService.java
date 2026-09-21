@@ -8,6 +8,8 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.RoutingResult;
 import com.ultra.dit.service.calculation.RoutingCalculationService;
+import com.ultra.dit.stage1.SpatialIndexService;
+import com.ultra.dit.stage1.TransformService;
 
 @Service
 public class RoutingFlowService {
