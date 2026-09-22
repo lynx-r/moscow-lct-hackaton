@@ -1,7 +1,5 @@
 package com.ultra.dit.helpers;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,30 +12,21 @@ import org.locationtech.jts.index.strtree.AbstractNode;
 import org.locationtech.jts.index.strtree.Boundable;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.WKTWriter;
-import org.n52.jackson.datatype.jts.JtsModule;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.service.DebugUtils;
 
 public class STRtreeVisualizer {
-
-  private static final ObjectMapper OBJECT_MAPPER = new Jackson2ObjectMapperBuilder().failOnUnknownProperties(false)
-      .modules(new JtsModule()).build();
 
   public static void writeSTRtreeToFile(STRtree tree, String fileName) {
     var boundaries = extractTreeBoundaries(tree);
     var features = boundaries.stream().map((geo) -> Feature.of(geo, new FeatureProperties()))
         .collect(Collectors.toList());
     var featureCollection = FeatureCollection.of(features);
-    String fileNamePath = Paths.get("data", "test", fileName).toString();
-    try (var outputStream = new FileOutputStream(fileNamePath)) {
-      OBJECT_MAPPER.writeValue(outputStream, featureCollection);
-    } catch (IOException e) {
-      System.out.println(e);
-    }
+
+    DebugUtils.writeFeatureCollectionToFile(featureCollection, Paths.get("data", "debug", "geojson", fileName));
   }
 
   public static void printSTRtreeAsWKT(STRtree tree) {

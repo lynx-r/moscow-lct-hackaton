@@ -80,6 +80,13 @@
             <version>1.5.3</version>
         </dependency>
 
+        <!-- JGraphT I/O -->
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-io</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
         <!-- Jackson Datatype JTS -->
         <dependency>
             <groupId>org.n52.jackson</groupId>

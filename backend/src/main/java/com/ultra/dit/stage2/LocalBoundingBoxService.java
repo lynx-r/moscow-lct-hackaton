@@ -23,7 +23,7 @@ public class LocalBoundingBoxService {
   private final double bufferMeters;
 
   public LocalBoundingBoxService(
-      @Value("${app.solution.stage2.bufferMeters:500}") double bufferMeters) {
+      @Value("${app.solution.stage2.bufferMeters:500.0}") double bufferMeters) {
     this.bufferMeters = bufferMeters;
   }
 
@@ -47,6 +47,7 @@ public class LocalBoundingBoxService {
     }
 
     // Расширяем Envelope во все стороны на 500 метров (ТЗ)
+    // FIXME: расширить в метрах не получилось. Расширяет в градусах
     envelope.expandBy(bufferMeters);
     return envelope;
   }

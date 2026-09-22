@@ -19,24 +19,18 @@ public class VirtualNode {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
-    if (!(o instanceof VirtualNode))
+    }
+    if (!(o instanceof VirtualNode)) {
       return false;
+    }
     VirtualNode that = (VirtualNode) o;
-    return coordinate.equals2D(that.coordinate) &&
-        Double.compare(that.directionIn.getX(), directionIn.getX()) == 0 &&
-        Double.compare(that.directionIn.getY(), directionIn.getY()) == 0;
+    return coordinate.equals2D(that.coordinate);
   }
 
   @Override
   public int hashCode() {
-    int result = coordinate.hashCode();
-    long temp;
-    temp = Double.doubleToLongBits(directionIn.getX());
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    temp = Double.doubleToLongBits(directionIn.getY());
-    result = 31 * result + (int) (temp ^ (temp >>> 32));
-    return result;
+    return coordinate.hashCode();
   }
 }

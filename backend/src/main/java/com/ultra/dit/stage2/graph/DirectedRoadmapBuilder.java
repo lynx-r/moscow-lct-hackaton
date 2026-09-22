@@ -1,9 +1,11 @@
 package com.ultra.dit.stage2.graph;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
@@ -12,13 +14,17 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
+import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.Vector2D;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.stage2_test.FeatureMapper;
 
 /**
  * Шаг 2.2. Класс-строитель безопасного ориентированного каркаса путей
@@ -49,20 +55,75 @@ public class DirectedRoadmapBuilder {
     // 1. Извлекаем опорные точки геометрии для построения Скелета Вороного
     List<Coordinate> siteCoordinates = extractSkeletonSites(cluster);
 
+    // TODO: debug start
+    var sitePoints = siteCoordinates.stream().map(t -> geometryFactory.createPoint(t));
+    var siteFeatures = FeatureMapper.mapStreamGeometriesToFeatures(sitePoints).collect(Collectors.toList());
+    var siteFeatureCollection = FeatureCollection.of(siteFeatures);
+    DebugUtils.writeFeatureCollectionToFile(siteFeatureCollection,
+        Paths.get("data", "debug", "geojson", "2-skeletonSites.geojson"));
+    // TODO: debug stop
+
     // 2. Генерация Диаграммы Вороного через JTS
     VoronoiDiagramBuilder voronoiBuilder = new VoronoiDiagramBuilder();
     voronoiBuilder.setSites(siteCoordinates);
     voronoiBuilder.setClipEnvelope(localData.getExecutionEnvelope());
     Geometry voronoiDiagram = voronoiBuilder.getDiagram(geometryFactory);
 
+    // // Списки целевых точек
+    // List<Coordinate> sources = localData.getNetworks().stream()
+    // .flatMap(g ->
+    // Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
+    // List<Coordinate> targets = cluster.stream()
+    // .map(o ->
+    // o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
+
     // 3. Выделяем безопасные ребра и собираем базовые вершины каркаса
     List<LineString> skeletonEdges = filterAndExtractVoronoiEdges(voronoiDiagram);
+
+    // TODO: debug start
+    var skeletonEdgesFeatures = FeatureMapper.mapGeometriesToFeatures(skeletonEdges).collect(Collectors.toList());
+    var skeletonEdgesFeatureCollection = FeatureCollection.of(skeletonEdgesFeatures);
+    DebugUtils.writeFeatureCollectionToFile(skeletonEdgesFeatureCollection,
+        Paths.get("data", "debug", "geojson", "3-skeletonEdgesFeatureCollection.geojson"));
+    // TODO: debug stop
+
+    // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
+    // snap(skeletonEdges, sources, targets);
 
     // 4. Наполнение графа вершинами и связями с учетом ориентации
     // (ОТ существующих сетей К точкам подключения ОКС)
     populateOrientedGraph(skeletonEdges, cluster);
 
-    return this.graph;
+    return graph;
+  }
+
+  // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
+  private void snap(List<LineString> skeletonEdges, List<Coordinate> sources, List<Coordinate> targets) {
+
+    // Собираем все уникальные вершины коридоров Вороного
+    Set<Coordinate> skeletonVertices = new HashSet<>();
+    for (LineString edge : skeletonEdges) {
+      skeletonVertices.add(edge.getStartPoint().getCoordinate());
+      skeletonVertices.add(edge.getEndPoint().getCoordinate());
+    }
+
+    // Соединяем каждую точку врезки (source) с ближайшей к ней безопасной вершиной
+    // Вороного
+    for (Coordinate src : sources) {
+      Coordinate closest = findClosestCoordinate(src, skeletonVertices);
+      if (closest != null) {
+        skeletonEdges.add(geometryFactory.createLineString(new Coordinate[] { src, closest }));
+      }
+    }
+
+    // Соединяем каждую точку ОКС (target) с ближайшей к ней безопасной вершиной
+    // Вороного
+    for (Coordinate trg : targets) {
+      Coordinate closest = findClosestCoordinate(trg, skeletonVertices);
+      if (closest != null) {
+        skeletonEdges.add(geometryFactory.createLineString(new Coordinate[] { closest, trg }));
+      }
+    }
   }
 
   /**
@@ -159,6 +220,16 @@ public class DirectedRoadmapBuilder {
       targetOksCoords.add(oks.getConnectionPoint().getCoordinate());
     }
 
+    // TODO: debug start
+    System.out.println("skeletonEdges:");
+    skeletonEdges.stream()
+        .forEach(t -> {
+          System.out.println(t.getStartPoint().getCoordinate());
+          System.out.println(t.getEndPoint().getCoordinate());
+        });
+    System.out.println("-----");
+    // TODO: debug end
+
     // Для каждого отрезка безопасного каркаса генерируем ориентированные ребра
     for (LineString edge : skeletonEdges) {
       Coordinate c1 = edge.getStartPoint().getCoordinate();
@@ -172,6 +243,8 @@ public class DirectedRoadmapBuilder {
       // VORONOI_SKELETON.
       // При необходимости, если координаты совпадают с точками врезки или ОКС, тип
       // переопределяется.
+
+      // TODO: prioritet 1 не выполняется определения типа узла determineNodeType
       VirtualNode node1_in = new VirtualNode(c1, dir2to1, determineNodeType(c1, existingSourceCoords, targetOksCoords));
       VirtualNode node2_out = new VirtualNode(c2, dir1to2,
           determineNodeType(c2, existingSourceCoords, targetOksCoords));
@@ -193,10 +266,12 @@ public class DirectedRoadmapBuilder {
   }
 
   private NodeType determineNodeType(Coordinate c, List<Coordinate> sources, List<Coordinate> targets) {
-    if (targets.contains(c))
+    if (targets.contains(c)) {
       return NodeType.OKS_CONNECTION;
-    if (sources.contains(c))
+    }
+    if (sources.contains(c)) {
       return NodeType.EXISTING_NETWORK_NODE;
+    }
     return NodeType.VORONOI_SKELETON;
   }
 
@@ -210,6 +285,20 @@ public class DirectedRoadmapBuilder {
         minDist = d;
     }
     return minDist;
+  }
+
+  // FIXME: new
+  private Coordinate findClosestCoordinate(Coordinate target, Set<Coordinate> candidates) {
+    Coordinate closest = null;
+    double minDist = Double.MAX_VALUE;
+    for (Coordinate c : candidates) {
+      double d = target.distance(c);
+      if (d < minDist) {
+        minDist = d;
+        closest = c;
+      }
+    }
+    return closest;
   }
 
   private void addEdgeWithNodes(VirtualNode from, VirtualNode to, LineString edgeGeometry) {

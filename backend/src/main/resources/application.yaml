@@ -26,7 +26,9 @@ app:
 
   solution:
     stage2:
-      bufferMeters: 500
+      bufferMeters: 500.0
+      # Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
+      bufferRadiusMeters: 2.0
 
 springdoc:
   api-docs:

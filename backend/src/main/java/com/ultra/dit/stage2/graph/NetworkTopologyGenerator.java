@@ -7,6 +7,7 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.*;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
@@ -15,6 +16,7 @@ import com.ultra.dit.stage2.model.VirtualNode;
 import lombok.NoArgsConstructor;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -60,13 +62,18 @@ public class NetworkTopologyGenerator {
 
     // Собираем альтернативные пути для всех комбинаций источников и потребителей
     // кластера
+    AtomicInteger counter = new AtomicInteger(0);
     List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths = new ArrayList<>();
     for (VirtualNode source : sourceNodes) {
       for (VirtualNode target : targetNodes) {
         try {
           // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
           // структурно уникальных
+          int i = counter.incrementAndGet();
           List<GraphPath<VirtualNode, DefaultWeightedEdge>> paths = pathFinder.getPaths(source, target, 10);
+          paths.forEach((path) -> {
+            DebugUtils.exportPathToGraphML(path, "path-" + i + "-" + path.hashCode() + ".graphml");
+          });
           rawPaths.addAll(paths);
         } catch (IllegalArgumentException ignored) {
           // Вызывается JGrapht, если компоненты графа изолированы

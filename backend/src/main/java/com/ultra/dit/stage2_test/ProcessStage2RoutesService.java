@@ -45,7 +45,7 @@ public class ProcessStage2RoutesService {
     var routingPipeline = networkRoutingService.executeRoutingPipeline(indexContainer);
 
     var featureCollections = routingPipeline.stream().map((route) -> {
-      return route.stream().map((clusterVariant) -> RoutingResultToFeatureListMapper.map(clusterVariant));
+      return route.stream().map((clusterVariant) -> FeatureMapper.mapRoutingResultToFeatures(clusterVariant));
     });
 
     var transformedRoutes = featureCollections.map((route) -> {

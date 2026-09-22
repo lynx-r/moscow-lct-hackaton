@@ -52,8 +52,26 @@ public class EdgeWeightCalculator {
     // узел.
     double deltaAlpha = from.getDirectionIn().angleWith(currentDirection);
 
+    // TODO: debug workaround
+    // Если угол равен 180° (или очень близок к нему), это означает, что мы
+    // сопоставляем ребро со случайно выбранным инвертированным вектором вершины.
+    // Для планарного графа это нормальное продолжение линии вперед.
+    if (Math.abs(deltaAlpha - 180.0) <= 1.5) {
+      deltaAlpha = 0.0; // Считаем это продолжением прямой линии (0°)
+    }
+
     // 4. Определение штрафа по матрице приоритетов ТЗ
     double anglePenalty = determineAnglePenalty(deltaAlpha);
+
+    // TODO: debug
+    System.out.println("------");
+    System.out.println("currentDirection:");
+    System.out.println(currentDirection);
+    System.out.println("deltaAlpha:");
+    System.out.println(deltaAlpha);
+    System.out.println("anglePenalty:");
+    System.out.println(anglePenalty);
+    System.out.println("------");
 
     // Если штраф заградительный — блокируем ребро
     if (anglePenalty == Double.MAX_VALUE) {

@@ -18,4 +18,8 @@ public class Feature {
     private FeatureProperties properties;
 
     private final GeoJsonType type = GeoJsonType.FEATURE;
+
+    public static Feature withDefaultProperties(Geometry geometry) {
+        return Feature.of(geometry, new FeatureProperties());
+    }
 }

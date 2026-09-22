@@ -3,6 +3,7 @@ package com.ultra.dit.stage2;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.stage2.model.OksObject;
@@ -17,7 +18,12 @@ import java.util.List;
 public class CollisionDetectionService {
 
   // Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
-  private static final double BUFFER_RADIUS_METERS = 2.0;
+  private double bufferRadiusMeters = 2.0;
+
+  CollisionDetectionService(
+      @Value("${app.solution.stage2.bufferRadiusMeters:2.0}") double bufferRadiusMeters) {
+    this.bufferRadiusMeters = bufferRadiusMeters;
+  }
 
   /**
    * Проверяет сегмент (ребро графа) на коллизии с пространственными
@@ -38,7 +44,7 @@ public class CollisionDetectionService {
     // 1. Динамическое построение 2D-буфера вокруг оси сегмента
     // Выполняется в планарной метровой проекции (UTM zone 37N), давая честные 2.0
     // метра во все стороны
-    Geometry pipelineBuffer = segment.buffer(BUFFER_RADIUS_METERS);
+    Geometry pipelineBuffer = segment.buffer(bufferRadiusMeters);
 
     // 2. Итерируемся по всем локальным ограничениям, попавшим в выборку
     for (Geometry constraint : localConstraints) {

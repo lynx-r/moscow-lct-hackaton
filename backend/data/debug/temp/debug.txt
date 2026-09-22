@@ -1,0 +1,344 @@
+------
+currentDirection:
+Vector2D(x=-0.8944271909999159, y=0.4472135954999579)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.7071067811865475, y=0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7107162396013995, y=0.7034788033529127)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.8944271909999159, y=0.4472135954999579)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.6246950475544243, y=-0.7808688094430304)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7213585476372325, y=-0.6925617992285618)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7249633043206071, y=-0.6887874907317545)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7213585476372325, y=-0.6925617992285618)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865475, y=-0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-1.0, y=0.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-1.0, y=0.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7035156528973086, y=0.7106797634156143)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7107162396013995, y=0.7034788033529127)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.7249633043206071, y=-0.6887874907317546)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.7249633043206071, y=-0.6887874907317546)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.7071067811865475, y=0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7249633043206071, y=-0.6887874907317545)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.6246950475544243, y=0.7808688094430304)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.6246950475544243, y=-0.7808688094430304)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.6246950475544243, y=0.7808688094430304)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.8944271909999159, y=0.4472135954999579)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865476, y=-0.7071067811865475)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865475, y=0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865475, y=-0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=1.0, y=0.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.6963894523765077, y=0.7176640792311872)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.8944271909999159, y=0.4472135954999579)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7035156528973086, y=0.7106797634156143)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=1.0, y=0.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865476, y=-0.7071067811865475)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=-0.6963894523765077, y=0.7176640792311872)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.0, y=-1.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=1.0, y=0.0)
+deltaAlpha:
+180.0
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.7071067811865475, y=0.7071067811865475)
+deltaAlpha:
+179.99999879258172
+anglePenalty:
+1.7976931348623157E308
+------
+------
+currentDirection:
+Vector2D(x=0.20952908873087345, y=0.9778024140774094)
+deltaAlpha:
+179.99999914622634
+anglePenalty:
+1.7976931348623157E308
+------
