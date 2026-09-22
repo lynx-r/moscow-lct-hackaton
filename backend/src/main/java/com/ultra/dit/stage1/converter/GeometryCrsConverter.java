@@ -84,7 +84,7 @@ public class GeometryCrsConverter {
           geometry.geometryChanged();
           geometry.setSRID(SRID);
 
-          return new Feature(geometry, feature.getProperties(), feature.getType());
+          return Feature.of(geometry, feature.getProperties());
         })
         .onClose(() -> {
           // КРИТИЧЕСКИ ВАЖНО: Вешаем хук очистки ThreadLocal на закрытие самого Стрима.

@@ -55,7 +55,7 @@ public class ProcessStage2RoutesService {
     var routes = transformedRoutes.map(route -> {
       var variants = route.map((variant) -> {
         var features = variant.collect(Collectors.toList());
-        return new FeatureCollection(features, GeoJsonType.FEATURE_COLLECTION);
+        return FeatureCollection.of(features);
       }).collect(Collectors.toList());
       return new ClusterVariantsResult(variants);
     }).collect(Collectors.toList());

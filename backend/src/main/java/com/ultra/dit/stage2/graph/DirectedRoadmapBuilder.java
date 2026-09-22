@@ -72,20 +72,35 @@ public class DirectedRoadmapBuilder {
   private List<Coordinate> extractSkeletonSites(List<OksObject> cluster) {
     Set<Coordinate> sites = new HashSet<>();
 
-    // Вершины локальных пространственных ограничений — основные источники для
-    // диаграммы
+    // 1. Вершины локальных пространственных ограничений
     for (Geometry constraint : localData.getConstraints()) {
       for (Coordinate coord : constraint.getCoordinates()) {
         sites.add(coord);
       }
     }
 
+    // 2. ДОБАВЛЯЕМ ТОЧКИ СУЩЕСТВУЮЩЕЙ СЕТИ КАК СТИМУЛЫ ДЛЯ ВОРОНОГО
+    for (Geometry network : localData.getNetworks()) {
+      for (Coordinate coord : network.getCoordinates()) {
+        sites.add(coord);
+      }
+    }
+
+    // 3. ДОБАВЛЯЕМ ТОЧКИ ПОДКЛЮЧЕНИЯ ОКС
+    for (OksObject oks : cluster) {
+      sites.add(oks.getConnectionPoint().getCoordinate());
+    }
+
     // Во избежание пустых диаграмм при отсутствии ограничений, добавим углы
     // Bounding Box
     Envelope env = localData.getExecutionEnvelope();
+    // левый нижний угол
     sites.add(new Coordinate(env.getMinX(), env.getMinY()));
+    // правый нижний угол
     sites.add(new Coordinate(env.getMaxX(), env.getMinY()));
+    // левый верхний угол
     sites.add(new Coordinate(env.getMinX(), env.getMaxY()));
+    // правый верхний угол
     sites.add(new Coordinate(env.getMaxX(), env.getMaxY()));
 
     return new ArrayList<>(sites);

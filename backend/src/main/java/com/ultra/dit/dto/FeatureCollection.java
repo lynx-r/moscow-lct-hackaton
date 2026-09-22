@@ -2,14 +2,17 @@ package com.ultra.dit.dto;
 
 import java.util.List;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
+@RequiredArgsConstructor(staticName = "of")
 public class FeatureCollection {
+    @NonNull
     private List<Feature> features;
-    private GeoJsonType type;
+
+    private final GeoJsonType type = GeoJsonType.FEATURE_COLLECTION;
 }

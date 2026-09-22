@@ -27,7 +27,7 @@ public abstract class BaseGeometryTest extends BaseStage1Test {
     try (var datasetInputStream = datasetResource.getInputStream()) {
       var originFeatureStream = PARSE_SERVICE.streamFeatures(datasetInputStream);
       var features = originFeatureStream.collect(Collectors.toList());
-      originFeatureCollection = new FeatureCollection(features, GeoJsonType.FEATURE_COLLECTION);
+      originFeatureCollection = FeatureCollection.of(features);
     }
   }
 

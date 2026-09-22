@@ -1,22 +1,28 @@
 package com.ultra.dit.stage2;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
+import com.ultra.dit.helpers.STRtreeVisualizer;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
-
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.util.List;
 
 class NetworkRoutingServiceTest extends BaseTest {
 
@@ -75,7 +81,18 @@ class NetworkRoutingServiceTest extends BaseTest {
     OksObject oks = new OksObject("OKS-1", connectionPoint, building, 1.5);
     var oksObjects = List.of(oks);
 
-    STRtree nodesTree = new STRtree(); // пустой для теста
+    STRtree nodesTree = new STRtree();
+    // Обязательно регистрируем точку подключения ОКС в индексе узлов карты
+    nodesTree.insert(connectionPoint.getEnvelopeInternal(), connectionPoint);
+    // Также можно зарегистрировать конечную точку существующей сети (5, 10) как
+    // точку врезки
+    Point networkNode = gf.createPoint(new Coordinate(5, 10));
+    nodesTree.insert(networkNode.getEnvelopeInternal(), networkNode);
+
+    STRtreeVisualizer.writeSTRtreeToFile(constraintsTree, "constraintsTree.geojson");
+    STRtreeVisualizer.writeSTRtreeToFile(networksTree, "networksTree.geojson");
+    STRtreeVisualizer.writeSTRtreeToFile(nodesTree, "nodesTree.geojson");
+
     IndexContainer globalIndexes = new IndexContainer(constraintsTree, networksTree, nodesTree, oksObjects);
 
     // 4. Запуск оркестратора
