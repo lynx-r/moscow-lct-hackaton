@@ -8,10 +8,10 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Envelope;
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.IndexContainer;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.graph.IntegratedEdgeWeightCalculator;
 import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
+import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
@@ -45,14 +45,14 @@ public class NetworkRoutingService {
   /**
    * Основной пайплайн Этапа 2: выполняет геометрическую трассировку для всех ОКС.
    * 
-   * @param oksList       Исходный список перспективных объектов капитального
-   *                      строительства (ОКС)
    * @param globalIndexes Контейнер глобальных пространственных R-Tree индексов
    * @return Список списков вариантов трассировки (до 3 вариантов на каждый
    *         кластер)
    */
-  public List<List<RoutingResult>> executeRoutingPipeline(List<OksObject> oksList, IndexContainer globalIndexes) {
+  public List<List<RoutingResult>> executeRoutingPipeline(IndexContainer globalIndexes) {
     List<List<RoutingResult>> pipelineResults = new ArrayList<>();
+
+    var oksList = globalIndexes.getOksObjects();
 
     // Шаг 2.0: Автоматическая пространственная кластеризация ОКС (d <= 100м)
     List<List<OksObject>> clusters = clusteringService.clusterOksObjects(oksList);

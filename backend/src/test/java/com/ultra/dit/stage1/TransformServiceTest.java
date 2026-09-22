@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.GeoJsonType;
 
 @ExtendWith(MockitoExtension.class)
 public class TransformServiceTest extends BaseGeometryTest {
@@ -25,8 +26,10 @@ public class TransformServiceTest extends BaseGeometryTest {
     var transformed32637To4326Stream = transformService.transform32637To4326(transformed4326To32637.stream());
     var transformed32637To4326 = transformed32637To4326Stream.collect(Collectors.toList());
 
-    var transformed4326To32637Collection = new FeatureCollection(transformed4326To32637, "FeatureCollection");
-    var transformed32637To4326Collection = new FeatureCollection(transformed32637To4326, "FeatureCollection");
+    var transformed4326To32637Collection = new FeatureCollection(transformed4326To32637,
+        GeoJsonType.FEATURE_COLLECTION);
+    var transformed32637To4326Collection = new FeatureCollection(transformed32637To4326,
+        GeoJsonType.FEATURE_COLLECTION);
 
     double tolerance = 1E-10;
     assertFeatureGeometriesNotEqual(transformed4326To32637Collection, transformed32637To4326Collection, tolerance);

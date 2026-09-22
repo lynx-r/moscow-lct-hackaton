@@ -21,3 +21,15 @@ Content-Type: image/png
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
+
+POST http://localhost:8080/routing/process-stage2
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="dataset.geojson"
+Content-Type: image/png
+
+< ./data/dataset-19.09.26.geojson
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###

@@ -1,4 +1,4 @@
-package com.ultra.dit.converter;
+package com.ultra.dit.stage1.converter;
 
 import java.util.stream.Stream;
 

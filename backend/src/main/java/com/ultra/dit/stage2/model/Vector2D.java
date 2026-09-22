@@ -1,7 +1,6 @@
 package com.ultra.dit.stage2.model;
 
 import lombok.Getter;
-import lombok.Value;
 
 /**
  * Вектор для расчета углов поворота (Virtual Web)

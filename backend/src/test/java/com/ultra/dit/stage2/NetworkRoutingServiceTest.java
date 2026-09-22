@@ -7,10 +7,10 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
-import com.ultra.dit.dto.IndexContainer;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
+import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 
@@ -65,9 +65,6 @@ class NetworkRoutingServiceTest extends BaseTest {
     STRtree networksTree = new STRtree();
     networksTree.insert(existingNet.getEnvelopeInternal(), existingNet);
 
-    STRtree nodesTree = new STRtree(); // пустой для теста
-    IndexContainer globalIndexes = new IndexContainer(constraintsTree, networksTree, nodesTree);
-
     // 3. Создаем целевой ОКС (точка финиша за препятствием)
     Point connectionPoint = gf.createPoint(new Coordinate(25, 10));
     Polygon building = gf.createPolygon(new Coordinate[] {
@@ -76,9 +73,13 @@ class NetworkRoutingServiceTest extends BaseTest {
         new Coordinate(24, 9)
     });
     OksObject oks = new OksObject("OKS-1", connectionPoint, building, 1.5);
+    var oksObjects = List.of(oks);
+
+    STRtree nodesTree = new STRtree(); // пустой для теста
+    IndexContainer globalIndexes = new IndexContainer(constraintsTree, networksTree, nodesTree, oksObjects);
 
     // 4. Запуск оркестратора
-    List<List<RoutingResult>> results = routingService.executeRoutingPipeline(List.of(oks), globalIndexes);
+    List<List<RoutingResult>> results = routingService.executeRoutingPipeline(globalIndexes);
 
     // 5. Проверки
     assertFalse(results.isEmpty());

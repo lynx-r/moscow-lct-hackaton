@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class FeatureCollection {
     private List<Feature> features;
-    private String type;
+    private GeoJsonType type;
 }

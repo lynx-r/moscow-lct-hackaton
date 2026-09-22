@@ -4,8 +4,8 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.converter.GeometryCrsConverter;
 import com.ultra.dit.dto.Feature;
+import com.ultra.dit.stage1.converter.GeometryCrsConverter;
 
 @Service
 public class TransformService {

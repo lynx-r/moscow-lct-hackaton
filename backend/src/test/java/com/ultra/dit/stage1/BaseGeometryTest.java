@@ -12,6 +12,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 
 import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.GeoJsonType;
 
 public abstract class BaseGeometryTest extends BaseStage1Test {
 
@@ -26,7 +27,7 @@ public abstract class BaseGeometryTest extends BaseStage1Test {
     try (var datasetInputStream = datasetResource.getInputStream()) {
       var originFeatureStream = PARSE_SERVICE.streamFeatures(datasetInputStream);
       var features = originFeatureStream.collect(Collectors.toList());
-      originFeatureCollection = new FeatureCollection(features, "FeatureCollection");
+      originFeatureCollection = new FeatureCollection(features, GeoJsonType.FEATURE_COLLECTION);
     }
   }
 

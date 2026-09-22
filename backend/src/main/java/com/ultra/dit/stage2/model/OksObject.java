@@ -1,7 +1,7 @@
 package com.ultra.dit.stage2.model;
 
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.Polygon;
 
 import lombok.Value;
 
@@ -14,6 +14,6 @@ import lombok.Value;
 public class OksObject {
   private final String id;
   private final Point connectionPoint;
-  private final Polygon buildingPolygon;
+  private final Geometry buildingPolygon;
   private final Double flowTph;
 }
