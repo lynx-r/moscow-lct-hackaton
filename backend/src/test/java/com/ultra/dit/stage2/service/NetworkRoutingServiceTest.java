@@ -51,12 +51,15 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
 
                 OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
                 LocalBoundingBoxService bboxService = new LocalBoundingBoxService(BUFFER_METERS);
-                CollisionDetectionService collisionService = new CollisionDetectionService(BUFFER_RADIUS_METERS);
+                // CollisionDetectionService collisionService = new
+                // CollisionDetectionService(BUFFER_RADIUS_METERS);
                 NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
                                 MAX_VALENCE);
 
                 routingService = new NetworkRoutingService(
-                                clusteringService, bboxService, collisionService, topologyGenerator);
+                                clusteringService, bboxService,
+                                // collisionService,
+                                topologyGenerator);
 
                 processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
                                 routingService);

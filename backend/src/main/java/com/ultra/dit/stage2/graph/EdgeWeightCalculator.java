@@ -2,9 +2,7 @@ package com.ultra.dit.stage2.graph;
 
 import org.locationtech.jts.geom.Coordinate;
 
-import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.Vector2D;
-import com.ultra.dit.stage2.model.VirtualNode;
 
 /**
  * Шаг 2.3. Калькулятор весов ребер (Edge Weight) с матрицей приоритетов углов
@@ -24,62 +22,32 @@ public class EdgeWeightCalculator {
   private static final double EPSILON = 1.5; // Допуск на погрешность геометрии в градусах
 
   /**
-   * Рассчитывает полный вес ребра между двумя узлами.
-   *
-   * @param from Исходный виртуальный узел (содержит вектор захода в него)
-   * @param to   Целевой виртуальный узел
-   * @return Стоимость ребра в метрах (или Double.MAX_VALUE при запрещенных углах)
+   * Динамически вычисляет штраф за угол поворота между двумя последовательными
+   * участками трубы.
+   * 
+   * @param p1 Начало предыдущего сегмента
+   * @param p2 Точка излома (текущая вершина соединения)
+   * @param p3 Конец текущего сегмента
+   * @return Метрический штраф (или Double.MAX_VALUE для запрещенных тупых углов)
    */
-  public double calculateWeight(VirtualNode from, VirtualNode to) {
-    Coordinate c1 = from.getCoordinate();
-    Coordinate c2 = to.getCoordinate();
+  public double calculateWeight(Coordinate p1, Coordinate p2, Coordinate p3) {
+    // Вектор захода (откуда пришли в точку p2)
+    Vector2D dirIn = new Vector2D(p2.x - p1.x, p2.y - p1.y);
+    // Вектор выхода (куда движемся из точки p2)
+    Vector2D dirOut = new Vector2D(p3.x - p2.x, p3.y - p2.y);
 
-    // 1. Физическая длина сегмента в метрах (работаем в проекции UTM)
-    double physicalLength = c1.distance(c2);
+    // Математически точный угол изменения траектории
+    double deltaAlpha = dirIn.angleWith(dirOut);
 
-    // Если это стартовая точка из существующей сети камер, вектора предыдущего
-    // захода нет, штрафовать за угол нечего — возвращаем чистую физическую длину.
-    if (from.getType() == NodeType.EXISTING_NETWORK_NODE) {
-      return physicalLength;
-    }
-
-    // 2. Вычисляем текущий вектор движения по ребру (от c1 к c2)
-    Vector2D currentDirection = new Vector2D(c2.x - c1.x, c2.y - c1.y);
-
-    // 3. Считаем угол излома \Delta\alpha относительно вектора, под которым мы
-    // вошли в узел 'from'
-    // ВАЖНО: from.getDirectionIn() смотрит ТУДА ЖЕ, куда двигался поток при входе в
-    // узел.
-    double deltaAlpha = from.getDirectionIn().angleWith(currentDirection);
-
-    // TODO: debug workaround
-    // Если угол равен 180° (или очень близок к нему), это означает, что мы
-    // сопоставляем ребро со случайно выбранным инвертированным вектором вершины.
-    // Для планарного графа это нормальное продолжение линии вперед.
-    if (Math.abs(deltaAlpha - 180.0) <= 1.5) {
-      deltaAlpha = 0.0; // Считаем это продолжением прямой линии (0°)
-    }
-
-    // 4. Определение штрафа по матрице приоритетов ТЗ
+    // Определение штрафа по матрице приоритетов ТЗ
     double anglePenalty = determineAnglePenalty(deltaAlpha);
-
-    // // TODO: debug start
-    // System.out.println("------");
-    // System.out.println("currentDirection:");
-    // System.out.println(currentDirection);
-    // System.out.println("deltaAlpha:");
-    // System.out.println(deltaAlpha);
-    // System.out.println("anglePenalty:");
-    // System.out.println(anglePenalty);
-    // System.out.println("------");
-    // // TODO: debug end
 
     // Если штраф заградительный — блокируем ребро
     if (anglePenalty == Double.MAX_VALUE) {
       return Double.MAX_VALUE;
     }
 
-    return physicalLength + anglePenalty;
+    return anglePenalty;
   }
 
   /**

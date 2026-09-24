@@ -14,8 +14,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public class VirtualNode {
   private final Coordinate coordinate;
-  private final Vector2D directionIn;
   private final NodeType type;
+
+  private static final double tolerance = 0.001;
 
   @Override
   public boolean equals(Object o) {
@@ -26,7 +27,7 @@ public class VirtualNode {
       return false;
     }
     VirtualNode that = (VirtualNode) o;
-    return coordinate.equals2D(that.coordinate);
+    return coordinate.equals2D(that.coordinate, tolerance);
   }
 
   @Override

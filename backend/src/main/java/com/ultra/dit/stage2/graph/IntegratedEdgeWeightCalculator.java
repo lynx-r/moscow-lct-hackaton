@@ -8,7 +8,6 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 
 import com.ultra.dit.stage2.model.OksObject;
-import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.stage2.service.CollisionDetectionService;
 
 /**
@@ -34,16 +33,16 @@ public class IntegratedEdgeWeightCalculator {
     this.activeCluster = activeCluster;
   }
 
-  public double calculateWeight(VirtualNode from, VirtualNode to) {
+  public double calculateWeight(Coordinate p1, Coordinate p2, Coordinate p3) {
     // 1. Первичная проверка угла поворота и базовой стоимости (длины)
-    double baseWeight = angleCalculator.calculateWeight(from, to);
+    double baseWeight = angleCalculator.calculateWeight(p1, p2, p3);
     if (baseWeight == Double.MAX_VALUE) {
       return Double.MAX_VALUE;
     }
 
     // 2. Геометрическая сборка отрезка для проверки коллизий
     LineString segment = geometryFactory.createLineString(new Coordinate[] {
-        from.getCoordinate(), to.getCoordinate()
+        p1, p2, p3
     });
 
     // 3. Проверка 2D буферизации с защитой от самоблокирования

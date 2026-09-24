@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.YenKShortestPath;
-import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
@@ -22,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.service.DebugUtils;
+import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
@@ -41,12 +41,14 @@ public class NetworkTopologyGeneratorService {
   private final GeometryFactory geometryFactory = new GeometryFactory();
   private final int maxVariants;
   private final int maxValence;
+  private final EdgeWeightCalculator angleCalculator;
 
   public NetworkTopologyGeneratorService(
       @Value("${app.solution.stage2.maxVariants:3}") int maxVariants,
       @Value("${app.solution.stage2.maxValence:4}") int maxValence) {
     this.maxVariants = maxVariants;
     this.maxValence = maxValence;
+    this.angleCalculator = new EdgeWeightCalculator();
   }
 
   @SuppressWarnings("null")
@@ -94,8 +96,8 @@ public class NetworkTopologyGeneratorService {
 
     // Используем алгоритм Йена из JGrapht для поиска простых путей без петель
     // TODO: debug undirected graph
-    var undirectedGraph = new AsUndirectedGraph<>(graph);
-    YenKShortestPath<VirtualNode, DefaultWeightedEdge> pathFinder = new YenKShortestPath<>(undirectedGraph);
+    // var undirectedGraph = new AsUndirectedGraph<>(graph);
+    YenKShortestPath<VirtualNode, DefaultWeightedEdge> pathFinder = new YenKShortestPath<>(graph);
 
     // Собираем альтернативные пути для всех комбинаций источников и потребителей
     // кластера
@@ -135,15 +137,48 @@ public class NetworkTopologyGeneratorService {
       }
     }
 
-    // Сортируем пути по базовой стоимости (весу)
-    rawPaths.sort(Comparator.comparingDouble(GraphPath::getWeight));
+    // Динамическая фильтрация и ранжирование путей с учётом геометрии углов
+    List<EvaluatedPath> evaluatedPaths = new ArrayList<>();
+    for (var path : rawPaths) {
+      List<VirtualNode> vertices = path.getVertexList();
+      if (vertices.size() < 2)
+        continue;
 
-    List<GraphPath<VirtualNode, DefaultWeightedEdge>> uniquePaths = filterDistinctVariants(rawPaths);
+      double totalWeightWithPenalties = 0.0;
+      boolean validationPassed = true;
+
+      // Накапливаем физическую длину
+      totalWeightWithPenalties += path.getWeight();
+
+      // Динамический расчёт изломов по цепочке смежных рёбер
+      for (int i = 0; i < vertices.size() - 2; i++) {
+        Coordinate p1 = vertices.get(i).getCoordinate();
+        Coordinate p2 = vertices.get(i + 1).getCoordinate(); // Точка излома
+        Coordinate p3 = vertices.get(i + 2).getCoordinate();
+
+        double penalty = angleCalculator.calculateWeight(p1, p2, p3);
+
+        if (penalty == Double.MAX_VALUE) {
+          validationPassed = false; // Путь совершил запрещенный разворот >90 градусов!
+          break;
+        }
+        totalWeightWithPenalties += penalty;
+      }
+
+      if (validationPassed) {
+        evaluatedPaths.add(new EvaluatedPath(path, totalWeightWithPenalties));
+      }
+    }
+
+    // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
+    evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
+
+    var distinctPaths = filterDistinctVariants(evaluatedPaths);
 
     // Преобразуем выбранные пути в геоинформационные структуры данных
     List<RoutingResult> finalVariants = new ArrayList<>();
-    for (GraphPath<VirtualNode, DefaultWeightedEdge> path : uniquePaths) {
-      RoutingResult result = buildTopologicalResult(path, graph);
+    for (var evalPath : distinctPaths) {
+      RoutingResult result = buildTopologicalResult(evalPath.path);
       if (result.isConnected()) {
         finalVariants.add(result);
         if (finalVariants.size() >= maxVariants) {
@@ -166,41 +201,29 @@ public class NetworkTopologyGeneratorService {
    * содержательно разными
    * (проходить через разные свободные коридоры Вороного или точки врезки).
    */
-  private List<GraphPath<VirtualNode, DefaultWeightedEdge>> filterDistinctVariants(
-      List<GraphPath<VirtualNode, DefaultWeightedEdge>> sortedPaths) {
+  @SuppressWarnings("null")
+  private List<EvaluatedPath> filterDistinctVariants(List<EvaluatedPath> paths) {
+    List<EvaluatedPath> distinct = new ArrayList<>();
+    for (var candidate : paths) {
+      boolean isSimilar = false;
+      Set<Coordinate> candidateCoords = candidate.path.getVertexList().stream()
+          .map(VirtualNode::getCoordinate).collect(Collectors.toSet());
 
-    List<GraphPath<VirtualNode, DefaultWeightedEdge>> distinct = new ArrayList<>();
+      for (var accepted : distinct) {
+        long sharedVertices = accepted.path.getVertexList().stream()
+            .filter(v -> candidateCoords.contains(v.getCoordinate())).count();
 
-    for (GraphPath<VirtualNode, DefaultWeightedEdge> candidate : sortedPaths) {
-      if (candidate.getWeight() >= Double.MAX_VALUE)
-        continue;
-
-      boolean isDuplicate = false;
-      @SuppressWarnings("null")
-      Set<Coordinate> candidateCoords = candidate.getVertexList().stream()
-          .map(VirtualNode::getCoordinate)
-          .collect(Collectors.toSet());
-
-      for (GraphPath<VirtualNode, DefaultWeightedEdge> accepted : distinct) {
-        int sharedVertices = 0;
-        for (VirtualNode v : accepted.getVertexList()) {
-          if (candidateCoords.contains(v.getCoordinate())) {
-            sharedVertices++;
-          }
-        }
         // Критерий уникальности: если более 70% вершин совпадают, считаем варианты
         // идентичными
-        double overlapRatio = (double) sharedVertices
-            / Math.max(candidate.getVertexList().size(), accepted.getVertexList().size());
-        if (overlapRatio > 0.7) {
-          isDuplicate = true;
+        double overlap = (double) sharedVertices
+            / Math.max(candidate.path.getVertexList().size(), accepted.path.getVertexList().size());
+        if (overlap > 0.7) {
+          isSimilar = true;
           break;
         }
       }
-
-      if (!isDuplicate) {
+      if (!isSimilar)
         distinct.add(candidate);
-      }
     }
     return distinct;
   }
@@ -210,8 +233,7 @@ public class NetworkTopologyGeneratorService {
    * камеры.
    */
   private RoutingResult buildTopologicalResult(
-      GraphPath<VirtualNode, DefaultWeightedEdge> path,
-      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> originalGraph) {
+      GraphPath<VirtualNode, DefaultWeightedEdge> path) {
 
     List<VirtualNode> vertices = path.getVertexList();
     List<LineString> pipelines = new ArrayList<>();
@@ -236,11 +258,14 @@ public class NetworkTopologyGeneratorService {
       // Учитываем связи оригинального графа в точке стыка, если это существующая
       // камера
       int totalValence = nodeValence.get(c1) + (from.getType() == NodeType.EXISTING_NETWORK_NODE ? 2 : 0);
+      // TODO: проверить
+      // TODO: Контроль валентности камер (degree <= 4) по ТЗ
+      // TODO: if (valenceMap.get(c1) > 4 || valenceMap.get(c2) > 4) {
       if (totalValence > maxValence) {
         return new RoutingResult(List.of(), List.of(), false);
       }
 
-      LineString line = geometryFactory.createLineString(new Coordinate[] { c1, c2 });
+      var line = geometryFactory.createLineString(new Coordinate[] { c1, c2 });
       pipelines.add(line);
     }
 
@@ -266,5 +291,15 @@ public class NetworkTopologyGeneratorService {
     }
 
     return new RoutingResult(pipelines, chambers, true);
+  }
+
+  private static class EvaluatedPath {
+    final GraphPath<VirtualNode, DefaultWeightedEdge> path;
+    final double totalCost;
+
+    EvaluatedPath(GraphPath<VirtualNode, DefaultWeightedEdge> path, double totalCost) {
+      this.path = path;
+      this.totalCost = totalCost;
+    }
   }
 }

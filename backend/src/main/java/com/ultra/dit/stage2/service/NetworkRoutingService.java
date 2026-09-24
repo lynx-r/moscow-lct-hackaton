@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
-import com.ultra.dit.stage2.graph.IntegratedEdgeWeightCalculator;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
@@ -36,16 +35,16 @@ public class NetworkRoutingService {
 
   private final OksClusteringService clusteringService;
   private final LocalBoundingBoxService boundingBoxService;
-  private final CollisionDetectionService collisionService;
+  // private final CollisionDetectionService collisionService;
   private final NetworkTopologyGeneratorService topologyGenerator;
 
   public NetworkRoutingService(OksClusteringService clusteringService,
       LocalBoundingBoxService boundingBoxService,
-      CollisionDetectionService collisionService,
+      // CollisionDetectionService collisionService,
       NetworkTopologyGeneratorService topologyGenerator) {
     this.clusteringService = clusteringService;
     this.boundingBoxService = boundingBoxService;
-    this.collisionService = collisionService;
+    // this.collisionService = collisionService;
     this.topologyGenerator = topologyGenerator;
   }
 
@@ -87,20 +86,21 @@ public class NetworkRoutingService {
 
       // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
       // (габарит 2.0м)
-      IntegratedEdgeWeightCalculator weightCalculator = new IntegratedEdgeWeightCalculator(
-          collisionService,
-          localData.getConstraintsGeometry(),
-          cluster);
+      // IntegratedEdgeWeightCalculator weightCalculator = new
+      // IntegratedEdgeWeightCalculator(
+      // collisionService,
+      // localData.getConstraintsGeometry(),
+      // cluster);
 
       // Актуализируем веса ребер в JGrapht на основе штрафных коэффициентов и
       // коллизий
-      for (DefaultWeightedEdge edge : graph.edgeSet()) {
-        VirtualNode from = graph.getEdgeSource(edge);
-        VirtualNode to = graph.getEdgeTarget(edge);
+      // for (DefaultWeightedEdge edge : graph.edgeSet()) {
+      // VirtualNode from = graph.getEdgeSource(edge);
+      // VirtualNode to = graph.getEdgeTarget(edge);
 
-        double calculatedWeight = weightCalculator.calculateWeight(from, to);
-        graph.setEdgeWeight(edge, calculatedWeight);
-      }
+      // double calculatedWeight = weightCalculator.calculateWeight(from, to);
+      // graph.setEdgeWeight(edge, calculatedWeight);
+      // }
 
       if (log.isDebugEnabled()) {
         int clusterIdx = clusterIndex.incrementAndGet();

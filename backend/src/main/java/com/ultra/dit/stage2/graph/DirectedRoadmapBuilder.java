@@ -20,7 +20,6 @@ import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
-import com.ultra.dit.stage2.model.Vector2D;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.Distance;
 
@@ -218,18 +217,13 @@ public class DirectedRoadmapBuilder {
       Coordinate c1 = edge.getStartPoint().getCoordinate();
       Coordinate c2 = edge.getEndPoint().getCoordinate();
 
-      // Вычисляем базовые векторы направления
-      Vector2D dir1to2 = new Vector2D(c2.x - c1.x, c2.y - c1.y);
-      Vector2D dir2to1 = new Vector2D(c1.x - c2.x, c1.y - c2.y);
-
       // Создаем виртуальные узлы со стоянием захода. NodeType выставляется как
       // VORONOI_SKELETON.
       // При необходимости, если координаты совпадают с точками врезки или ОКС, тип
       // переопределяется.
 
-      // TODO: prioritet 1 не выполняется определения типа узла determineNodeType
-      VirtualNode node1_in = new VirtualNode(c1, dir2to1, determineNodeType(c1, existingSourceTree, targetOksTree));
-      VirtualNode node2_out = new VirtualNode(c2, dir1to2,
+      VirtualNode node1_in = new VirtualNode(c1, determineNodeType(c1, existingSourceTree, targetOksTree));
+      VirtualNode node2_out = new VirtualNode(c2,
           determineNodeType(c2, existingSourceTree, targetOksTree));
 
       // По ТЗ: Ориентация строго ОТ существующих сетей К ОКС.
@@ -250,7 +244,7 @@ public class DirectedRoadmapBuilder {
 
   private NodeType determineNodeType(Coordinate c, STRtree existingSourceTree, STRtree targetOksTree) {
     // Ищем кандидатов среди sources
-    List<Coordinate> sourceCandidates = getCandidates(c, existingSourceTree);
+    List<Coordinate> sourceCandidates = getSearchCandidates(c, existingSourceTree);
     for (Coordinate source : sourceCandidates) {
       if (Distance.distanceSq(c, source) <= EPSILON_SQ) {
         return NodeType.EXISTING_NETWORK_NODE;
@@ -258,7 +252,7 @@ public class DirectedRoadmapBuilder {
     }
 
     // Ищем кандидатов среди targets
-    List<Coordinate> targetCandidates = getCandidates(c, targetOksTree);
+    List<Coordinate> targetCandidates = getSearchCandidates(c, targetOksTree);
     for (Coordinate target : targetCandidates) {
       if (Distance.distanceSq(c, target) <= EPSILON_SQ) {
         return NodeType.OKS_CONNECTION;
@@ -269,18 +263,19 @@ public class DirectedRoadmapBuilder {
   }
 
   private double minDistToCoordinates(Coordinate c, STRtree existingSourceTree) {
-    List<Coordinate> sourceCandidates = getCandidates(c, existingSourceTree);
+    List<Coordinate> sourceCandidates = getSearchCandidates(c, existingSourceTree);
     double minDist = Double.MAX_VALUE;
     for (Coordinate p : sourceCandidates) {
       double d = Distance.distanceSq(c, p);
-      if (d < minDist)
+      if (d < minDist) {
         minDist = d;
+      }
     }
     return Math.sqrt(minDist);
   }
 
   @SuppressWarnings("unchecked")
-  private List<Coordinate> getCandidates(Coordinate c, STRtree searchTree) {
+  private List<Coordinate> getSearchCandidates(Coordinate c, STRtree searchTree) {
     var searchEnv = new Envelope(c.x - EPSILON, c.x + EPSILON, c.y - EPSILON, c.y + EPSILON);
     return searchTree.query(searchEnv);
   }
