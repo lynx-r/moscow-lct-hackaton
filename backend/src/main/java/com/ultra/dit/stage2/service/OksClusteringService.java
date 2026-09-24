@@ -20,7 +20,7 @@ public class OksClusteringService {
 
   private final Double clusterSizeMeters;
 
-  OksClusteringService(@Value("${app.solution.stage2.clusterSizeMeters:100.0}") double clusterSize) {
+  OksClusteringService(@Value("${app.solution.stage2.clusterSizeMeters:100.0}") Double clusterSize) {
     this.clusterSizeMeters = clusterSize;
   }
 

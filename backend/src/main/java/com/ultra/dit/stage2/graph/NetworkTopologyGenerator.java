@@ -1,11 +1,23 @@
 package com.ultra.dit.stage2.graph;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.YenKShortestPath;
 import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.service.DebugUtils;
@@ -15,13 +27,7 @@ import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 
 import lombok.NoArgsConstructor;
-import lombok.extern.java.Log;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.log4j.Log4j2;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Шаг 2.5. Финальный сервис генерации вариантов трассировки,
@@ -37,14 +43,21 @@ public class NetworkTopologyGenerator {
   private static final int MAX_VARIANTS = 3;
   private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
 
+  @SuppressWarnings("null")
+  public List<RoutingResult> generateNetworkVariants(
+      List<OksObject> cluster,
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
+    return generateNetworkVariantsDebug(cluster, graph, 0);
+  }
+
   /**
    * Генерирует до 3 содержательно отличающихся вариантов прокладки тепловой сети
    * для кластера ОКС.
    */
   @SuppressWarnings("null")
-  public List<RoutingResult> generateNetworkVariants(
+  public List<RoutingResult> generateNetworkVariantsDebug(
       List<OksObject> cluster,
-      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, int clusterIdx) {
 
     List<RoutingResult> finalVariants = new ArrayList<>();
 
@@ -105,7 +118,7 @@ public class NetworkTopologyGenerator {
 
           if (log.isDebugEnabled()) {
             // TODO: debug start
-            DebugUtils.writeGraphPaths(paths, "path-" + i);
+            DebugUtils.writeGraphPaths(paths, "path-" + clusterIdx + "-" + i);
             // TODO: debug stop
           }
 

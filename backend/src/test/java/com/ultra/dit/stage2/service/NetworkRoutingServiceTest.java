@@ -46,7 +46,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
         @BeforeEach
         void setUp() {
                 TransformService transformService = new TransformService();
-                SpatialIndexService spatialIndexService = new SpatialIndexService();
+                SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
 
                 OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
                 LocalBoundingBoxService bboxService = new LocalBoundingBoxService(BUFFER_METERS);
@@ -70,9 +70,11 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                         cluster.getVariants().forEach((variant) -> {
                                 variant.getFeatures().addAll(features);
                                 DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-variant:" + index.incrementAndGet());
+                                                "result-variant-" + index.incrementAndGet());
                         });
                 });
+
+                assertFalse(clustersRoutingResult.getRoutes().isEmpty());
         }
 
         @Test

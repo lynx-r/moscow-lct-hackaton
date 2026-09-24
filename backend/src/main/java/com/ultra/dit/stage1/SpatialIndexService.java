@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.index.strtree.STRtree;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.Feature;
@@ -19,6 +20,13 @@ import com.ultra.dit.stage2.model.OksObject;
 
 @Service
 public class SpatialIndexService {
+
+  private final Double oksConnectionPointBufferMeters;
+
+  public SpatialIndexService(
+      @Value("${app.solution.stage2.oksConnectionPointBufferMeters:2.0}") Double oksConnectionPointBufferMeters) {
+    this.oksConnectionPointBufferMeters = oksConnectionPointBufferMeters;
+  }
 
   public IndexContainer buildSpatialIndices(Stream<Feature> inputStream) {
     var constraintsTree = new STRtree();
@@ -85,9 +93,9 @@ public class SpatialIndexService {
       // Делаем микро-окно вокруг точки (расширяем на пару метров, чтобы поймать
       // касание или пересечение)
       var searchEnvelope = pointGeom.getEnvelopeInternal();
-      // TODO: в конфиг 2 метра
-      // 2 метра буфера более чем достаточно для точки подключения на границе здания
-      searchEnvelope.expandBy(2.0);
+      // oksConnectionPointBufferMeters метра буфера более чем достаточно для точки
+      // подключения на границе здания
+      searchEnvelope.expandBy(oksConnectionPointBufferMeters);
 
       // Запрашиваем из локального R-Tree только кандидатов, находящихся рядом с
       // точкой

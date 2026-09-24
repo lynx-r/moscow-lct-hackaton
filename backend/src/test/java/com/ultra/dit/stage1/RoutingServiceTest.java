@@ -2,7 +2,6 @@ package com.ultra.dit.stage1;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +22,7 @@ public class RoutingServiceTest extends BaseGeometryTest {
   private TransformService transformService = new TransformService();
 
   @Spy
-  private SpatialIndexService spatialIndexService = new SpatialIndexService();
+  private SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
 
   @Spy
   private RoutingCalculationService routingCalculationService = new MockRoutingCalculationService();

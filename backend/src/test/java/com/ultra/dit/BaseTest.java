@@ -14,4 +14,7 @@ public abstract class BaseTest {
   protected final ObjectMapper objectMapper = OBJECT_MAPPER;
 
   protected static final ClassPathResource datasetResource = new ClassPathResource("files/dataset-19.09.26.geojson");
+
+  protected final double OKS_CONNECTION_POINT_BUFFER_METERS = 2.0;
+
 }

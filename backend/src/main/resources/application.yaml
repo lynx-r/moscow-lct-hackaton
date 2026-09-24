@@ -30,6 +30,8 @@ app:
       # Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
       bufferRadiusMeters: 2.0
       clusterSizeMeters: 100.0
+      # N метра буфера более чем достаточно для точки подключения на границе здания
+      oksConnectionPointBufferMeters: 2.0
 
 springdoc:
   api-docs:

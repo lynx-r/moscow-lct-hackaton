@@ -20,6 +20,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import org.springframework.util.FileSystemUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,8 @@ public class DebugUtils {
 
   static {
     try {
+      FileSystemUtils.deleteRecursively(DebugUtils.DEBUG_FOLDER);
+
       if (Files.notExists(DEBUG_FOLDER)) {
         // Создает всю цепочку папок, если они не существуют.
         // Если папка уже есть — ничего не произойдет.

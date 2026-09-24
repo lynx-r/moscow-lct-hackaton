@@ -3,7 +3,6 @@ package com.ultra.dit.stage2.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -14,7 +13,6 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.graph.IntegratedEdgeWeightCalculator;
@@ -73,7 +71,6 @@ public class NetworkRoutingService {
 
     AtomicInteger clusterIndex = new AtomicInteger(0);
     for (List<OksObject> cluster : clusters) {
-      int clusterIdx = clusterIndex.incrementAndGet();
       // // TODO: debug start
       // var clusterFeatures = cluster.stream().flatMap(oks -> {
       // return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
@@ -90,14 +87,8 @@ public class NetworkRoutingService {
 
       // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
       // Roadmap)
-      DirectedRoadmapBuilder roadmapBuilder = new DirectedRoadmapBuilder(localData);
-      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph = roadmapBuilder.build(cluster, clusterIdx);
-
-      if (log.isDebugEnabled()) {
-        // TODO: debug start
-        DebugUtils.writeGraph(graph, "graph-base-" + clusterIdx);
-        // TODO: debug end
-      }
+      DirectedRoadmapBuilder roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster);
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph = roadmapBuilder.build();
 
       // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
       // (габарит 2.0м)
@@ -117,6 +108,7 @@ public class NetworkRoutingService {
       }
 
       if (log.isDebugEnabled()) {
+        int clusterIdx = clusterIndex.incrementAndGet();
         // TODO: debug start
         GeometryFactory geometryFactory = new GeometryFactory();
         var env = localData.getExecutionEnvelope();
@@ -136,14 +128,19 @@ public class NetworkRoutingService {
 
         DebugUtils.writeFeaturesIn32637(localFeatures, "1-" + clusterIdx + "-localFeatures");
 
-        DebugUtils.writeGraph(graph, "graph-weight-" + clusterIdx);
+        DebugUtils.writeGraph(graph, "graph-" + clusterIdx);
+
+        List<RoutingResult> clusterVariants = topologyGenerator.generateNetworkVariantsDebug(cluster, graph,
+            clusterIdx);
+        pipelineResults.add(clusterVariants);
         // TODO: debug end
+      } else {
+        // Шаг 2.5: Поиск K кратчайших путей (алгоритм Йена) и топологический контроль
+        // валентности (degree <= 4)
+        List<RoutingResult> clusterVariants = topologyGenerator.generateNetworkVariants(cluster, graph);
+        pipelineResults.add(clusterVariants);
       }
 
-      // Шаг 2.5: Поиск K кратчайших путей (алгоритм Йена) и топологический контроль
-      // валентности (degree <= 4)
-      List<RoutingResult> clusterVariants = topologyGenerator.generateNetworkVariants(cluster, graph);
-      pipelineResults.add(clusterVariants);
     }
 
     return pipelineResults;
