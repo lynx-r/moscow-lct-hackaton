@@ -62,28 +62,34 @@ public class DebugUtils {
       .serializationInclusion(JsonInclude.Include.NON_EMPTY)
       .modules(new JtsModule()).build();
 
-  public static void writeFeatures(Stream<Feature> featureStream, String fileName) {
-    String fileNamePath32637 = GEOJSON_FOLDER.resolve("32637:" + fileName + GEOJSON_EXT).toString();
+  public static void writeFeaturesIn32637(Stream<Feature> featureStream, String fileName) {
+    String fileNamePath32637 = GEOJSON_FOLDER.resolve("32637:" + fileName).toString();
 
     var rawFeatures = featureStream.collect(Collectors.toList());
-    var rawFeatureCollection = FeatureCollection.of(rawFeatures);
-    try (var outputStream = new FileOutputStream(fileNamePath32637)) {
-      OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
-    } catch (IOException e) {
-      System.out.println(e);
-    }
+    writeFeaturesToFile(rawFeatures, fileNamePath32637);
 
-    String fileNamePath = GEOJSON_FOLDER.resolve("4326:" + fileName + GEOJSON_EXT).toString();
+    String fileNamePath4326 = GEOJSON_FOLDER.resolve("4326:" + fileName).toString();
     var features = transform.transform32637To4326(rawFeatures.stream()).collect(Collectors.toList());
-    var featureCollection = FeatureCollection.of(features);
-    try (var outputStream = new FileOutputStream(fileNamePath)) {
-      OBJECT_MAPPER.writeValue(outputStream, featureCollection);
+    writeFeaturesToFile(features, fileNamePath4326);
+  }
+
+  public static void writeFeatures(Stream<Feature> featureStream, String fileName) {
+    String fileNamePath32637 = GEOJSON_FOLDER.resolve(fileName).toString();
+
+    var rawFeatures = featureStream.collect(Collectors.toList());
+    writeFeaturesToFile(rawFeatures, fileNamePath32637);
+  }
+
+  public static void writeFeaturesToFile(List<Feature> featureStream, String fileName) {
+    var rawFeatureCollection = FeatureCollection.of(featureStream);
+    try (var outputStream = new FileOutputStream(fileName + GEOJSON_EXT)) {
+      OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
     } catch (IOException e) {
       System.out.println(e);
     }
   }
 
-  public static <V extends VirtualNode, E> void writeGraph(Graph<V, E> graph,
+  public static <V extends VirtualNode, E> void writeGraphWithFeatures(Graph<V, E> graph, Stream<Feature> featureStream,
       String fileName) {
 
     var graphEdgeFeatures = StreamSupport.stream(graph.iterables().edges().spliterator(), false).map(edge -> {
@@ -97,7 +103,15 @@ public class DebugUtils {
       var lineString = geometryFactory.createLineString(lineCoords);
       return Feature.withDefaultProperties(lineString);
     });
-    writeFeatures(graphEdgeFeatures, fileName);
+
+    var allFeatures = Stream.concat(graphEdgeFeatures, featureStream);
+    writeFeaturesIn32637(allFeatures, fileName);
+  }
+
+  public static <V extends VirtualNode, E> void writeGraph(Graph<V, E> graph,
+      String fileName) {
+
+    writeGraphWithFeatures(graph, Stream.empty(), fileName);
 
     exportToGraphML(graph, fileName);
   }
@@ -125,13 +139,13 @@ public class DebugUtils {
     }
   }
 
-  public static <V, E> void writeGraphPaths(List<GraphPath<V, E>> paths, String fileName) {
+  public static <V extends VirtualNode, E> void writeGraphPaths(List<GraphPath<V, E>> paths, String fileName) {
     paths.forEach((path) -> {
-      DebugUtils.exportPathToGraphML(path, fileName);
+      exportPathToGraphML(path, fileName);
     });
   }
 
-  public static <V, E> void exportPathToGraphML(GraphPath<V, E> graphPath, String filePath) {
+  public static <V extends VirtualNode, E> void exportPathToGraphML(GraphPath<V, E> graphPath, String filePath) {
     // 1. Получаем исходный граф, к которому принадлежит путь
     Graph<V, E> baseGraph = graphPath.getGraph();
 
@@ -143,6 +157,7 @@ public class DebugUtils {
     // 3. Создаем представление графа (подграф), содержащее только элементы пути
     Graph<V, E> pathGraph = new AsSubgraph<>(baseGraph, pathVertices, pathEdges);
 
+    writeGraph(pathGraph, filePath);
     exportToGraphML(pathGraph, filePath);
   }
 }

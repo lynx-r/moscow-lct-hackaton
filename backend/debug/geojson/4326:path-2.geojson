@@ -1,0 +1,81 @@
+{
+  "features" : [ {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63678443, 55.70156799 ], [ 37.63815336, 55.701568 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63815336, 55.701568 ], [ 37.6383093, 55.7015581 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63218499, 55.70360966 ], [ 37.63203902, 55.70399657 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63677419, 55.70613271 ], [ 37.63901313, 55.70615755 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.64068491, 55.70482864 ], [ 37.63901313, 55.70615755 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63829686, 55.70273389 ], [ 37.64068491, 55.70482864 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63203902, 55.70399657 ], [ 37.63574824, 55.70556469 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63574824, 55.70556469 ], [ 37.63677419, 55.70613271 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63480755, 55.7015651 ], [ 37.63218499, 55.70360966 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.6334371, 55.7017129 ], [ 37.63480755, 55.7015651 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63678443, 55.70156799 ], [ 37.63829686, 55.70273389 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  } ],
+  "type" : "FeatureCollection"
+}

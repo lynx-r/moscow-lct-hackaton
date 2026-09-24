@@ -155,7 +155,7 @@
             <data key="edge_weight_key">160.85970912023302</data>
         </edge>
         <edge source="N_414328.1808231832_6173707.744576314" target="N_414414.2057615485_6173706.05513641">
-            <data key="edge_weight_key">1.7976931348623157E308</data>
+            <data key="edge_weight_key">86.0415261832371</data>
         </edge>
         <edge source="N_414327.8801460175_6173707.429445228" target="N_414420.68295133923_6173576.483933092">
             <data key="edge_weight_key">160.4963794732445</data>
@@ -164,7 +164,7 @@
             <data key="edge_weight_key">0.4355621194497348</data>
         </edge>
         <edge source="N_414328.1808231832_6173707.744576314" target="N_414414.2057615485_6173706.05513641">
-            <data key="edge_weight_key">1.7976931348623157E308</data>
+            <data key="edge_weight_key">86.0415261832371</data>
         </edge>
         <edge source="N_414930.66160079255_6173696.396997474" target="N_414930.66160079255_6173196.03461324">
             <data key="edge_weight_key">500.36238423455507</data>

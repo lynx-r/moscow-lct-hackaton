@@ -21,7 +21,7 @@ public class STRtreeVisualizer {
     var boundaries = extractTreeBoundaries(tree);
     var features = boundaries.stream().map((geo) -> Feature.of(geo, new FeatureProperties()));
 
-    DebugUtils.writeFeatures(features, fileName);
+    DebugUtils.writeFeaturesIn32637(features, fileName);
   }
 
   public static void printSTRtreeAsWKT(STRtree tree) {

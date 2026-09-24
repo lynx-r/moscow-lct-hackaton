@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +16,6 @@ import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
-import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.helpers.STRtreeVisualizer;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
@@ -34,7 +32,7 @@ import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
 class NetworkRoutingServiceTest extends BaseStage2Test {
 
         private static final double BUFFER_METERS = 500.0;
-        private static final double BUFFER_RADIUS_METERS = 2;
+        private static final double BUFFER_RADIUS_METERS = 0.5;
         private static final double CLUSTER_SIZE_METERS = 100.0;
 
         @Spy
@@ -64,14 +62,15 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
 
         @Test
         void test1() {
-                var features = originFeatureCollection.getFeatures().stream();
-                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features, true);
+                var features = originFeatureCollection.getFeatures();
+                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
                 clustersRoutingResult.getRoutes().forEach(cluster -> {
                         AtomicInteger index = new AtomicInteger(0);
                         cluster.getVariants().forEach((variant) -> {
+                                variant.getFeatures().addAll(features);
                                 DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-variant-" + index.incrementAndGet());
+                                                "result-variant:" + index.incrementAndGet());
                         });
                 });
         }
@@ -116,7 +115,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                 var testGeometries = List.of(obstacle, networkNode, existingNet, connectionPoint, building).stream();
                 // .stream() .flatMap(List::stream);
                 var testMapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(testGeometries);
-                DebugUtils.writeFeatures(testMapGeometriesToFeatures, "testFeatureCollection");
+                DebugUtils.writeFeaturesIn32637(testMapGeometriesToFeatures, "testFeatureCollection");
                 // TODO: debug stop
 
                 STRtree nodesTree = new STRtree();
@@ -133,7 +132,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                 var treeGeometries = List.of(constraints, networks, nodes, List.of(building)).stream()
                                 .flatMap(List::stream);
                 var mapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(treeGeometries);
-                DebugUtils.writeFeatures(mapGeometriesToFeatures,
+                DebugUtils.writeFeaturesIn32637(mapGeometriesToFeatures,
                                 "treeFeatureCollection");
                 // TODO: debug stop
 
@@ -148,7 +147,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                 clustersRoutingResult.getRoutes().forEach(cluster -> {
                         AtomicInteger index = new AtomicInteger(0);
                         cluster.getVariants().forEach((variant) -> {
-                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
+                                DebugUtils.writeFeaturesIn32637(variant.getFeatures().stream(),
                                                 "result-variant-" + index.incrementAndGet());
                         });
                 });

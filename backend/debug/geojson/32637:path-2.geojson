@@ -1,0 +1,81 @@
+{
+  "features" : [ {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414328.18082318, 6173707.74457631 ], [ 414414.20576155, 6173706.05513641 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414414.20576155, 6173706.05513641 ], [ 414423.9838768, 6173704.76141369 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414043.62913828, 6173940.63432489 ], [ 414035.30614393, 6173983.87103516 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414337.52393258, 6174215.72146977 ], [ 414478.2589673, 6174215.72146977 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414580.40440157, 6174065.77931336 ], [ 414478.2589673, 6174215.72146977 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414425.77166261, 6173835.61902285 ], [ 414580.40440157, 6174065.77931336 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414035.30614393, 6173983.87103516 ], [ 414271.81577001, 6174153.77976027 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414271.81577001, 6174153.77976027 ], [ 414337.52393258, 6174215.72146977 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414203.94524144, 6173709.86768507 ], [ 414043.62913828, 6173940.63432489 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414118.14905495, 6173728.01074674 ], [ 414203.94524144, 6173709.86768507 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 414328.18082318, 6173707.74457631 ], [ 414425.77166261, 6173835.61902285 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  } ],
+  "type" : "FeatureCollection"
+}

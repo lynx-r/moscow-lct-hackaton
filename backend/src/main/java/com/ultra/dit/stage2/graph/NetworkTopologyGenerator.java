@@ -78,7 +78,7 @@ public class NetworkTopologyGenerator {
     // Используем алгоритм Йена из JGrapht для поиска простых путей без петель
     // TODO: debug undirected graph
     var undirectedGraph = new AsUndirectedGraph<>(graph);
-    YenKShortestPath<VirtualNode, DefaultWeightedEdge> pathFinder = new YenKShortestPath<>(graph);
+    YenKShortestPath<VirtualNode, DefaultWeightedEdge> pathFinder = new YenKShortestPath<>(undirectedGraph);
 
     // Собираем альтернативные пути для всех комбинаций источников и потребителей
     // кластера

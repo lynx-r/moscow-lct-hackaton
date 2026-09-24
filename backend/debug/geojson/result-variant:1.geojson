@@ -1,0 +1,159 @@
+{
+  "features" : [ {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.6305387, 55.7018115 ], [ 37.63179608, 55.69996402 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63179608, 55.69996402 ], [ 37.63134835, 55.69934611 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63134835, 55.69934611 ], [ 37.63574824, 55.69768428 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63574824, 55.69768428 ], [ 37.63716113, 55.69697378 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63716113, 55.69697378 ], [ 37.63927601, 55.69699724 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63927601, 55.69699724 ], [ 37.64075161, 55.69826926 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.64075161, 55.69826926 ], [ 37.63829686, 55.70040522 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63829686, 55.70040522 ], [ 37.63677974, 55.7015651 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63677974, 55.7015651 ], [ 37.63678443, 55.70156799 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63678443, 55.70156799 ], [ 37.63815336, 55.701568 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.63815336, 55.701568 ], [ 37.6383093, 55.7015581 ] ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Point",
+      "coordinates" : [ 37.6305387, 55.7018115 ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Point",
+      "coordinates" : [ 37.6383093, 55.7015581 ]
+    },
+    "properties" : { },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Polygon",
+      "coordinates" : [ [ [ 37.63498618, 55.70234651 ], [ 37.6365103, 55.70234651 ], [ 37.6365103, 55.7007837 ], [ 37.63498618, 55.7007837 ], [ 37.63498618, 55.70234651 ] ] ]
+    },
+    "properties" : {
+      "id" : "1",
+      "object_type" : "restriction",
+      "restriction_type" : "water"
+    },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Point",
+      "coordinates" : [ 37.6334371, 55.7017129 ]
+    },
+    "properties" : {
+      "id" : "2",
+      "object_type" : "heat_chamber"
+    },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Point",
+      "coordinates" : [ 37.6383093, 55.7015581 ]
+    },
+    "properties" : {
+      "id" : "3",
+      "object_type" : "oks_connection_point",
+      "flow_tph" : 24.87
+    },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Polygon",
+      "coordinates" : [ [ [ 37.63818154, 55.70165517 ], [ 37.63841219, 55.70165517 ], [ 37.63841219, 55.70148082 ], [ 37.63818154, 55.70148082 ], [ 37.63818154, 55.70165517 ] ] ]
+    },
+    "properties" : {
+      "id" : "4",
+      "object_type" : "restriction",
+      "restriction_type" : "oks"
+    },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "LineString",
+      "coordinates" : [ [ 37.6305387, 55.7018115 ], [ 37.6334371, 55.7017129 ] ]
+    },
+    "properties" : {
+      "id" : "5",
+      "object_type" : "heat_network",
+      "diameter" : 500
+    },
+    "type" : "Feature"
+  }, {
+    "geometry" : {
+      "type" : "Point",
+      "coordinates" : [ 37.630934, 55.7017982 ]
+    },
+    "properties" : {
+      "id" : "6",
+      "object_type" : "heat_chamber"
+    },
+    "type" : "Feature"
+  } ],
+  "type" : "FeatureCollection"
+}

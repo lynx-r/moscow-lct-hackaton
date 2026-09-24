@@ -88,29 +88,6 @@ public class NetworkRoutingService {
       Envelope localEnvelope = boundingBoxService.calculateLocalEnvelope(cluster);
       LocalIndexContainer localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
 
-      if (log.isDebugEnabled()) {
-        // TODO: debug start
-        GeometryFactory geometryFactory = new GeometryFactory();
-        var env = localData.getExecutionEnvelope();
-        var envCoordinates = new Coordinate[] {
-            new Coordinate(env.getMinX(), env.getMinY()), new Coordinate(env.getMinX(), env.getMaxY()),
-            new Coordinate(env.getMaxX(), env.getMaxY()), new Coordinate(env.getMaxX(), env.getMinY()),
-            new Coordinate(env.getMinX(), env.getMinY())
-
-        };
-        var localBoundPolygon = geometryFactory.createPolygon(envCoordinates);
-        var localFeatures = Stream.of(FeatureMapper.mapGeometriesToFeatures(
-            localData.getConstraints()),
-            FeatureMapper.mapGeometriesToFeatures(localData.getNetworks()),
-            FeatureMapper.mapGeometriesToFeatures(localData.getNodes()),
-            Stream.of(Feature.withDefaultProperties(localBoundPolygon)))
-            .flatMap((s) -> s);
-
-        DebugUtils.writeFeatures(localFeatures,
-            "1-" + clusterIdx + "-localFeatures");
-        // TODO: debug end
-      }
-
       // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
       // Roadmap)
       DirectedRoadmapBuilder roadmapBuilder = new DirectedRoadmapBuilder(localData);
@@ -141,6 +118,24 @@ public class NetworkRoutingService {
 
       if (log.isDebugEnabled()) {
         // TODO: debug start
+        GeometryFactory geometryFactory = new GeometryFactory();
+        var env = localData.getExecutionEnvelope();
+        var envCoordinates = new Coordinate[] {
+            new Coordinate(env.getMinX(), env.getMinY()), new Coordinate(env.getMinX(), env.getMaxY()),
+            new Coordinate(env.getMaxX(), env.getMaxY()), new Coordinate(env.getMaxX(), env.getMinY()),
+            new Coordinate(env.getMinX(), env.getMinY())
+
+        };
+        var localBoundPolygon = geometryFactory.createPolygon(envCoordinates);
+        var localFeatures = Stream.of(FeatureMapper.mapGeometriesToFeatures(
+            localData.getConstraints()),
+            FeatureMapper.mapGeometriesToFeatures(localData.getNetworks()),
+            FeatureMapper.mapGeometriesToFeatures(localData.getNodes()),
+            Stream.of(Feature.withDefaultProperties(localBoundPolygon)))
+            .flatMap((s) -> s);
+
+        DebugUtils.writeFeaturesIn32637(localFeatures, "1-" + clusterIdx + "-localFeatures");
+
         DebugUtils.writeGraph(graph, "graph-weight-" + clusterIdx);
         // TODO: debug end
       }
