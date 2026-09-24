@@ -64,4 +64,16 @@ public class GlobalExceptionHandler {
     // Обычно для ошибок бизнес-валидации/трансформации возвращают 422 код
     return new ResponseEntity<>(error, HttpStatus.UNPROCESSABLE_ENTITY);
   }
+
+  /**
+   * Ошибки построения маршрутов
+   */
+  @ExceptionHandler(RoutingException.class)
+  public ResponseEntity<ErrorResponse> handleRoutingException(RoutingException ex) {
+    // Берем сообщение, которое вы передали при создании исключения
+    ErrorResponse error = new ErrorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+    // Обычно для ошибок бизнес-валидации/трансформации возвращают 422 код
+    return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
 }

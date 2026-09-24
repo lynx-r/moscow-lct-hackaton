@@ -36,14 +36,22 @@ public final class LocalIndexContainer {
   }
 
   public List<Geometry> getConstraintsGeometry() {
-    return constraints.stream().map(c -> c.getGeometry()).collect(Collectors.toList());
+    return getConstraintsGeometryStream().collect(Collectors.toList());
   }
 
   public Stream<Geometry> getNetworksGeometryStream() {
     return networks.stream().map(c -> c.getGeometry());
   }
 
+  public List<Geometry> getNetworksGeometry() {
+    return getNetworksGeometryStream().collect(Collectors.toList());
+  }
+
   public Stream<Geometry> getNodesGeometryStream() {
     return nodes.stream().map(c -> c.getGeometry());
+  }
+
+  public List<Geometry> getNodesGeometry() {
+    return getNodesGeometryStream().collect(Collectors.toList());
   }
 }

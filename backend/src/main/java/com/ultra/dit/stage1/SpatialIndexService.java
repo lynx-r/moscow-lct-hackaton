@@ -18,6 +18,9 @@ import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
+import lombok.extern.java.Log;
+
+@Log
 @Service
 public class SpatialIndexService {
 
@@ -29,6 +32,8 @@ public class SpatialIndexService {
   }
 
   public IndexContainer buildSpatialIndices(Stream<Feature> inputStream) {
+    log.info("SpatialIndexService::buildSpatialIndices start");
+
     var constraintsTree = new STRtree();
     var networksTree = new STRtree();
     var nodesTree = new STRtree();
@@ -79,7 +84,10 @@ public class SpatialIndexService {
 
     var oksBuffer = spatialJoin(tempPointsBuffer, constraintsTree);
 
-    return new IndexContainer(constraintsTree, networksTree, nodesTree, oksBuffer);
+    var result = new IndexContainer(constraintsTree, networksTree, nodesTree, oksBuffer);
+    log.info("SpatialIndexService::buildSpatialIndices finish");
+
+    return result;
   }
 
   // Пространственная сшивка (Spatial Join) точек с ближайшими полигонами ОКС

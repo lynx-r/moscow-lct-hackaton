@@ -16,9 +16,9 @@ public abstract class BaseStage2Test extends BaseTest {
 
   protected static final ParseService PARSE_SERVICE = new ParseService(OBJECT_MAPPER);
 
+  protected static final ClassPathResource datasetResource = new ClassPathResource("files/dataset-19.09.26.geojson");
   // protected static final ClassPathResource datasetResource = new
-  // ClassPathResource("files/dataset-19.09.26.geojson");
-  protected static final ClassPathResource datasetResource = new ClassPathResource("files/1-test-dataset.geojson");
+  // ClassPathResource("files/1-test-dataset.geojson");
 
   protected static FeatureCollection originFeatureCollection;
 

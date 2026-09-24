@@ -12,9 +12,12 @@ import org.springframework.stereotype.Service;
 
 import com.ultra.dit.stage2.model.OksObject;
 
+import lombok.extern.java.Log;
+
 /**
  * Шаг 2.0. Автоматическая кластеризация ОКС по пространственной близости.
  */
+@Log
 @Service
 public class OksClusteringService {
 
@@ -32,6 +35,7 @@ public class OksClusteringService {
    * @return Список списков (кластеров) объектов ОКС
    */
   public List<List<OksObject>> clusterOksObjects(List<OksObject> oksList) {
+    log.info("OksClusteringService::clusterOksObjects start");
     if (oksList == null || oksList.isEmpty()) {
       return Collections.emptyList();
     }
@@ -64,7 +68,9 @@ public class OksClusteringService {
       clusterMap.computeIfAbsent(root, k -> new ArrayList<>()).add(oksList.get(i));
     }
 
-    return new ArrayList<>(clusterMap.values());
+    var result = new ArrayList<>(clusterMap.values());
+    log.info("OksClusteringService::clusterOksObjects finish");
+    return result;
   }
 
   // Вспомогательный метод DSU: Поиск корня с компрессией путей

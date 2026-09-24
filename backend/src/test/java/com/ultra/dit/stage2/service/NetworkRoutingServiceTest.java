@@ -35,6 +35,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
         private static final double CLUSTER_SIZE_METERS = 100.0;
         private static final int MAX_VARIANTS = 3;
         private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
+        private static final int CHOOSE_FROM_PATHS_COUNT = 4; // Максимальная степень узла для камер по ТЗ
 
         @Spy
         private ParseService parserService = new ParseService(OBJECT_MAPPER);
@@ -54,7 +55,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                 // CollisionDetectionService collisionService = new
                 // CollisionDetectionService(BUFFER_RADIUS_METERS);
                 NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
-                                MAX_VALENCE);
+                                MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT);
 
                 routingService = new NetworkRoutingService(
                                 clusteringService, bboxService,

@@ -1,6 +1,7 @@
 package com.ultra.dit.stage2_test;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.ClusterVariantsResult;
@@ -74,6 +76,12 @@ public class ProcessStage2RoutesService {
       return new ClusterVariantsResult(variants);
     }).collect(Collectors.toList());
 
+    AtomicInteger i = new AtomicInteger(0);
+    routes.forEach(route -> {
+      route.getVariants().forEach(featureCollection -> {
+        DebugUtils.writeFeatures(featureCollection.getFeatures().stream(), "result-route-" + i.incrementAndGet());
+      });
+    });
     return new ClustersRoutingResult(routes);
 
   }

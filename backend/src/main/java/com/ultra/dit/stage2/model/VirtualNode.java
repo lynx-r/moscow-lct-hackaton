@@ -27,7 +27,7 @@ public class VirtualNode {
       return false;
     }
     VirtualNode that = (VirtualNode) o;
-    return coordinate.equals2D(that.coordinate, tolerance);
+    return coordinate.equals2D(that.coordinate);
   }
 
   @Override
