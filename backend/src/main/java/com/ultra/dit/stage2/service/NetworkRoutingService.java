@@ -3,7 +3,6 @@ package com.ultra.dit.stage2.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
@@ -16,13 +15,11 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.graph.IntegratedEdgeWeightCalculator;
-import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
-import com.ultra.dit.stage2_test.FeatureMapper;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -40,12 +37,12 @@ public class NetworkRoutingService {
   private final OksClusteringService clusteringService;
   private final LocalBoundingBoxService boundingBoxService;
   private final CollisionDetectionService collisionService;
-  private final NetworkTopologyGenerator topologyGenerator;
+  private final NetworkTopologyGeneratorService topologyGenerator;
 
   public NetworkRoutingService(OksClusteringService clusteringService,
       LocalBoundingBoxService boundingBoxService,
       CollisionDetectionService collisionService,
-      NetworkTopologyGenerator topologyGenerator) {
+      NetworkTopologyGeneratorService topologyGenerator) {
     this.clusteringService = clusteringService;
     this.boundingBoxService = boundingBoxService;
     this.collisionService = collisionService;
@@ -66,8 +63,6 @@ public class NetworkRoutingService {
 
     // Шаг 2.0: Автоматическая пространственная кластеризация ОКС (d <= 100м)
     List<List<OksObject>> clusters = clusteringService.clusterOksObjects(oksList);
-
-    System.out.println("SIZE: " + clusters.size());
 
     AtomicInteger clusterIndex = new AtomicInteger(0);
     for (List<OksObject> cluster : clusters) {
@@ -94,7 +89,7 @@ public class NetworkRoutingService {
       // (габарит 2.0м)
       IntegratedEdgeWeightCalculator weightCalculator = new IntegratedEdgeWeightCalculator(
           collisionService,
-          localData.getConstraints(),
+          localData.getConstraintsGeometry(),
           cluster);
 
       // Актуализируем веса ребер в JGrapht на основе штрафных коэффициентов и
@@ -119,12 +114,12 @@ public class NetworkRoutingService {
 
         };
         var localBoundPolygon = geometryFactory.createPolygon(envCoordinates);
-        var localFeatures = Stream.of(FeatureMapper.mapGeometriesToFeatures(
-            localData.getConstraints()),
-            FeatureMapper.mapGeometriesToFeatures(localData.getNetworks()),
-            FeatureMapper.mapGeometriesToFeatures(localData.getNodes()),
-            Stream.of(Feature.withDefaultProperties(localBoundPolygon)))
-            .flatMap((s) -> s);
+        List<Feature> localBoundList = List.of(Feature.withDefaultProperties(localBoundPolygon));
+        var localFeatures = List.of(localData.getConstraints(),
+            localData.getNetworks(),
+            localData.getNodes(),
+            localBoundList)
+            .stream().flatMap(l -> l.stream());
 
         DebugUtils.writeFeaturesIn32637(localFeatures, "1-" + clusterIdx + "-localFeatures");
 

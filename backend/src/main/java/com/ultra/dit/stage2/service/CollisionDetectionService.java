@@ -1,5 +1,7 @@
 package com.ultra.dit.stage2.service;
 
+import java.util.List;
+
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
@@ -7,8 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.stage2.model.OksObject;
-
-import java.util.List;
 
 /**
  * Шаг 2.4. Сервис проверки пространственных ограничений, 2D буферизации
@@ -95,7 +95,6 @@ public class CollisionDetectionService {
       // ограничения
       // JTS distance() возвращает 0.0, если геометрии пересекаются или накладываются
       double distance = pipelineBuffer.distance(constraint);
-
       if (distance <= 0.0) {
         // Буфер трубы задел или пересек зону запрета — ребро заблокировано
         return false;

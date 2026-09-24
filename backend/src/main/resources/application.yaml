@@ -32,6 +32,10 @@ app:
       clusterSizeMeters: 100.0
       # N метра буфера более чем достаточно для точки подключения на границе здания
       oksConnectionPointBufferMeters: 2.0
+      # Количество вариантов для генерации
+      maxVariants: 3
+      # Максимальная степень узла для камер по ТЗ
+      maxValence: 4
 
 springdoc:
   api-docs:

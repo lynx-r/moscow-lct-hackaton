@@ -14,6 +14,7 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
 import com.ultra.dit.stage2.model.LocalIndexContainer;
@@ -21,6 +22,7 @@ import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.Vector2D;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.util.Distance;
 
 /**
  * Шаг 2.2. Класс-строитель безопасного ориентированного каркаса путей
@@ -33,15 +35,37 @@ public class DirectedRoadmapBuilder {
   private final LocalIndexContainer localData;
   private final List<OksObject> cluster;
 
+  // Допуск в 5 сантиметров (0.05 метра) гарантирует сшивание при плавающей точке
+  private static final double EPSILON = 0.05;
+  private static final double EPSILON_SQ = EPSILON * EPSILON;
+
   private final GeometryFactory geometryFactory = new GeometryFactory();
 
   // Граф JGrapht, типизированный виртуальными узлами VirtualNode
   private final DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph;
 
+  private final STRtree targetOksTree;
+  private final STRtree existingSourceTree;
+
   public DirectedRoadmapBuilder(LocalIndexContainer localData, List<OksObject> cluster) {
     this.localData = localData;
     this.cluster = cluster;
     this.graph = new DirectedWeightedMultigraph<>(DefaultWeightedEdge.class);
+
+    // Собираем все доступные целевые координаты существующих сетей (точки врезки)
+    existingSourceTree = new STRtree();
+    localData.getNetworksGeometryStream().forEach(network -> {
+      for (Coordinate c : network.getCoordinates()) {
+        existingSourceTree.insert(new Envelope(c), c);
+      }
+    });
+
+    // Собираем целевые координаты точек подключения ОКС
+    targetOksTree = new STRtree();
+    for (OksObject oks : cluster) {
+      var c = oks.getConnectionPoint().getCoordinate();
+      targetOksTree.insert(new Envelope(c), c);
+    }
   }
 
   /**
@@ -77,7 +101,7 @@ public class DirectedRoadmapBuilder {
   private void snap(List<LineString> skeletonEdges) {
 
     // Списки целевых точек
-    List<Coordinate> sources = localData.getNetworks().stream()
+    List<Coordinate> sources = localData.getNetworksGeometryStream()
         .flatMap(g -> Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
     List<Coordinate> targets = cluster.stream()
         .map(o -> o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
@@ -116,8 +140,8 @@ public class DirectedRoadmapBuilder {
     Set<Coordinate> sites = new HashSet<>();
 
     // 1. Вершины локальных пространственных ограничений
-    for (Geometry constraint : localData.getConstraints()) {
-      // TODO: в конфиг
+    localData.getConstraintsGeometryStream().forEach(constraint -> {
+      // TODO: в конфиг !!!
       var constraintBoundary = constraint.buffer(3.0).getBoundary();
       for (Coordinate coord : constraintBoundary.getCoordinates()) {
         sites.add(coord);
@@ -125,14 +149,14 @@ public class DirectedRoadmapBuilder {
       for (Coordinate coord : constraint.getCoordinates()) {
         sites.add(coord);
       }
-    }
+    });
 
     // 2. ДОБАВЛЯЕМ ТОЧКИ СУЩЕСТВУЮЩЕЙ СЕТИ КАК СТИМУЛЫ ДЛЯ ВОРОНОГО
-    for (Geometry network : localData.getNetworks()) {
+    localData.getNetworksGeometryStream().forEach(network -> {
       for (Coordinate coord : network.getCoordinates()) {
         sites.add(coord);
       }
-    }
+    });
 
     // 3. ДОБАВЛЯЕМ ТОЧКИ ПОДКЛЮЧЕНИЯ ОКС
     for (OksObject oks : cluster) {
@@ -173,13 +197,8 @@ public class DirectedRoadmapBuilder {
 
         // Первичный быстрый пре-фильтр пересечений с ограничениями.
         // Строгая валидация с буфером 2.0м будет происходить на Шаге 2.4.
-        boolean intersectsConstraint = false;
-        for (Geometry constraint : localData.getConstraints()) {
-          if (segment.intersects(constraint)) {
-            intersectsConstraint = true;
-            break;
-          }
-        }
+        boolean intersectsConstraint = localData.getConstraintsGeometryStream()
+            .anyMatch(constraint -> segment.intersects(constraint));
         if (!intersectsConstraint) {
           validEdges.add(segment);
         }
@@ -193,19 +212,6 @@ public class DirectedRoadmapBuilder {
    * потребителям.
    */
   private void populateOrientedGraph(List<LineString> skeletonEdges) {
-    // Собираем все доступные целевые координаты существующих сетей (точки врезки)
-    List<Coordinate> existingSourceCoords = new ArrayList<>();
-    for (Geometry network : localData.getNetworks()) {
-      for (Coordinate c : network.getCoordinates()) {
-        existingSourceCoords.add(c);
-      }
-    }
-
-    // Собираем целевые координаты точек подключения ОКС
-    List<Coordinate> targetOksCoords = new ArrayList<>();
-    for (OksObject oks : cluster) {
-      targetOksCoords.add(oks.getConnectionPoint().getCoordinate());
-    }
 
     // Для каждого отрезка безопасного каркаса генерируем ориентированные ребра
     for (LineString edge : skeletonEdges) {
@@ -222,15 +228,15 @@ public class DirectedRoadmapBuilder {
       // переопределяется.
 
       // TODO: prioritet 1 не выполняется определения типа узла determineNodeType
-      VirtualNode node1_in = new VirtualNode(c1, dir2to1, determineNodeType(c1, existingSourceCoords, targetOksCoords));
+      VirtualNode node1_in = new VirtualNode(c1, dir2to1, determineNodeType(c1, existingSourceTree, targetOksTree));
       VirtualNode node2_out = new VirtualNode(c2, dir1to2,
-          determineNodeType(c2, existingSourceCoords, targetOksCoords));
+          determineNodeType(c2, existingSourceTree, targetOksTree));
 
       // По ТЗ: Ориентация строго ОТ существующих сетей К ОКС.
       // Рассчитываем, какое направление приближает нас к потребителям и отдаляет от
       // источников.
-      double dist1ToSources = minDistToCoordinates(c1, existingSourceCoords);
-      double dist2ToSources = minDistToCoordinates(c2, existingSourceCoords);
+      double dist1ToSources = minDistToCoordinates(c1, existingSourceTree);
+      double dist2ToSources = minDistToCoordinates(c2, existingSourceTree);
 
       // Если движение от c1 к c2 удаляет нас от источников существующей сети,
       // направляем ребро c1 -> c2
@@ -242,33 +248,48 @@ public class DirectedRoadmapBuilder {
     }
   }
 
-  private NodeType determineNodeType(Coordinate c, List<Coordinate> sources, List<Coordinate> targets) {
-    if (targets.contains(c)) {
-      return NodeType.OKS_CONNECTION;
+  private NodeType determineNodeType(Coordinate c, STRtree existingSourceTree, STRtree targetOksTree) {
+    // Ищем кандидатов среди sources
+    List<Coordinate> sourceCandidates = getCandidates(c, existingSourceTree);
+    for (Coordinate source : sourceCandidates) {
+      if (Distance.distanceSq(c, source) <= EPSILON_SQ) {
+        return NodeType.EXISTING_NETWORK_NODE;
+      }
     }
-    if (sources.contains(c)) {
-      return NodeType.EXISTING_NETWORK_NODE;
+
+    // Ищем кандидатов среди targets
+    List<Coordinate> targetCandidates = getCandidates(c, targetOksTree);
+    for (Coordinate target : targetCandidates) {
+      if (Distance.distanceSq(c, target) <= EPSILON_SQ) {
+        return NodeType.OKS_CONNECTION;
+      }
     }
+
     return NodeType.VORONOI_SKELETON;
   }
 
-  private double minDistToCoordinates(Coordinate c, List<Coordinate> points) {
-    if (points.isEmpty())
-      return 0.0;
+  private double minDistToCoordinates(Coordinate c, STRtree existingSourceTree) {
+    List<Coordinate> sourceCandidates = getCandidates(c, existingSourceTree);
     double minDist = Double.MAX_VALUE;
-    for (Coordinate p : points) {
-      double d = c.distance(p);
+    for (Coordinate p : sourceCandidates) {
+      double d = Distance.distanceSq(c, p);
       if (d < minDist)
         minDist = d;
     }
-    return minDist;
+    return Math.sqrt(minDist);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Coordinate> getCandidates(Coordinate c, STRtree searchTree) {
+    var searchEnv = new Envelope(c.x - EPSILON, c.x + EPSILON, c.y - EPSILON, c.y + EPSILON);
+    return searchTree.query(searchEnv);
   }
 
   private Coordinate findClosestCoordinate(Coordinate target, Set<Coordinate> candidates) {
     Coordinate closest = null;
     double minDist = Double.MAX_VALUE;
     for (Coordinate c : candidates) {
-      double d = target.distance(c);
+      double d = Distance.distanceSq(c, target);
       if (d < minDist) {
         minDist = d;
         closest = c;

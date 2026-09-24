@@ -44,17 +44,14 @@ public class DebugUtils {
 
   static {
     try {
-      FileSystemUtils.deleteRecursively(DebugUtils.DEBUG_FOLDER);
+      FileSystemUtils.deleteRecursively(DebugUtils.GEOJSON_FOLDER);
+      FileSystemUtils.deleteRecursively(DebugUtils.GRPAHT_FOLDER);
 
-      if (Files.notExists(DEBUG_FOLDER)) {
-        // Создает всю цепочку папок, если они не существуют.
-        // Если папка уже есть — ничего не произойдет.
-        Files.createDirectory(DEBUG_FOLDER);
-        Files.createDirectory(GEOJSON_FOLDER);
-        Files.createDirectory(GRPAHT_FOLDER);
-        Files.createDirectory(TEMP_FOLDER);
-        System.out.println("Директории готовы к использованию!");
-      }
+      createDirectoryIfNotExist(DEBUG_FOLDER);
+      createDirectoryIfNotExist(GEOJSON_FOLDER);
+      createDirectoryIfNotExist(GRPAHT_FOLDER);
+      createDirectoryIfNotExist(TEMP_FOLDER);
+
     } catch (IOException e) {
       System.err.println("Не удалось создать директорию: " + e.getMessage());
     }
@@ -162,5 +159,13 @@ public class DebugUtils {
 
     writeGraph(pathGraph, filePath);
     exportToGraphML(pathGraph, filePath);
+  }
+
+  public static void createDirectoryIfNotExist(Path path) throws IOException {
+    if (Files.notExists(path)) {
+      // Создает всю цепочку папок, если они не существуют.
+      // Если папка уже есть — ничего не произойдет.
+      Files.createDirectory(path);
+    }
   }
 }

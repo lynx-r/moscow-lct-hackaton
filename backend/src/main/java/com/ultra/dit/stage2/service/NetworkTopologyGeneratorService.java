@@ -1,4 +1,4 @@
-package com.ultra.dit.stage2.graph;
+package com.ultra.dit.stage2.service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,6 +18,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.service.DebugUtils;
@@ -26,7 +27,6 @@ import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 
-import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -36,12 +36,18 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 @Service
-@NoArgsConstructor
-public class NetworkTopologyGenerator {
+public class NetworkTopologyGeneratorService {
 
   private final GeometryFactory geometryFactory = new GeometryFactory();
-  private static final int MAX_VARIANTS = 3;
-  private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
+  private final int maxVariants;
+  private final int maxValence;
+
+  public NetworkTopologyGeneratorService(
+      @Value("${app.solution.stage2.maxVariants:3}") int maxVariants,
+      @Value("${app.solution.stage2.maxValence:4}") int maxValence) {
+    this.maxVariants = maxVariants;
+    this.maxValence = maxValence;
+  }
 
   @SuppressWarnings("null")
   public List<RoutingResult> generateNetworkVariants(
@@ -58,8 +64,6 @@ public class NetworkTopologyGenerator {
   public List<RoutingResult> generateNetworkVariantsDebug(
       List<OksObject> cluster,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, int clusterIdx) {
-
-    List<RoutingResult> finalVariants = new ArrayList<>();
 
     // Находим все потенциальные стартовые узлы (точки существующей сети) и финишные
     // (ОКС)
@@ -137,11 +141,12 @@ public class NetworkTopologyGenerator {
     List<GraphPath<VirtualNode, DefaultWeightedEdge>> uniquePaths = filterDistinctVariants(rawPaths);
 
     // Преобразуем выбранные пути в геоинформационные структуры данных
+    List<RoutingResult> finalVariants = new ArrayList<>();
     for (GraphPath<VirtualNode, DefaultWeightedEdge> path : uniquePaths) {
       RoutingResult result = buildTopologicalResult(path, graph);
       if (result.isConnected()) {
         finalVariants.add(result);
-        if (finalVariants.size() >= MAX_VARIANTS) {
+        if (finalVariants.size() >= maxVariants) {
           break;
         }
       }
@@ -231,7 +236,7 @@ public class NetworkTopologyGenerator {
       // Учитываем связи оригинального графа в точке стыка, если это существующая
       // камера
       int totalValence = nodeValence.get(c1) + (from.getType() == NodeType.EXISTING_NETWORK_NODE ? 2 : 0);
-      if (totalValence > MAX_VALENCE) {
+      if (totalValence > maxValence) {
         return new RoutingResult(List.of(), List.of(), false);
       }
 

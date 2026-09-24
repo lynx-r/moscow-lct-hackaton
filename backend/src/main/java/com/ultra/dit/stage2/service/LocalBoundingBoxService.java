@@ -1,10 +1,8 @@
 package com.ultra.dit.stage2.service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.Geometry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -57,45 +55,23 @@ public class LocalBoundingBoxService {
    * Выполняет пространственную фильтрацию через R-Tree (STRtree.query)
    * и формирует изолированный контекст данных для текущего шага трассировки.
    */
+  @SuppressWarnings("unchecked")
   public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes) {
     if (localEnvelope == null || localEnvelope.isNull()) {
       return new LocalIndexContainer(List.of(), List.of(), List.of(), localEnvelope);
     }
 
     // Извлекаем пространственные ограничения (Зоны запрета, дороги, здания)
-    List<Geometry> localConstraints = castQueryResult(globalIndexes.getConstraintsTree().query(localEnvelope));
+    List<Feature> localConstraints = globalIndexes.getConstraintsTree().query(localEnvelope);
 
     // Извлекаем существующие тепловые сети (Линейные объекты)
-    List<Geometry> localNetworks = castQueryResult(globalIndexes.getNetworksTree().query(localEnvelope));
+    List<Feature> localNetworks = globalIndexes.getNetworksTree().query(localEnvelope);
 
     // Извлекаем существующие камеры, источники, точки подключения (Точечные
     // объекты)
-    List<Geometry> localNodes = castQueryResult(globalIndexes.getNodesTree().query(localEnvelope));
+    List<Feature> localNodes = globalIndexes.getNodesTree().query(localEnvelope);
 
     return new LocalIndexContainer(localConstraints, localNetworks, localNodes, localEnvelope);
   }
 
-  /**
-   * Безопасное приведение сырых результатов запроса STRtree.query к
-   * типизированному списку Geometry.
-   * JTS STRtree возвращает List без явной типизации (коллекция Object).
-   */
-  private List<Geometry> castQueryResult(List<?> rawItems) {
-    if (rawItems == null || rawItems.isEmpty()) {
-      return new ArrayList<>();
-    }
-    // Создаем изменяемый массив-копию для изоляции данных в пределах потока
-    // выполнения
-    List<Geometry> geometries = new ArrayList<>(rawItems.size());
-    for (Object item : rawItems) {
-      if (item instanceof Feature) {
-        var feature = (Feature) item;
-        geometries.add(feature.getGeometry());
-      } else if (item instanceof Geometry) {
-        throw new RuntimeException("Ошибка: Geometry в STRtree");
-        // geometries.add((Geometry) item);
-      }
-    }
-    return geometries;
-  }
 }

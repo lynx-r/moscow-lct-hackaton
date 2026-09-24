@@ -21,7 +21,6 @@ import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
-import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
 import com.ultra.dit.stage2.model.ClustersRoutingResult;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
@@ -34,6 +33,8 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
         private static final double BUFFER_METERS = 500.0;
         private static final double BUFFER_RADIUS_METERS = 0.5;
         private static final double CLUSTER_SIZE_METERS = 100.0;
+        private static final int MAX_VARIANTS = 3;
+        private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
 
         @Spy
         private ParseService parserService = new ParseService(OBJECT_MAPPER);
@@ -51,7 +52,8 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
                 OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
                 LocalBoundingBoxService bboxService = new LocalBoundingBoxService(BUFFER_METERS);
                 CollisionDetectionService collisionService = new CollisionDetectionService(BUFFER_RADIUS_METERS);
-                NetworkTopologyGenerator topologyGenerator = new NetworkTopologyGenerator();
+                NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
+                                MAX_VALENCE);
 
                 routingService = new NetworkRoutingService(
                                 clusteringService, bboxService, collisionService, topologyGenerator);
