@@ -3,36 +3,103 @@ package com.ultra.dit.service;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.graph.AsSubgraph;
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.jgrapht.nio.graphml.GraphMLExporter;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.VirtualNode;
 
 public class DebugUtils {
-  private static final ObjectMapper OBJECT_MAPPER = new Jackson2ObjectMapperBuilder().failOnUnknownProperties(false)
+  public static Path DEBUG_FOLDER = Paths.get("debug");
+  public static Path GEOJSON_FOLDER = DEBUG_FOLDER.resolve("geojson");
+  public static Path GRPAHT_FOLDER = DEBUG_FOLDER.resolve("grapht");
+  public static Path TEMP_FOLDER = DEBUG_FOLDER.resolve("temp");
+
+  private static final String GEOJSON_EXT = ".geojson";
+  private static final String GRAPHT_EXT = ".graphml";
+
+  private static final TransformService transform = new TransformService();
+
+  private static final GeometryFactory geometryFactory = new GeometryFactory();
+
+  static {
+    try {
+      if (Files.notExists(DEBUG_FOLDER)) {
+        // Создает всю цепочку папок, если они не существуют.
+        // Если папка уже есть — ничего не произойдет.
+        Files.createDirectory(DEBUG_FOLDER);
+        Files.createDirectory(GEOJSON_FOLDER);
+        Files.createDirectory(GRPAHT_FOLDER);
+        Files.createDirectory(TEMP_FOLDER);
+        System.out.println("Директории готовы к использованию!");
+      }
+    } catch (IOException e) {
+      System.err.println("Не удалось создать директорию: " + e.getMessage());
+    }
+  }
+
+  public static final ObjectMapper OBJECT_MAPPER = new Jackson2ObjectMapperBuilder().failOnUnknownProperties(false)
       .indentOutput(true)
+      .serializationInclusion(JsonInclude.Include.NON_EMPTY)
       .modules(new JtsModule()).build();
 
-  public static void writeFeatureCollectionToFile(FeatureCollection featureCollection, Path path) {
-    String fileNamePath = path.toString();
+  public static void writeFeatures(Stream<Feature> featureStream, String fileName) {
+    String fileNamePath32637 = GEOJSON_FOLDER.resolve("32637:" + fileName + GEOJSON_EXT).toString();
+
+    var rawFeatures = featureStream.collect(Collectors.toList());
+    var rawFeatureCollection = FeatureCollection.of(rawFeatures);
+    try (var outputStream = new FileOutputStream(fileNamePath32637)) {
+      OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
+    } catch (IOException e) {
+      System.out.println(e);
+    }
+
+    String fileNamePath = GEOJSON_FOLDER.resolve("4326:" + fileName + GEOJSON_EXT).toString();
+    var features = transform.transform32637To4326(rawFeatures.stream()).collect(Collectors.toList());
+    var featureCollection = FeatureCollection.of(features);
     try (var outputStream = new FileOutputStream(fileNamePath)) {
       OBJECT_MAPPER.writeValue(outputStream, featureCollection);
     } catch (IOException e) {
       System.out.println(e);
     }
+  }
+
+  public static <V extends VirtualNode, E> void writeGraph(Graph<V, E> graph,
+      String fileName) {
+
+    var graphEdgeFeatures = StreamSupport.stream(graph.iterables().edges().spliterator(), false).map(edge -> {
+      VirtualNode from = graph.getEdgeSource(edge);
+      VirtualNode to = graph.getEdgeTarget(edge);
+
+      var lineCoords = new Coordinate[] {
+          from.getCoordinate(),
+          to.getCoordinate()
+      };
+      var lineString = geometryFactory.createLineString(lineCoords);
+      return Feature.withDefaultProperties(lineString);
+    });
+    writeFeatures(graphEdgeFeatures, fileName);
+
+    exportToGraphML(graph, fileName);
   }
 
   public static <V, E> void exportToGraphML(Graph<V, E> graph,
@@ -42,14 +109,26 @@ public class DebugUtils {
     // Включаем экспорт весов ребер
     exporter.setExportEdgeWeights(true);
     // Опционально: настраиваем ID для вершин, чтобы GraphML корректно их читал
-    // exporter.setVertexIdProvider(v -> String.valueOf(v.hashCode()));
+    // Вместо дефолтных номеров заставим экспортер писать в ID координаты узла,
+    // чтобы сразу видеть их в XML
+    exporter.setVertexIdProvider(v -> {
+      // Преобразуем координаты в строку без пробелов и точек, пригодную для XML ID
+      // (например, "N_24_7")
+      return "N_" + (((VirtualNode) v).getCoordinate().x) + "_" + (((VirtualNode) v).getCoordinate().y);
+    });
 
-    var path = Paths.get("data", "debug", "grapht", fileName).toString();
+    var path = GRPAHT_FOLDER.resolve(fileName + GRAPHT_EXT).toString();
     try (var writer = new FileWriter(path)) {
       exporter.exportGraph(graph, writer);
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+
+  public static <V, E> void writeGraphPaths(List<GraphPath<V, E>> paths, String fileName) {
+    paths.forEach((path) -> {
+      DebugUtils.exportPathToGraphML(path, fileName);
+    });
   }
 
   public static <V, E> void exportPathToGraphML(GraphPath<V, E> graphPath, String filePath) {

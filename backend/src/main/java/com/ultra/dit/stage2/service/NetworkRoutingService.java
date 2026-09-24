@@ -1,14 +1,16 @@
-package com.ultra.dit.stage2;
+package com.ultra.dit.stage2.service;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.Feature;
@@ -24,6 +26,8 @@ import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.stage2_test.FeatureMapper;
 
+import lombok.extern.log4j.Log4j2;
+
 /**
  * Главный сервис-оркестратор пространственного анализа и трассировки тепловой
  * сети.
@@ -31,6 +35,7 @@ import com.ultra.dit.stage2_test.FeatureMapper;
  * данных,
  * построения направленного каркаса и генерации итоговых вариантов топологии.
  */
+@Log4j2
 @Service
 public class NetworkRoutingService {
 
@@ -66,42 +71,56 @@ public class NetworkRoutingService {
 
     System.out.println("SIZE: " + clusters.size());
 
+    AtomicInteger clusterIndex = new AtomicInteger(0);
     for (List<OksObject> cluster : clusters) {
-      // TODO: debug start OK
-      var clusterFeatures = cluster.stream().flatMap(oks -> {
-        return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
-            Feature.withDefaultProperties(oks.getBuildingPolygon())).stream();
-      }).collect(Collectors.toList());
-      var clusterFeatureCollection = FeatureCollection.of(clusterFeatures);
-      DebugUtils.writeFeatureCollectionToFile(clusterFeatureCollection,
-          Paths.get("data", "debug", "geojson", "0-clusterFeatureCollection.geojson"));
-      // TODO: debug end
+      int clusterIdx = clusterIndex.incrementAndGet();
+      // // TODO: debug start
+      // var clusterFeatures = cluster.stream().flatMap(oks -> {
+      // return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
+      // Feature.withDefaultProperties(oks.getBuildingPolygon())).stream();
+      // });
+      // DebugUtils.transformAndWriteFeatureCollectionToFile(clusterFeatures,
+      // "0-" + clusterIdx + "-clusterFeatureCollection.geojson");
+      // // TODO: debug end
 
       // Шаг 2.1: Вычисление Bounding Box кластера и локализация выборки данных
       // (+500м)
       Envelope localEnvelope = boundingBoxService.calculateLocalEnvelope(cluster);
       LocalIndexContainer localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
 
-      // TODO: debug start OK
-      var localFeatures = Stream.of(FeatureMapper.mapGeometriesToFeatures(localData.getConstraints()),
-          FeatureMapper.mapGeometriesToFeatures(localData.getNetworks()),
-          FeatureMapper.mapGeometriesToFeatures(localData.getNodes()))
-          .flatMap((s) -> s)
-          .collect(Collectors.toList());
+      if (log.isDebugEnabled()) {
+        // TODO: debug start
+        GeometryFactory geometryFactory = new GeometryFactory();
+        var env = localData.getExecutionEnvelope();
+        var envCoordinates = new Coordinate[] {
+            new Coordinate(env.getMinX(), env.getMinY()), new Coordinate(env.getMinX(), env.getMaxY()),
+            new Coordinate(env.getMaxX(), env.getMaxY()), new Coordinate(env.getMaxX(), env.getMinY()),
+            new Coordinate(env.getMinX(), env.getMinY())
 
-      var localFeatureCollection = FeatureCollection.of(localFeatures);
-      DebugUtils.writeFeatureCollectionToFile(localFeatureCollection,
-          Paths.get("data", "debug", "geojson", "1-localFeatureCollection.geojson"));
-      // TODO: debug end
+        };
+        var localBoundPolygon = geometryFactory.createPolygon(envCoordinates);
+        var localFeatures = Stream.of(FeatureMapper.mapGeometriesToFeatures(
+            localData.getConstraints()),
+            FeatureMapper.mapGeometriesToFeatures(localData.getNetworks()),
+            FeatureMapper.mapGeometriesToFeatures(localData.getNodes()),
+            Stream.of(Feature.withDefaultProperties(localBoundPolygon)))
+            .flatMap((s) -> s);
+
+        DebugUtils.writeFeatures(localFeatures,
+            "1-" + clusterIdx + "-localFeatures");
+        // TODO: debug end
+      }
 
       // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
       // Roadmap)
       DirectedRoadmapBuilder roadmapBuilder = new DirectedRoadmapBuilder(localData);
-      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph = roadmapBuilder.build(cluster);
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph = roadmapBuilder.build(cluster, clusterIdx);
 
-      // TODO: debug start OK
-      DebugUtils.exportToGraphML(graph, "base-graph-" + cluster.get(0).getId() + ".graphml");
-      // TODO: debug end
+      if (log.isDebugEnabled()) {
+        // TODO: debug start
+        DebugUtils.writeGraph(graph, "graph-base-" + clusterIdx);
+        // TODO: debug end
+      }
 
       // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
       // (габарит 2.0м)
@@ -120,9 +139,11 @@ public class NetworkRoutingService {
         graph.setEdgeWeight(edge, calculatedWeight);
       }
 
-      // TODO: debug start
-      DebugUtils.exportToGraphML(graph, "with-weight-" + cluster.get(0).getId() + ".graphml");
-      // TODO: debug end
+      if (log.isDebugEnabled()) {
+        // TODO: debug start
+        DebugUtils.writeGraph(graph, "graph-weight-" + clusterIdx);
+        // TODO: debug end
+      }
 
       // Шаг 2.5: Поиск K кратчайших путей (алгоритм Йена) и топологический контроль
       // валентности (degree <= 4)

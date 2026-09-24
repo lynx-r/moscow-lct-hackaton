@@ -1,0 +1,7 @@
+logging:
+  level:
+    "[com.ultra.dit]": DEBUG
+    "[org.springframework.web.filter]": DEBUG
+    "[org.springframework.security]": DEBUG
+    "[org.postgresql]": DEBUG
+    "[org.hibernate]": DEBUG

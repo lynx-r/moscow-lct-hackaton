@@ -1,4 +1,4 @@
-package com.ultra.dit.stage2;
+package com.ultra.dit.stage2.service;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
@@ -18,7 +18,7 @@ import java.util.List;
 public class CollisionDetectionService {
 
   // Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
-  private double bufferRadiusMeters = 2.0;
+  private final double bufferRadiusMeters;
 
   CollisionDetectionService(
       @Value("${app.solution.stage2.bufferRadiusMeters:2.0}") double bufferRadiusMeters) {
@@ -41,9 +41,26 @@ public class CollisionDetectionService {
       return false;
     }
 
+    // // РАСШИРЕННАЯ ЗАЩИТА ОТ САМОБЛОКИРОВАНИЯ:
+    // // Если сегмент напрямую соединяется с целевой точкой подключения ОКС,
+    // // мы временно уменьшаем радиус буфера до 0.1м (или полностью отключаем
+    // // проверку),
+    // // так как это финишный подвод трубы к зданию сквозь его охранную зону.
+    // boolean isFinalOksInlet = false;
+    // for (OksObject oks : activeCluster) {
+    // if (segment.getStartPoint().distance(oks.getConnectionPoint()) < 0.05 ||
+    // segment.getEndPoint().distance(oks.getConnectionPoint()) < 0.05) {
+    // isFinalOksInlet = true;
+    // break;
+    // }
+    // }
+
     // 1. Динамическое построение 2D-буфера вокруг оси сегмента
     // Выполняется в планарной метровой проекции (UTM zone 37N), давая честные 2.0
     // метра во все стороны
+    // Устанавливаем радиус буфера: 0.1 метра для финального подвода трубы, 2.0
+    // метра — для магистрали
+    // double radius = isFinalOksInlet ? 0.1 : bufferRadiusMeters;
     Geometry pipelineBuffer = segment.buffer(bufferRadiusMeters);
 
     // 2. Итерируемся по всем локальным ограничениям, попавшим в выборку
@@ -61,8 +78,13 @@ public class CollisionDetectionService {
         if (segment.intersects(matchingOks.getConnectionPoint())) {
           // Разрешаем проход: коллизия со своим зданием для финишного отрезка
           // игнорируется
+          // TODO: почему не break?
           continue;
         }
+
+        // if (segment.distance(matchingOks.getConnectionPoint()) <= 10.0) {
+        // continue; // Разрешаем коллизию со своим зданием в зоне подвода
+        // }
 
         // Если отрезок проходит мимо/вдоль своего здания, но не заходит в его
         // connectionPoint,

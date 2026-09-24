@@ -2,6 +2,7 @@ package com.ultra.dit.stage1;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,7 +14,7 @@ import com.ultra.dit.service.calculation.MockRoutingCalculationService;
 import com.ultra.dit.service.calculation.RoutingCalculationService;
 
 @ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
-public class RoutingServiceTest extends BaseStage1Test {
+public class RoutingServiceTest extends BaseGeometryTest {
 
   @Spy
   private ParseService parserService = new ParseService(OBJECT_MAPPER);

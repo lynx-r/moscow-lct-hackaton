@@ -13,8 +13,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.ultra.dit.BaseTest;
+
 @ExtendWith(MockitoExtension.class)
-public class ParseServiceTest extends BaseStage1Test {
+public class ParseServiceTest extends BaseTest {
 
   @InjectMocks
   private ParseService parseService;

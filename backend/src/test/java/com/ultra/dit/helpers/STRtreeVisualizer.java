@@ -1,9 +1,7 @@
 package com.ultra.dit.helpers;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
@@ -14,7 +12,6 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.WKTWriter;
 
 import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.FeatureProperties;
 import com.ultra.dit.service.DebugUtils;
 
@@ -22,11 +19,9 @@ public class STRtreeVisualizer {
 
   public static void writeSTRtreeToFile(STRtree tree, String fileName) {
     var boundaries = extractTreeBoundaries(tree);
-    var features = boundaries.stream().map((geo) -> Feature.of(geo, new FeatureProperties()))
-        .collect(Collectors.toList());
-    var featureCollection = FeatureCollection.of(features);
+    var features = boundaries.stream().map((geo) -> Feature.of(geo, new FeatureProperties()));
 
-    DebugUtils.writeFeatureCollectionToFile(featureCollection, Paths.get("data", "debug", "geojson", fileName));
+    DebugUtils.writeFeatures(features, fileName);
   }
 
   public static void printSTRtreeAsWKT(STRtree tree) {

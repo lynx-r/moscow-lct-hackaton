@@ -54,7 +54,7 @@ public class RoutingController {
   public ResponseEntity<ClustersRoutingResult> processStage2(@RequestParam MultipartFile file) {
     try {
       var featureCollection = parserService.streamFeatures(file.getInputStream());
-      var outputGeoJson = processStage2RoutesService.buildRoutes(featureCollection);
+      var outputGeoJson = processStage2RoutesService.buildRoutes(featureCollection, true);
       return ResponseEntity.ok(outputGeoJson);
     } catch (IOException e) {
       throw new ParseException("Не удалось разобрать GeoJson " + e.getMessage());

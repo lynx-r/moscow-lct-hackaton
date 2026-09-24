@@ -1,4 +1,4 @@
-package com.ultra.dit.stage2;
+package com.ultra.dit.stage2.service;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.locationtech.jts.geom.Point;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.stage2.model.OksObject;
@@ -16,6 +17,13 @@ import com.ultra.dit.stage2.model.OksObject;
  */
 @Service
 public class OksClusteringService {
+
+  private final Double clusterSizeMeters;
+
+  OksClusteringService(@Value("${app.solution.stage2.clusterSizeMeters:100.0}") double clusterSize) {
+    this.clusterSizeMeters = clusterSize;
+  }
+
   /**
    * Если целевые точки подключения двух ОКС находятся на расстоянии <= 100
    * метров, они объединяются в один кластер.
@@ -43,8 +51,7 @@ public class OksClusteringService {
       for (int j = i + 1; j < n; j++) {
         Point pJ = oksList.get(j).getConnectionPoint();
 
-        // Проверка нормативного расстояния в 100 метров
-        if (pI.distance(pJ) <= 100.0) {
+        if (pI.distance(pJ) <= clusterSizeMeters) {
           union(parent, i, j);
         }
       }

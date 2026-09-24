@@ -29,6 +29,7 @@ app:
       bufferMeters: 500.0
       # Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
       bufferRadiusMeters: 2.0
+      clusterSizeMeters: 100.0
 
 springdoc:
   api-docs:
@@ -53,7 +54,7 @@ springdoc:
 
 logging:
   level:
-    "[com.ultra.dit]": DEBUG
+    "[com.ultra.dit]": INFO
     "[org.springframework.web.filter]": DEBUG
     "[org.springframework.security]": DEBUG
     "[org.postgresql]": DEBUG

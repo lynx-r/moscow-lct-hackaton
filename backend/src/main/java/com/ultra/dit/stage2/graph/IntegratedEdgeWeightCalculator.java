@@ -7,9 +7,9 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 
-import com.ultra.dit.stage2.CollisionDetectionService;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.stage2.service.CollisionDetectionService;
 
 /**
  * Модернизированный калькулятор весов ребер (Шаг 2.3 + Шаг 2.4).

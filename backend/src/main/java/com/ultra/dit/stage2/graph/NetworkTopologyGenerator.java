@@ -2,6 +2,7 @@ package com.ultra.dit.stage2.graph;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.YenKShortestPath;
+import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.*;
@@ -14,6 +15,9 @@ import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 
 import lombok.NoArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j2;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,6 +28,7 @@ import java.util.stream.Collectors;
  * контроля валентности узлов и построения топологии GeoJSON-совместимых
  * объектов.
  */
+@Log4j2
 @Service
 @NoArgsConstructor
 public class NetworkTopologyGenerator {
@@ -53,11 +58,26 @@ public class NetworkTopologyGenerator {
         .filter(v -> v.getType() == NodeType.OKS_CONNECTION)
         .collect(Collectors.toList());
 
+    if (log.isDebugEnabled()) {
+      // TODO: debug start
+      System.out.println("=== ДЕБАГ ТРАССИРОВКИ ===");
+      System.out.println("Потенциальные источники (Sources): " + sourceNodes.stream()
+          .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: " + v.getType())
+          .collect(Collectors.joining(", ")));
+
+      System.out.println("Потенциальные цели (Targets): " + targetNodes.stream()
+          .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: " + v.getType())
+          .collect(Collectors.joining(", ")));
+      // TODO: debug stop
+    }
+
     if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
       return List.of(new RoutingResult(List.of(), List.of(), false));
     }
 
     // Используем алгоритм Йена из JGrapht для поиска простых путей без петель
+    // TODO: debug undirected graph
+    var undirectedGraph = new AsUndirectedGraph<>(graph);
     YenKShortestPath<VirtualNode, DefaultWeightedEdge> pathFinder = new YenKShortestPath<>(graph);
 
     // Собираем альтернативные пути для всех комбинаций источников и потребителей
@@ -67,14 +87,31 @@ public class NetworkTopologyGenerator {
     for (VirtualNode source : sourceNodes) {
       for (VirtualNode target : targetNodes) {
         try {
+          if (log.isDebugEnabled()) {
+            // TODO: debug start
+            // Выводим конкретную пару, для которой сейчас запустится YenKShortestPath
+            System.out.println("Запуск поиска от Source: [" + source.getCoordinate().x + ", " + source.getCoordinate().y
+                + "] тип: " + source.getType());
+            System.out.println("Запуск поиска к Target: [" + target.getCoordinate().x + ", " + target.getCoordinate().y
+                + "] тип: " + target.getType());
+            System.out.println("===============================");
+            // TODO: debug stop
+          }
+
           // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
           // структурно уникальных
           int i = counter.incrementAndGet();
           List<GraphPath<VirtualNode, DefaultWeightedEdge>> paths = pathFinder.getPaths(source, target, 10);
-          paths.forEach((path) -> {
-            DebugUtils.exportPathToGraphML(path, "path-" + i + "-" + path.hashCode() + ".graphml");
-          });
-          rawPaths.addAll(paths);
+
+          if (log.isDebugEnabled()) {
+            // TODO: debug start
+            DebugUtils.writeGraphPaths(paths, "path-" + i);
+            // TODO: debug stop
+          }
+
+          if (!paths.isEmpty()) {
+            rawPaths.addAll(paths);
+          }
         } catch (IllegalArgumentException ignored) {
           // Вызывается JGrapht, если компоненты графа изолированы
         }

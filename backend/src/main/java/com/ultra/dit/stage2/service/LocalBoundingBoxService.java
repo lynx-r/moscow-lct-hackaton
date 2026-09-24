@@ -1,4 +1,4 @@
-package com.ultra.dit.stage2;
+package com.ultra.dit.stage2.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.dto.Feature;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
@@ -87,8 +88,12 @@ public class LocalBoundingBoxService {
     // выполнения
     List<Geometry> geometries = new ArrayList<>(rawItems.size());
     for (Object item : rawItems) {
-      if (item instanceof Geometry) {
-        geometries.add((Geometry) item);
+      if (item instanceof Feature) {
+        var feature = (Feature) item;
+        geometries.add(feature.getGeometry());
+      } else if (item instanceof Geometry) {
+        throw new RuntimeException("Ошибка: Geometry в STRtree");
+        // geometries.add((Geometry) item);
       }
     }
     return geometries;

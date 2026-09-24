@@ -63,15 +63,16 @@ public class EdgeWeightCalculator {
     // 4. Определение штрафа по матрице приоритетов ТЗ
     double anglePenalty = determineAnglePenalty(deltaAlpha);
 
-    // TODO: debug
-    System.out.println("------");
-    System.out.println("currentDirection:");
-    System.out.println(currentDirection);
-    System.out.println("deltaAlpha:");
-    System.out.println(deltaAlpha);
-    System.out.println("anglePenalty:");
-    System.out.println(anglePenalty);
-    System.out.println("------");
+    // // TODO: debug start
+    // System.out.println("------");
+    // System.out.println("currentDirection:");
+    // System.out.println(currentDirection);
+    // System.out.println("deltaAlpha:");
+    // System.out.println(deltaAlpha);
+    // System.out.println("anglePenalty:");
+    // System.out.println(anglePenalty);
+    // System.out.println("------");
+    // // TODO: debug end
 
     // Если штраф заградительный — блокируем ребро
     if (anglePenalty == Double.MAX_VALUE) {

@@ -1,10 +1,10 @@
-package com.ultra.dit.stage2;
+package com.ultra.dit.stage2.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.file.Paths;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,49 +14,66 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
-import com.ultra.dit.BaseTest;
 import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.helpers.STRtreeVisualizer;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
+import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.graph.NetworkTopologyGenerator;
+import com.ultra.dit.stage2.model.ClustersRoutingResult;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
+import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
 
-class NetworkRoutingServiceTest extends BaseTest {
+class NetworkRoutingServiceTest extends BaseStage2Test {
 
-        private static final double BUFFER_METERS = 9.0;
-        private static final double BUFFER_RADIUS_METERS = 2.0;
+        private static final double BUFFER_METERS = 500.0;
+        private static final double BUFFER_RADIUS_METERS = 2;
+        private static final double CLUSTER_SIZE_METERS = 100.0;
 
         @Spy
         private ParseService parserService = new ParseService(OBJECT_MAPPER);
 
-        private NetworkRoutingService routingService;
-        private GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 32637);
+        private ProcessStage2RoutesService processStage2RoutesService;
 
-        // Реальные сервисы для сквозного тестирования цепочки трансформации
-        private ParseService parseService;
-        private TransformService transformService;
+        private NetworkRoutingService routingService;
+        private GeometryFactory gf = new GeometryFactory();
 
         @BeforeEach
         void setUp() {
-                // Инициализируем реальные легковесные сервисы без Spring-контекста для скорости
-                transformService = new TransformService();
+                TransformService transformService = new TransformService();
+                SpatialIndexService spatialIndexService = new SpatialIndexService();
 
-                OksClusteringService clusteringService = new OksClusteringService();
+                OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
                 LocalBoundingBoxService bboxService = new LocalBoundingBoxService(BUFFER_METERS);
                 CollisionDetectionService collisionService = new CollisionDetectionService(BUFFER_RADIUS_METERS);
                 NetworkTopologyGenerator topologyGenerator = new NetworkTopologyGenerator();
 
                 routingService = new NetworkRoutingService(
                                 clusteringService, bboxService, collisionService, topologyGenerator);
+
+                processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
+                                routingService);
+        }
+
+        @Test
+        void test1() {
+                var features = originFeatureCollection.getFeatures().stream();
+                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features, true);
+
+                clustersRoutingResult.getRoutes().forEach(cluster -> {
+                        AtomicInteger index = new AtomicInteger(0);
+                        cluster.getVariants().forEach((variant) -> {
+                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
+                                                "result-variant-" + index.incrementAndGet());
+                        });
+                });
         }
 
         @Test
@@ -71,25 +88,36 @@ class NetworkRoutingServiceTest extends BaseTest {
                 STRtree constraintsTree = new STRtree();
                 constraintsTree.insert(obstacle.getEnvelopeInternal(), obstacle);
 
-                // Также можно зарегистрировать конечную точку существующей сети (15, 10) как
+                // Также можно зарегистрировать конечную точку существующей сети как
                 // точку врезки
-                Point networkNode = gf.createPoint(new Coordinate(15, 10));
+                Point networkNode = gf.createPoint(new Coordinate(13, 7));
                 // 2. Создаем существующую сеть (точка старта)
                 LineString existingNet = gf.createLineString(new Coordinate[] {
-                                new Coordinate(0, 10), networkNode.getCoordinate()
+                                new Coordinate(12, 10), networkNode.getCoordinate()
                 });
                 STRtree networksTree = new STRtree();
                 networksTree.insert(existingNet.getEnvelopeInternal(), existingNet);
 
                 // 3. Создаем целевой ОКС (точка финиша за препятствием)
-                Point connectionPoint = gf.createPoint(new Coordinate(25, 10));
+                Point connectionPoint = gf.createPoint(new Coordinate(24, 7));
                 Polygon building = gf.createPolygon(new Coordinate[] {
-                                new Coordinate(24, 9), new Coordinate(26, 9),
-                                new Coordinate(26, 11), new Coordinate(24, 11),
-                                new Coordinate(24, 9)
+                                new Coordinate(23, 6), new Coordinate(25, 6),
+                                new Coordinate(25, 8), new Coordinate(23, 8),
+                                new Coordinate(23, 6)
                 });
+                // Добавляем полигон здания ОКС, чтобы к нему можно было протянуть трубу
+                constraintsTree.insert(building.getEnvelopeInternal(), building);
                 OksObject oks = new OksObject("OKS-1", connectionPoint, building, 1.5);
                 var oksObjects = List.of(oks);
+
+                // TODO: debug start
+                @SuppressWarnings("null")
+                // polyCoords
+                var testGeometries = List.of(obstacle, networkNode, existingNet, connectionPoint, building).stream();
+                // .stream() .flatMap(List::stream);
+                var testMapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(testGeometries);
+                DebugUtils.writeFeatures(testMapGeometriesToFeatures, "testFeatureCollection");
+                // TODO: debug stop
 
                 STRtree nodesTree = new STRtree();
                 // Обязательно регистрируем точку подключения ОКС в индексе узлов карты
@@ -102,18 +130,28 @@ class NetworkRoutingServiceTest extends BaseTest {
                 var nodes = STRtreeVisualizer.extractTreeBoundaries(nodesTree);
 
                 @SuppressWarnings("null")
-                var treeGeometries = List.of(constraints, networks, nodes).stream().flatMap(List::stream);
-                var mapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(treeGeometries)
-                                .collect(Collectors.toList());
-                var treeFeatureCollection = FeatureCollection.of(mapGeometriesToFeatures);
-                DebugUtils.writeFeatureCollectionToFile(treeFeatureCollection,
-                                Paths.get("data", "debug", "geojson", "treeFeatureCollection.geojson"));
+                var treeGeometries = List.of(constraints, networks, nodes, List.of(building)).stream()
+                                .flatMap(List::stream);
+                var mapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(treeGeometries);
+                DebugUtils.writeFeatures(mapGeometriesToFeatures,
+                                "treeFeatureCollection");
                 // TODO: debug stop
 
                 IndexContainer globalIndexes = new IndexContainer(constraintsTree, networksTree, nodesTree, oksObjects);
 
                 // 4. Запуск оркестратора
                 List<List<RoutingResult>> results = routingService.executeRoutingPipeline(globalIndexes);
+
+                ClustersRoutingResult clustersRoutingResult = processStage2RoutesService
+                                .mapResultsToClustersRoutingResult(results, false);
+
+                clustersRoutingResult.getRoutes().forEach(cluster -> {
+                        AtomicInteger index = new AtomicInteger(0);
+                        cluster.getVariants().forEach((variant) -> {
+                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
+                                                "result-variant-" + index.incrementAndGet());
+                        });
+                });
 
                 // 5. Проверки
                 assertFalse(results.isEmpty());

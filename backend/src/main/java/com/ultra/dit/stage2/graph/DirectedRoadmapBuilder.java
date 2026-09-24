@@ -1,7 +1,7 @@
 package com.ultra.dit.stage2.graph;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -14,17 +14,13 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
-import com.ultra.dit.dto.FeatureCollection;
-import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.Vector2D;
 import com.ultra.dit.stage2.model.VirtualNode;
-import com.ultra.dit.stage2_test.FeatureMapper;
 
 /**
  * Шаг 2.2. Класс-строитель безопасного ориентированного каркаса путей
@@ -51,17 +47,18 @@ public class DirectedRoadmapBuilder {
    * @param cluster Список ОКС текущего кластера
    * @return Построенный ориентированный граф DirectedWeightedMultigraph
    */
-  public DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> build(List<OksObject> cluster) {
+  public DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> build(List<OksObject> cluster,
+      /* debug */ int idx) {
     // 1. Извлекаем опорные точки геометрии для построения Скелета Вороного
     List<Coordinate> siteCoordinates = extractSkeletonSites(cluster);
 
-    // TODO: debug start
-    var sitePoints = siteCoordinates.stream().map(t -> geometryFactory.createPoint(t));
-    var siteFeatures = FeatureMapper.mapStreamGeometriesToFeatures(sitePoints).collect(Collectors.toList());
-    var siteFeatureCollection = FeatureCollection.of(siteFeatures);
-    DebugUtils.writeFeatureCollectionToFile(siteFeatureCollection,
-        Paths.get("data", "debug", "geojson", "2-skeletonSites.geojson"));
-    // TODO: debug stop
+    // // TODO: debug start
+    // var sitePoints = siteCoordinates.stream().map(t ->
+    // geometryFactory.createPoint(t));
+    // var siteFeatures = FeatureMapper.mapStreamGeometriesToFeatures(sitePoints);
+    // DebugUtils.transformAndWriteFeatureCollectionToFile(siteFeatures, "2-" + idx
+    // + "-skeletonSites.geojson");
+    // // TODO: debug stop
 
     // 2. Генерация Диаграммы Вороного через JTS
     VoronoiDiagramBuilder voronoiBuilder = new VoronoiDiagramBuilder();
@@ -69,30 +66,28 @@ public class DirectedRoadmapBuilder {
     voronoiBuilder.setClipEnvelope(localData.getExecutionEnvelope());
     Geometry voronoiDiagram = voronoiBuilder.getDiagram(geometryFactory);
 
-    // // Списки целевых точек
-    // List<Coordinate> sources = localData.getNetworks().stream()
-    // .flatMap(g ->
-    // Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
-    // List<Coordinate> targets = cluster.stream()
-    // .map(o ->
-    // o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
+    // Списки целевых точек
+    List<Coordinate> sources = localData.getNetworks().stream()
+        .flatMap(g -> Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
+    List<Coordinate> targets = cluster.stream()
+        .map(o -> o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
 
     // 3. Выделяем безопасные ребра и собираем базовые вершины каркаса
     List<LineString> skeletonEdges = filterAndExtractVoronoiEdges(voronoiDiagram);
 
-    // TODO: debug start
-    var skeletonEdgesFeatures = FeatureMapper.mapGeometriesToFeatures(skeletonEdges).collect(Collectors.toList());
-    var skeletonEdgesFeatureCollection = FeatureCollection.of(skeletonEdgesFeatures);
-    DebugUtils.writeFeatureCollectionToFile(skeletonEdgesFeatureCollection,
-        Paths.get("data", "debug", "geojson", "3-skeletonEdgesFeatureCollection.geojson"));
-    // TODO: debug stop
-
     // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
-    // snap(skeletonEdges, sources, targets);
+    snap(skeletonEdges, sources, targets);
 
     // 4. Наполнение графа вершинами и связями с учетом ориентации
     // (ОТ существующих сетей К точкам подключения ОКС)
     populateOrientedGraph(skeletonEdges, cluster);
+
+    // // TODO: debug start
+    // var skeletonEdgesFeatures =
+    // FeatureMapper.mapGeometriesToFeatures(skeletonEdges);
+    // DebugUtils.transformAndWriteFeatureCollectionToFile(skeletonEdgesFeatures,
+    // "3-" + idx + "-skeletonEdgesFeatureCollection.geojson");
+    // // TODO: debug stop
 
     return graph;
   }
@@ -221,13 +216,13 @@ public class DirectedRoadmapBuilder {
     }
 
     // TODO: debug start
-    System.out.println("skeletonEdges:");
-    skeletonEdges.stream()
-        .forEach(t -> {
-          System.out.println(t.getStartPoint().getCoordinate());
-          System.out.println(t.getEndPoint().getCoordinate());
-        });
-    System.out.println("-----");
+    // System.out.println("skeletonEdges:");
+    // skeletonEdges.stream()
+    // .forEach(t -> {
+    // System.out.println(t.getStartPoint().getCoordinate());
+    // System.out.println(t.getEndPoint().getCoordinate());
+    // });
+    // System.out.println("-----");
     // TODO: debug end
 
     // Для каждого отрезка безопасного каркаса генерируем ориентированные ребра

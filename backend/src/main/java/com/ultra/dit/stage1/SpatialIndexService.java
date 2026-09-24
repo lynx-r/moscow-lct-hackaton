@@ -7,13 +7,13 @@ import java.util.stream.Stream;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.dto.RestrictionType;
+import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
@@ -85,6 +85,7 @@ public class SpatialIndexService {
       // Делаем микро-окно вокруг точки (расширяем на пару метров, чтобы поймать
       // касание или пересечение)
       var searchEnvelope = pointGeom.getEnvelopeInternal();
+      // TODO: в конфиг 2 метра
       // 2 метра буфера более чем достаточно для точки подключения на границе здания
       searchEnvelope.expandBy(2.0);
 
@@ -119,20 +120,22 @@ public class SpatialIndexService {
       // делаем резервный поиск по всему локальному окну без ограничения, чтобы
       // алгоритм не упал
       if (buildingPolygon == null) {
-        // Фолбэк: берем ближайший полигон ОКС из расширенного окна
-        var fallbackEnvelope = pointGeom.getEnvelopeInternal();
-        fallbackEnvelope.expandBy(100.0);
-        var fallbackCandidates = constraintsTree.query(fallbackEnvelope);
-        for (Object candidate : fallbackCandidates) {
-          if (candidate instanceof Feature) {
-            var feat = (Feature) candidate;
-            var props = feat.getProperties();
-            if (props.getObjectType() == ObjectType.RESTRICTION && props.getRestrictionType() == RestrictionType.OKS) {
-              buildingPolygon = feat.getGeometry();
-              break; // берем первый попавшийся в 100м
-            }
-          }
-        }
+        throw new ParseException("Не найден полигон ОКС для точки подключения");
+        // // Фолбэк: берем ближайший полигон ОКС из расширенного окна
+        // var fallbackEnvelope = pointGeom.getEnvelopeInternal();
+        // fallbackEnvelope.expandBy(100.0);
+        // var fallbackCandidates = constraintsTree.query(fallbackEnvelope);
+        // for (Object candidate : fallbackCandidates) {
+        // if (candidate instanceof Feature) {
+        // var feat = (Feature) candidate;
+        // var props = feat.getProperties();
+        // if (props.getObjectType() == ObjectType.RESTRICTION &&
+        // props.getRestrictionType() == RestrictionType.OKS) {
+        // buildingPolygon = feat.getGeometry();
+        // break; // берем первый попавшийся в 100м
+        // }
+        // }
+        // }
       }
 
       // Создаем полноценный валидный OksObject с привязанным полигоном
