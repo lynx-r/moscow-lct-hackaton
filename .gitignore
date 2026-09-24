@@ -150,3 +150,5 @@ source/database/pg_data/*
 
 # Делаем исключение для файла .gitkeep, чтобы папка попала в Git
 !source/database/pg_data/.gitkeep
+
+backend/debug
