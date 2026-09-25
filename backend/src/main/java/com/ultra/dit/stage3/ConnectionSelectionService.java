@@ -1,26 +1,43 @@
 package com.ultra.dit.stage3;
 
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.ObjectType;
-import com.ultra.dit.stage2.model.IndexContainer;
-import com.ultra.dit.stage2.model.RoutingResult;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Predicate;
+
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.linearref.LengthIndexedLine;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.function.Predicate;
+import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.ObjectType;
+import com.ultra.dit.stage2.model.IndexContainer;
+import com.ultra.dit.stage2.model.RoutingResult;
 
 /**
- * Выбор точки присоединения в общей планарной системе координат с единицей метр.
+ * Выбор точки присоединения в общей планарной системе координат с единицей
+ * метр.
  */
 @Service
 public class ConnectionSelectionService {
     /**
-     * Отдельная сессия для каждого альтернативного варианта; исходные индексы не меняются.
+     * Отдельная сессия для каждого альтернативного варианта; исходные индексы не
+     * меняются.
+     * 
      * @param indexes
      * @return Session
      */
@@ -29,7 +46,8 @@ public class ConnectionSelectionService {
     }
 
     /**
-     *  Этап 2 выдает ребра в порядке сеть -> ОКС; этап 3 принимает ОКС -> сеть.
+     * Этап 2 выдает ребра в порядке сеть -> ОКС; этап 3 принимает ОКС -> сеть.
+     * 
      * @param result
      * @return
      */
@@ -39,7 +57,8 @@ public class ConnectionSelectionService {
         }
         List<Coordinate> coordinates = new ArrayList<>();
         for (LineString edge : result.getNewPipelines()) {
-            if (edge.isEmpty()) throw new IllegalArgumentException("Пустое ребро маршрута");
+            if (edge.isEmpty())
+                throw new IllegalArgumentException("Пустое ребро маршрута");
             if (!coordinates.isEmpty() && !coordinates.get(coordinates.size() - 1)
                     .equals2D(edge.getCoordinateN(0))) {
                 throw new IllegalArgumentException("Ребра этапа 2 не образуют непрерывный упорядоченный путь");
@@ -74,7 +93,8 @@ public class ConnectionSelectionService {
                     addSegment(s.getId(), s.getParentId(), s.getDiameter(), s.getGeometry());
                 } else if (item instanceof Feature) {
                     Feature f = (Feature) item;
-                    if (f.getProperties().getObjectType() != ObjectType.HEAT_NETWORK) continue;
+                    if (f.getProperties().getObjectType() != ObjectType.HEAT_NETWORK)
+                        continue;
                     Geometry g = f.getGeometry();
                     if (!(g instanceof LineString) && !(g instanceof MultiLineString)) {
                         throw new IllegalArgumentException("Сеть должна быть линейной");
@@ -85,7 +105,8 @@ public class ConnectionSelectionService {
                                 f.getProperties().getDiameter() == null ? 0 : f.getProperties().getDiameter(),
                                 (LineString) g.getGeometryN(i));
                     }
-                } else throw new IllegalArgumentException("Неподдерживаемый элемент индекса сети");
+                } else
+                    throw new IllegalArgumentException("Неподдерживаемый элемент индекса сети");
             }
             for (Object item : indices.getNodesTree().query(new Envelope(
                     -Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, Double.MAX_VALUE))) {
@@ -99,13 +120,15 @@ public class ConnectionSelectionService {
                         nodes.add(new NetworkNode(f.getProperties().getId(), NetworkNode.HEAT_CHAMBER,
                                 (Point) f.getGeometry().copy(), false));
                     }
-                } else throw new IllegalArgumentException("Неподдерживаемый элемент индекса узла");
+                } else
+                    throw new IllegalArgumentException("Неподдерживаемый элемент индекса узла");
             }
             rebuildIndices();
         }
 
         /**
          * Добавляем сегмент
+         * 
          * @param id
          * @param parentId
          * @param diameter
@@ -129,19 +152,24 @@ public class ConnectionSelectionService {
             List<NetworkNode> candidates = new ArrayList<>();
             for (Object item : nodesTree.query(search)) {
                 NetworkNode n = (NetworkNode) item;
-                if (n.isHeatChamber() && n.getGeometry().distance(end) <= 10.0) candidates.add(n);
+                if (n.isHeatChamber() && n.getGeometry().distance(end) <= 10.0)
+                    candidates.add(n);
             }
             candidates.sort(Comparator.comparingDouble((NetworkNode n) -> n.getGeometry().distance(end))
                     .thenComparing(NetworkNode::getId, Comparator.nullsFirst(String::compareTo)));
             for (NetworkNode n : candidates) {
-                if (incidentCount(n.getGeometry()) > 3) continue;
+                if (incidentCount(n.getGeometry()) > 3)
+                    continue;
                 LineString adjusted = moveEnd(route, n.getGeometry().getCoordinate());
-                if (adjusted.getLength() == 0 || !adjusted.isSimple() || adjusted.isClosed() || !validRoute.test(adjusted)) continue;
+                if (adjusted.getLength() == 0 || !adjusted.isSimple() || adjusted.isClosed()
+                        || !validRoute.test(adjusted))
+                    continue;
                 connections.add(adjusted);
                 return new ConnectionResult(oksId, ConnectionResult.ConnectionType.EXISTING_CHAMBER,
                         n, adjusted, null, Collections.emptyList());
             }
-            if (segments.isEmpty()) throw new IllegalStateException("Нет доступных сетей");
+            if (segments.isEmpty())
+                throw new IllegalStateException("Нет доступных сетей");
             NetworkSegment nearest = (NetworkSegment) networksTree.nearestNeighbour(
                     end.getEnvelopeInternal(), end, (a, b) -> geometry(a.getItem()).distance(geometry(b.getItem())));
             LengthIndexedLine indexed = new LengthIndexedLine(nearest.getGeometry());
@@ -161,7 +189,8 @@ public class ConnectionSelectionService {
                 }
             }
             LineString adjusted = moveEnd(route, tap);
-            if (adjusted.getLength() == 0 || !adjusted.isSimple() || adjusted.isClosed() || !validRoute.test(adjusted)) {
+            if (adjusted.getLength() == 0 || !adjusted.isSimple() || adjusted.isClosed()
+                    || !validRoute.test(adjusted)) {
                 throw new IllegalStateException("Измененный маршрут непроходим. Ну пути преграда");
             }
             String id = "virtual-" + UUID.randomUUID();
@@ -185,9 +214,12 @@ public class ConnectionSelectionService {
         private int incidentCount(Point point) {
             int count = 0;
             for (Object item : networksTree.query(point.getEnvelopeInternal())) {
-                if (((NetworkSegment) item).getGeometry().intersects(point)) count++;
+                if (((NetworkSegment) item).getGeometry().intersects(point))
+                    count++;
             }
-            for (LineString line : connections) if (line.intersects(point)) count++;
+            for (LineString line : connections)
+                if (line.intersects(point))
+                    count++;
             return count;
         }
 
@@ -198,8 +230,10 @@ public class ConnectionSelectionService {
         private void rebuildIndices() {
             networksTree = new STRtree();
             nodesTree = new STRtree();
-            for (NetworkSegment s : segments) networksTree.insert(s.getGeometry().getEnvelopeInternal(), s);
-            for (NetworkNode n : nodes) nodesTree.insert(n.getGeometry().getEnvelopeInternal(), n);
+            for (NetworkSegment s : segments)
+                networksTree.insert(s.getGeometry().getEnvelopeInternal(), s);
+            for (NetworkNode n : nodes)
+                nodesTree.insert(n.getGeometry().getEnvelopeInternal(), n);
             networksTree.build();
             nodesTree.build();
         }
@@ -210,19 +244,22 @@ public class ConnectionSelectionService {
 
         /**
          * Свежий граф топологии; два направления на участок, вес равен длине в метрах
+         * 
          * @return
          */
         public DirectedWeightedMultigraph<Coordinate, DefaultWeightedEdge> buildGraph() {
-            DirectedWeightedMultigraph<Coordinate, DefaultWeightedEdge> graph =
-                    new DirectedWeightedMultigraph<>(DefaultWeightedEdge.class);
+            DirectedWeightedMultigraph<Coordinate, DefaultWeightedEdge> graph = new DirectedWeightedMultigraph<>(
+                    DefaultWeightedEdge.class);
             List<LineString> lines = new ArrayList<>(connections);
-            for (NetworkSegment s : segments) lines.add(s.getGeometry());
+            for (NetworkSegment s : segments)
+                lines.add(s.getGeometry());
             for (LineString line : lines) {
                 LengthIndexedLine indexed = new LengthIndexedLine(line);
                 SortedSet<Double> cuts = new TreeSet<>(Arrays.asList(0.0, indexed.getEndIndex()));
                 for (Object item : nodesTree.query(line.getEnvelopeInternal())) {
                     Point p = ((NetworkNode) item).getGeometry();
-                    if (line.intersects(p)) cuts.add(indexed.project(p.getCoordinate()));
+                    if (line.intersects(p))
+                        cuts.add(indexed.project(p.getCoordinate()));
                 }
                 Double previous = null;
                 for (double cut : cuts) {
@@ -248,7 +285,8 @@ public class ConnectionSelectionService {
         if (line == null || line.isEmpty() || line.getLength() <= 0 || !line.isSimple() || line.isClosed()) {
             throw new IllegalArgumentException("Ожидалась непустая открытая линия.");
         }
-        if (line.getSRID() == 4326) throw new IllegalArgumentException("Координаты должны быть в метрической системе");
+        if (line.getSRID() == 4326)
+            throw new IllegalArgumentException("Координаты должны быть в метрической системе");
         for (Coordinate c : line.getCoordinates()) {
             if (!Double.isFinite(c.x) || !Double.isFinite(c.y)) {
                 throw new IllegalArgumentException("Координаты не являются конечными");

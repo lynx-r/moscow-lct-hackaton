@@ -1,10 +1,8 @@
 package com.ultra.dit.stage3;
 
-import lombok.Getter;
-
-
-
 import org.locationtech.jts.geom.Point;
+
+import lombok.Getter;
 
 public class NetworkNode {
 
@@ -19,7 +17,7 @@ public class NetworkNode {
     @Getter
     private final boolean virtual;
 
-    public NetworkNode(String id, String objectType, Point geometry, boolean virtual){
+    public NetworkNode(String id, String objectType, Point geometry, boolean virtual) {
         this.id = id;
         this.objectType = objectType;
         this.geometry = geometry;

@@ -1,12 +1,11 @@
 package com.ultra.dit.stage3;
 
-
-import lombok.Data;
-import org.locationtech.jts.geom.LineString;
-
 import java.util.Collections;
 import java.util.List;
 
+import org.locationtech.jts.geom.LineString;
+
+import lombok.Data;
 
 @Data
 public class ConnectionResult {
@@ -29,9 +28,8 @@ public class ConnectionResult {
             NetworkNode chamber,
             LineString route,
             NetworkSegment replacedSegment,
-            List<NetworkSegment> createdSegments
-    ) {
-        this.oksId=oksId;
+            List<NetworkSegment> createdSegments) {
+        this.oksId = oksId;
         this.connectionType = connectionType;
         this.chamber = chamber;
         this.route = route;

@@ -1,9 +1,8 @@
 package com.ultra.dit.stage3;
 
-import lombok.Getter;
-import lombok.Value;
 import org.locationtech.jts.geom.LineString;
 
+import lombok.Value;
 
 /**
  * Сегмент существуещей тепловой сети
