@@ -68,15 +68,18 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
 
         @Test
         void test1() {
-                var features = originFeatureCollection.getFeatures();
+                var features = testFeatureCollection.getFeatures();
                 var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
+                AtomicInteger clusterIndex = new AtomicInteger(0);
                 clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        AtomicInteger index = new AtomicInteger(0);
+                        int clusterIdx = clusterIndex.incrementAndGet();
+                        AtomicInteger variantIndex = new AtomicInteger(0);
                         cluster.getVariants().forEach((variant) -> {
+                                var variantIdx = variantIndex.incrementAndGet();
                                 variant.getFeatures().addAll(features);
                                 DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-variant-" + index.incrementAndGet());
+                                                "result-cluster-" + clusterIdx + "-variant-" + variantIdx);
                         });
                 });
 

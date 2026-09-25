@@ -2,6 +2,8 @@ package com.ultra.dit.stage1;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,8 +33,24 @@ public class RoutingServiceTest extends BaseGeometryTest {
   private RoutingFlowService routingService;
 
   @Test
-  void shouldProcessRouting() {
-    var result = routingService.buildRoute(originFeatureStream);
+  void testBuildRoute() throws IOException {
+    for (var resource : datasetResources) {
+      var featuresInputStream = resource.getInputStream();
+      var featuresStream = parserService.streamFeatures(featuresInputStream);
+      var parsed = routingService.buildRoute(featuresStream);
+      assertNotNull(parsed);
+    }
+  }
+
+  @Test
+  void shouldBaseProcessRouting() {
+    var result = routingService.buildRoute(featuresBase.stream());
+    assertNotNull(result);
+  }
+
+  @Test
+  void shouldOrganizerProcessRouting() {
+    var result = routingService.buildRoute(featuresOrganizer.stream());
     assertNotNull(result);
   }
 
