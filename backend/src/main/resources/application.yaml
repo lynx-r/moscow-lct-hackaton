@@ -63,6 +63,7 @@ springdoc:
 logging:
   level:
     "[com.ultra.dit]": INFO
+    "[org.aspectj]": DEBUG
     "[org.springframework.web.filter]": DEBUG
     "[org.springframework.security]": DEBUG
     "[org.postgresql]": DEBUG

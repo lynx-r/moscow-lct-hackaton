@@ -11,6 +11,7 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.dto.RestrictionType;
@@ -18,9 +19,6 @@ import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
-import lombok.extern.java.Log;
-
-@Log
 @Service
 public class SpatialIndexService {
 
@@ -31,8 +29,8 @@ public class SpatialIndexService {
     this.oksConnectionPointBufferMeters = oksConnectionPointBufferMeters;
   }
 
+  @LogExecutionTime
   public IndexContainer buildSpatialIndices(Stream<Feature> inputStream) {
-    log.info("SpatialIndexService::buildSpatialIndices start");
 
     var constraintsTree = new STRtree();
     var networksTree = new STRtree();
@@ -84,10 +82,7 @@ public class SpatialIndexService {
 
     var oksBuffer = spatialJoin(tempPointsBuffer, constraintsTree);
 
-    var result = new IndexContainer(constraintsTree, networksTree, nodesTree, oksBuffer);
-    log.info("SpatialIndexService::buildSpatialIndices finish");
-
-    return result;
+    return new IndexContainer(constraintsTree, networksTree, nodesTree, oksBuffer);
   }
 
   // Пространственная сшивка (Spatial Join) точек с ближайшими полигонами ОКС

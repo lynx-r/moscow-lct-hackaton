@@ -10,14 +10,12 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.stage2.model.OksObject;
-
-import lombok.extern.java.Log;
 
 /**
  * Шаг 2.0. Автоматическая кластеризация ОКС по пространственной близости.
  */
-@Log
 @Service
 public class OksClusteringService {
 
@@ -34,8 +32,8 @@ public class OksClusteringService {
    * @param oksList Список перспективных ОКС для кластеризации
    * @return Список списков (кластеров) объектов ОКС
    */
+  @LogExecutionTime
   public List<List<OksObject>> clusterOksObjects(List<OksObject> oksList) {
-    log.info("OksClusteringService::clusterOksObjects start");
     if (oksList == null || oksList.isEmpty()) {
       return Collections.emptyList();
     }
@@ -69,7 +67,6 @@ public class OksClusteringService {
     }
 
     var result = new ArrayList<>(clusterMap.values());
-    log.info("OksClusteringService::clusterOksObjects finish");
     return result;
   }
 

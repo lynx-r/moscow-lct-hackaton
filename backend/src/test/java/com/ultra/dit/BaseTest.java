@@ -3,11 +3,14 @@ package com.ultra.dit;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +18,7 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
 
+@ExtendWith(MockitoExtension.class)
 public abstract class BaseTest {
   // Общие объекты для всех тестов геометрии
   protected static final ObjectMapper OBJECT_MAPPER = DebugUtils.OBJECT_MAPPER;
@@ -43,33 +47,37 @@ public abstract class BaseTest {
 
   @BeforeAll
   public static void initAllTests() throws IOException {
-    testFeatures = datasetResources.stream().map((resource) -> {
+    testFeatures = new ArrayList<>();
+
+    for (var resource : datasetResources) {
       assertTrue(resource.exists(), "Файл " + resource.getFilename() + " должен существовать");
 
-      // Поток откроется, прочитается и закроется ровно один раз
-      try (var datasetInputStream = resource.getInputStream()) {
-        var featureStream = PARSE_SERVICE.streamFeatures(datasetInputStream).collect(Collectors.toList());
-        return featureStream;
-      } catch (IOException e) {
-        e.printStackTrace();
-        return List.<Feature>of();
+      // Открываем поток, полностью вычитываем стрим сервиса в список, и только потом
+      // закрываем поток
+      try (var datasetInputStream = resource.getInputStream();
+          var featureStream = PARSE_SERVICE.streamFeatures(datasetInputStream)) {
+
+        List<Feature> features = featureStream.collect(Collectors.toList());
+        testFeatures.add(features);
       }
-    }).collect(Collectors.toList());
+    }
 
     // datasetTestResource
     assertTrue(datasetBaseResource.exists(), "Файл датасета должен существовать");
 
     // Поток откроется, прочитается и закроется ровно один раз
-    try (var datasetInputStream = datasetBaseResource.getInputStream()) {
-      featuresBase = PARSE_SERVICE.streamFeatures(datasetInputStream).collect(Collectors.toList());
+    try (var datasetInputStream = datasetBaseResource.getInputStream();
+        var featureStream = PARSE_SERVICE.streamFeatures(datasetInputStream)) {
+      featuresBase = featureStream.collect(Collectors.toList());
     }
 
     // datasetOrganizerResource
     assertTrue(datasetOrganizerResource.exists(), "Файл датасета должен существовать");
 
     // Поток откроется, прочитается и закроется ровно один раз
-    try (var datasetInputStream = datasetOrganizerResource.getInputStream()) {
-      featuresOrganizer = PARSE_SERVICE.streamFeatures(datasetInputStream).collect(Collectors.toList());
+    try (var datasetInputStream = datasetOrganizerResource.getInputStream();
+        var featureStream = PARSE_SERVICE.streamFeatures(datasetInputStream)) {
+      featuresOrganizer = featureStream.collect(Collectors.toList());
     }
   }
 

@@ -34,8 +34,7 @@ public class RoutingController {
 
   @PostMapping("process")
   public ResponseEntity<RoutingResult> process(@RequestParam MultipartFile file) {
-    try {
-      var featureCollection = parserService.streamFeatures(file.getInputStream());
+    try (var featureCollection = parserService.streamFeatures(file.getInputStream())) {
       var outputGeoJson = routingFlowService.buildRoute(featureCollection);
       return ResponseEntity.ok(outputGeoJson);
     } catch (IOException e) {
@@ -45,15 +44,15 @@ public class RoutingController {
 
   @PostMapping("process-json")
   public ResponseEntity<RoutingResult> processJson(InputStream inputStream) {
-    var featureCollection = parserService.streamFeatures(inputStream);
-    var outputGeoJson = routingFlowService.buildRoute(featureCollection);
-    return ResponseEntity.ok(outputGeoJson);
+    try (var featureCollection = parserService.streamFeatures(inputStream)) {
+      var outputGeoJson = routingFlowService.buildRoute(featureCollection);
+      return ResponseEntity.ok(outputGeoJson);
+    }
   }
 
   @PostMapping("process-stage2")
   public ResponseEntity<ClustersRoutingResult> processStage2(@RequestParam MultipartFile file) {
-    try {
-      var featureCollection = parserService.streamFeatures(file.getInputStream());
+    try (var featureCollection = parserService.streamFeatures(file.getInputStream())) {
       var outputGeoJson = processStage2RoutesService.buildRoutes(featureCollection, true);
       return ResponseEntity.ok(outputGeoJson);
     } catch (IOException e) {

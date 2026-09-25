@@ -4,41 +4,56 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mockito;
+import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
+import com.ultra.dit.aop.LoggingAspect;
 import com.ultra.dit.service.RoutingFlowService;
-import com.ultra.dit.service.calculation.MockRoutingCalculationService;
-import com.ultra.dit.service.calculation.RoutingCalculationService;
 
-@ExtendWith(MockitoExtension.class) // Подключаем Mockito к JUnit 5
+// Подключаем Mockito к JUnit 5
 public class RoutingServiceTest extends BaseGeometryTest {
 
-  @Spy
-  private ParseService parserService = new ParseService(OBJECT_MAPPER);
+  private ParseService parseService;
 
-  @Spy
-  private TransformService transformService = new TransformService();
+  private TransformService transformService;
 
-  @Spy
-  private SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
+  private SpatialIndexService spatialIndexService;
 
-  @Spy
-  private RoutingCalculationService routingCalculationService = new MockRoutingCalculationService();
-
-  @InjectMocks
   private RoutingFlowService routingService;
+
+  @BeforeEach
+  void setUp() {
+    var parseServiceSpy = Mockito.spy(new ParseService(OBJECT_MAPPER));
+    AspectJProxyFactory parseServiceFactory = new AspectJProxyFactory(parseServiceSpy);
+    parseServiceFactory.addAspect(new LoggingAspect());
+    parseServiceFactory.setProxyTargetClass(true);
+    parseService = parseServiceFactory.getProxy();
+
+    var transformServiceSpy = Mockito.spy(new TransformService());
+    AspectJProxyFactory transformServiceFactory = new AspectJProxyFactory(transformServiceSpy);
+    transformServiceFactory.addAspect(new LoggingAspect());
+    transformServiceFactory.setProxyTargetClass(true);
+    transformService = transformServiceFactory.getProxy();
+
+    var spatialIndexServiceSpy = Mockito.spy(new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS));
+    AspectJProxyFactory spatialIndexServiceFactory = new AspectJProxyFactory(spatialIndexServiceSpy);
+    spatialIndexServiceFactory.addAspect(new LoggingAspect());
+    spatialIndexServiceFactory.setProxyTargetClass(true);
+    spatialIndexService = spatialIndexServiceFactory.getProxy();
+
+    routingService = new RoutingFlowService(transformService, spatialIndexService);
+  }
 
   @Test
   void testBuildRoute() throws IOException {
     for (var resource : datasetResources) {
-      var featuresInputStream = resource.getInputStream();
-      var featuresStream = parserService.streamFeatures(featuresInputStream);
-      var parsed = routingService.buildRoute(featuresStream);
-      assertNotNull(parsed);
+      try (var featuresInputStream = resource.getInputStream();
+          var parsed = parseService.streamFeatures(featuresInputStream)) {
+        var routes = routingService.buildRoute(parsed);
+        assertNotNull(routes);
+      }
     }
   }
 

@@ -1,27 +1,22 @@
 package com.ultra.dit.stage2.service;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.exception.RoutingException;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
-import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
-import com.ultra.dit.stage2.model.VirtualNode;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -58,14 +53,13 @@ public class NetworkRoutingService {
    * @return Список списков вариантов трассировки (до 3 вариантов на каждый
    *         кластер)
    */
+  @LogExecutionTime
   public List<List<RoutingResult>> executeRoutingPipeline(IndexContainer globalIndexes) {
-    log.info("NetworkRoutingService::executeRoutingPipeline start");
-
     var oksList = globalIndexes.getOksObjects();
 
     // Шаг 2.0: Автоматическая пространственная кластеризация ОКС (d <= 100м)
     List<List<OksObject>> clusters = clusteringService.clusterOksObjects(oksList);
-    log.info("executeRoutingPipeline clusters.size() = " + clusters.size());
+    log.info("Clusters Count " + clusters.size());
 
     AtomicInteger clusterIndex = new AtomicInteger(0);
     ForkJoinPool customThreadPool = new ForkJoinPool(3); // Ограничиваемся 3 параллельными кластерами
@@ -73,26 +67,26 @@ public class NetworkRoutingService {
     try {
       var pipelineResults = customThreadPool.submit(() -> clusters.parallelStream().map(cluster -> {
         int clusterIdx = clusterIndex.incrementAndGet();
-        // // TODO: debug start
-        // var clusterFeatures = cluster.stream().flatMap(oks -> {
-        // return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
-        // Feature.withDefaultProperties(oks.getBuildingPolygon())).stream();
-        // });
-        // DebugUtils.transformAndWriteFeatureCollectionToFile(clusterFeatures,
-        // "0-" + clusterIdx + "-clusterFeatureCollection.geojson");
-        // // TODO: debug end
+        if (log.isTraceEnabled()) {
+          // TODO: debug start
+          var clusterFeatures = cluster.stream().flatMap(oks -> {
+            return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
+                Feature.withDefaultProperties(oks.getBuildingPolygon())).stream();
+          });
+          DebugUtils.writeFeaturesIn32637(clusterFeatures,
+              "0-" + clusterIdx + "-clusterFeatureCollection");
+          // TODO: debug end
+        }
 
         // Шаг 2.1: Вычисление Bounding Box кластера и локализация выборки данных
         // (+500м)
-        Envelope localEnvelope = boundingBoxService.calculateLocalEnvelope(cluster);
-        LocalIndexContainer localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
+        var localEnvelope = boundingBoxService.calculateLocalEnvelope(cluster);
+        var localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
 
         // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
         // Roadmap)
-        log.info("DirectedRoadmapBuilder::build cluster-" + clusterIdx + " start");
-        DirectedRoadmapBuilder roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster);
-        DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph = roadmapBuilder.build();
-        log.info("DirectedRoadmapBuilder::build cluster-" + clusterIdx + " finish");
+        var roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster);
+        var graph = roadmapBuilder.build();
 
         // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
         // (габарит 2.0м)
@@ -112,7 +106,7 @@ public class NetworkRoutingService {
         // graph.setEdgeWeight(edge, calculatedWeight);
         // }
 
-        if (log.isDebugEnabled()) {
+        if (log.isTraceEnabled()) {
           // TODO: debug start
           GeometryFactory geometryFactory = new GeometryFactory();
           var env = localData.getExecutionEnvelope();
@@ -137,18 +131,11 @@ public class NetworkRoutingService {
           // TODO: debug end
         }
 
-        log.info("NetworkTopologyGeneratorService::generateNetworkVariants for cluster-" + clusterIdx + " start");
-        List<RoutingResult> clusterVariants = topologyGenerator.generateNetworkVariants(cluster, graph);
-        log.info("NetworkTopologyGeneratorService::generateNetworkVariants for cluster-" + clusterIdx + " finish");
-        return clusterVariants;
+        return topologyGenerator.generateNetworkVariants(cluster, graph);
       }).filter(variant -> !variant.isEmpty()).collect(Collectors.toList())).get();
       return pipelineResults;
-    } catch (InterruptedException e) {
+    } catch (Exception e) {
       throw new RoutingException("Не удалось построить маршруты: " + e.getMessage());
-    } catch (ExecutionException e) {
-      throw new RoutingException("Не удалось построить маршруты: " + e.getMessage());
-    } finally {
-      log.info("NetworkRoutingService::executeRoutingPipeline finish");
     }
 
   }

@@ -141,10 +141,10 @@ public class DirectedRoadmapBuilder {
     // 1. Вершины локальных пространственных ограничений
     localData.getConstraintsGeometryStream().forEach(constraint -> {
       // TODO: в конфиг !!!
-      var constraintBoundary = constraint.buffer(3.0).getBoundary();
-      for (Coordinate coord : constraintBoundary.getCoordinates()) {
-        sites.add(coord);
-      }
+      // var constraintBoundary = constraint.buffer(3.0).getBoundary();
+      // for (Coordinate coord : constraintBoundary.getCoordinates()) {
+      // sites.add(coord);
+      // }
       for (Coordinate coord : constraint.getCoordinates()) {
         sites.add(coord);
       }

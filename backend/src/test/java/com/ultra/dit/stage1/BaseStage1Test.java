@@ -13,7 +13,7 @@ public abstract class BaseStage1Test extends BaseTest {
   protected InputStream datasetOrganizerInputStream;
 
   @BeforeEach
-  public void setUp() throws IOException {
+  void setUp() throws IOException {
     datasetBaseInputStream = datasetBaseResource.getInputStream();
     datasetOrganizerInputStream = datasetOrganizerResource.getInputStream();
   }

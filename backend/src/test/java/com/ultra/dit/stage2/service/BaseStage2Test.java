@@ -23,8 +23,8 @@ public abstract class BaseStage2Test extends BaseTest {
     assertTrue(datasetBaseResource.exists(), "Файл датасета должен существовать");
 
     // Поток откроется, прочитается и закроется ровно один раз
-    try (var datasetInputStream = datasetBaseResource.getInputStream()) {
-      var originFeatureStream = PARSE_SERVICE.streamFeatures(datasetInputStream);
+    try (var datasetInputStream = datasetBaseResource.getInputStream();
+        var originFeatureStream = PARSE_SERVICE.streamFeatures(datasetInputStream)) {
       var features = originFeatureStream.collect(Collectors.toList());
       testFeatureCollection = FeatureCollection.of(features);
     }

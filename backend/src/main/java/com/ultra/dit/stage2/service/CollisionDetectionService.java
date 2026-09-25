@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.stage2.model.OksObject;
 
 /**
@@ -36,6 +37,7 @@ public class CollisionDetectionService {
    * @return true, если сегмент безопасен и проходим; false, если обнаружена
    *         коллизия
    */
+  @LogExecutionTime
   public boolean isSegmentPassable(LineString segment, List<Geometry> localConstraints, List<OksObject> activeCluster) {
     if (segment == null || segment.isEmpty()) {
       return false;

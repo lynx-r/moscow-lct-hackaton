@@ -6,6 +6,7 @@ import org.locationtech.jts.geom.Envelope;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
@@ -30,6 +31,7 @@ public class LocalBoundingBoxService {
    * Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
    * для кластера ОКС с учетом технологического буфера +500м.
    */
+  @LogExecutionTime
   public Envelope calculateLocalEnvelope(List<OksObject> cluster) {
     if (cluster == null || cluster.isEmpty()) {
       return new Envelope();
@@ -55,6 +57,7 @@ public class LocalBoundingBoxService {
    * Выполняет пространственную фильтрацию через R-Tree (STRtree.query)
    * и формирует изолированный контекст данных для текущего шага трассировки.
    */
+  @LogExecutionTime
   @SuppressWarnings("unchecked")
   public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes) {
     if (localEnvelope == null || localEnvelope.isNull()) {

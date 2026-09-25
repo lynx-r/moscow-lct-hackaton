@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.RoutingResult;
-import com.ultra.dit.service.calculation.RoutingCalculationService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 
@@ -15,13 +14,11 @@ import com.ultra.dit.stage1.TransformService;
 public class RoutingFlowService {
 
   private final TransformService transformService;
-  private final RoutingCalculationService routingCalculationService;
   private final SpatialIndexService spatialIndexService;
 
-  RoutingFlowService(TransformService transformService,
-      RoutingCalculationService routingProcessService, SpatialIndexService spatialIndexService) {
+  public RoutingFlowService(TransformService transformService,
+      SpatialIndexService spatialIndexService) {
     this.transformService = transformService;
-    this.routingCalculationService = routingProcessService;
     this.spatialIndexService = spatialIndexService;
   }
 

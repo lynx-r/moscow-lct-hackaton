@@ -11,12 +11,10 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.exception.ParseException;
 
-import lombok.extern.java.Log;
-
-@Log
 @Service
 public class ParseService {
 
@@ -33,8 +31,8 @@ public class ParseService {
    * @return
    * @throws IOException
    */
+  @LogExecutionTime
   public Stream<Feature> streamFeatures(InputStream inputStream) {
-    log.info("ParseService::streamFeatures start");
     try {
       var factory = mapper.getFactory();
       var parser = factory.createParser(inputStream);
@@ -56,7 +54,7 @@ public class ParseService {
       parser.nextToken();
 
       MappingIterator<Feature> iterator = mapper.readerFor(Feature.class).readValues(parser);
-      var result = StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false)
+      return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false)
           .onClose(() -> {
             try {
               parser.close();
@@ -64,8 +62,6 @@ public class ParseService {
               throw new ParseException("Ошибка парсинга GeoJson: " + e.getMessage());
             }
           });
-      log.info("ParseService::streamFeatures finish");
-      return result;
     } catch (IOException e) {
       e.printStackTrace();
       throw new ParseException("Не удалось разобрать GeoJson " + e.getMessage());

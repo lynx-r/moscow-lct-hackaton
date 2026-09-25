@@ -16,6 +16,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
+import com.ultra.dit.BaseTest;
 import com.ultra.dit.helpers.STRtreeVisualizer;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
@@ -28,7 +29,7 @@ import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
 import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
 
-class NetworkRoutingServiceTest extends BaseStage2Test {
+class NetworkRoutingServiceTest extends BaseTest {
 
         private static final double BUFFER_METERS = 500.0;
         private static final double BUFFER_RADIUS_METERS = 0.5;
@@ -68,7 +69,7 @@ class NetworkRoutingServiceTest extends BaseStage2Test {
 
         @Test
         void test1() {
-                var features = testFeatureCollection.getFeatures();
+                var features = featuresBase;
                 var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
                 AtomicInteger clusterIndex = new AtomicInteger(0);
