@@ -31,6 +31,11 @@ public final class LocalIndexContainer {
     this.executionEnvelope = executionEnvelope;
   }
 
+  public boolean isInvalid() {
+    // TODO: проверять networks и constraints?
+    return nodes.isEmpty() || executionEnvelope.isNull();
+  }
+
   public Stream<Geometry> getConstraintsGeometryStream() {
     return constraints.stream().map(c -> c.getGeometry());
   }

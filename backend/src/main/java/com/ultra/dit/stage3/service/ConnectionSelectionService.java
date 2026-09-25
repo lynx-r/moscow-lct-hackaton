@@ -16,6 +16,7 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.MultiLineString;
 import org.locationtech.jts.geom.Point;
@@ -55,26 +56,31 @@ public class ConnectionSelectionService {
      * @return
      */
     public LineString routeFromStage2(RoutingResult result) {
-        if (!result.isConnected() || result.getNewPipelines().isEmpty()) {
-            throw new IllegalArgumentException("Маршрут этапа 2 не соединен.");
-        }
-        List<Coordinate> coordinates = new ArrayList<>();
-        for (LineString edge : result.getNewPipelines()) {
-            if (edge.isEmpty())
-                throw new IllegalArgumentException("Пустое ребро маршрута");
-            if (!coordinates.isEmpty() && !coordinates.get(coordinates.size() - 1)
-                    .equals2D(edge.getCoordinateN(0))) {
-                throw new IllegalArgumentException("Ребра этапа 2 не образуют непрерывный упорядоченный путь");
-            }
-            for (Coordinate c : edge.getCoordinates()) {
-                if (coordinates.isEmpty() || !coordinates.get(coordinates.size() - 1).equals2D(c)) {
-                    coordinates.add(c.copy());
-                }
-            }
-        }
-        Collections.reverse(coordinates);
-        return result.getNewPipelines().get(0).getFactory()
-                .createLineString(coordinates.toArray(new Coordinate[0]));
+        // TODO: uncomment
+        // if (!result.isConnected() || result.getNewPipelines().isEmpty()) {
+        // throw new IllegalArgumentException("Маршрут этапа 2 не соединен.");
+        // }
+        // List<Coordinate> coordinates = new ArrayList<>();
+        // for (LineString edge : result.getNewPipelines()) {
+        // if (edge.isEmpty())
+        // throw new IllegalArgumentException("Пустое ребро маршрута");
+        // if (!coordinates.isEmpty() && !coordinates.get(coordinates.size() - 1)
+        // .equals2D(edge.getCoordinateN(0))) {
+        // throw new IllegalArgumentException("Ребра этапа 2 не образуют непрерывный
+        // упорядоченный путь");
+        // }
+        // for (Coordinate c : edge.getCoordinates()) {
+        // if (coordinates.isEmpty() || !coordinates.get(coordinates.size() -
+        // 1).equals2D(c)) {
+        // coordinates.add(c.copy());
+        // }
+        // }
+        // }
+        // Collections.reverse(coordinates);
+        // return result.getNewPipelines().get(0).getFactory()
+        // .createLineString(coordinates.toArray(new Coordinate[0]));
+        GeometryFactory gf = new GeometryFactory();
+        return gf.createLineString();
     }
 
     /**
@@ -89,8 +95,10 @@ public class ConnectionSelectionService {
         private STRtree nodesTree;
 
         private Session(IndexContainer indices) {
-            for (Object item : indices.getNetworksTree().query(new Envelope(
-                    -Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, Double.MAX_VALUE))) {
+            Envelope globalSearchEnv = new Envelope(-Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE,
+                    Double.MAX_VALUE);
+            var networksQuery = indices.getNetworksTree().query(globalSearchEnv);
+            for (Object item : networksQuery) {
                 if (item instanceof NetworkSegment) {
                     NetworkSegment s = (NetworkSegment) item;
                     addSegment(s.getId(), s.getParentId(), s.getDiameter(), s.getGeometry());
@@ -104,27 +112,33 @@ public class ConnectionSelectionService {
                     }
                     for (int i = 0; i < g.getNumGeometries(); i++) {
                         String id = f.getProperties().getId();
-                        addSegment(g instanceof LineString ? id : id + ":" + i, id,
-                                f.getProperties().getDiameter() == null ? 0 : f.getProperties().getDiameter(),
-                                (LineString) g.getGeometryN(i));
+                        String idGeometry = g instanceof LineString ? id : id + ":" + i;
+                        int diameter = f.getProperties().getDiameter() == null ? 0 : f.getProperties().getDiameter();
+                        LineString geometryN = (LineString) g.getGeometryN(i);
+                        addSegment(idGeometry, id, diameter, geometryN);
                     }
-                } else
+                } else {
                     throw new IllegalArgumentException("Неподдерживаемый элемент индекса сети");
+                }
             }
-            for (Object item : indices.getNodesTree().query(new Envelope(
-                    -Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, Double.MAX_VALUE))) {
+            var nodesQuery = indices.getNodesTree().query(globalSearchEnv);
+            for (Object item : nodesQuery) {
                 if (item instanceof NetworkNode) {
                     NetworkNode n = (NetworkNode) item;
-                    nodes.add(new NetworkNode(n.getId(), n.getObjectType(),
-                            (Point) n.getGeometry().copy(), n.isVirtual()));
+                    NetworkNode node = new NetworkNode(n.getId(), n.getObjectType(),
+                            (Point) n.getGeometry().copy(), n.isVirtual());
+                    nodes.add(node);
                 } else if (item instanceof Feature) {
                     Feature f = (Feature) item;
-                    if (f.getProperties().getObjectType() == ObjectType.HEAT_CHAMBER) {
-                        nodes.add(new NetworkNode(f.getProperties().getId(), NetworkNode.HEAT_CHAMBER,
-                                (Point) f.getGeometry().copy(), false));
+                    boolean isHeatChamber = f.getProperties().getObjectType() == ObjectType.HEAT_CHAMBER;
+                    if (isHeatChamber) {
+                        NetworkNode chamberNode = new NetworkNode(f.getProperties().getId(), NetworkNode.HEAT_CHAMBER,
+                                (Point) f.getGeometry().copy(), false);
+                        nodes.add(chamberNode);
                     }
-                } else
+                } else {
                     throw new IllegalArgumentException("Неподдерживаемый элемент индекса узла");
+                }
             }
             rebuildIndices();
         }
@@ -155,8 +169,9 @@ public class ConnectionSelectionService {
             List<NetworkNode> candidates = new ArrayList<>();
             for (Object item : nodesTree.query(search)) {
                 NetworkNode n = (NetworkNode) item;
-                if (n.isHeatChamber() && n.getGeometry().distance(end) <= 10.0)
+                if (n.isHeatChamber() && n.getGeometry().distance(end) <= 10.0) {
                     candidates.add(n);
+                }
             }
             candidates.sort(Comparator.comparingDouble((NetworkNode n) -> n.getGeometry().distance(end))
                     .thenComparing(NetworkNode::getId, Comparator.nullsFirst(String::compareTo)));

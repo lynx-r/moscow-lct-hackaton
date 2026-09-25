@@ -59,6 +59,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- Log4j2 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+        </dependency>
+
         <!-- Springdoc OpenAPI API -->
         <dependency>
             <groupId>org.springdoc</groupId>

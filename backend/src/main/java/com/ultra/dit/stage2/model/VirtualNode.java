@@ -2,8 +2,10 @@ package com.ultra.dit.stage2.model;
 
 import org.locationtech.jts.geom.Coordinate;
 
-import lombok.AllArgsConstructor;
+import com.ultra.dit.dto.FeatureProperties;
+
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Виртуальная вершина графа (Учитывает Coordinate + Вектор Захода)
@@ -11,12 +13,30 @@ import lombok.Getter;
  * VirtualNode
  */
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor(staticName = "of")
 public class VirtualNode {
   private final Coordinate coordinate;
   private final NodeType type;
+  private final FeatureProperties featureProperties;
+  private final OksObject oksObject;
 
-  private static final double tolerance = 0.001;
+  public boolean isOksObject() {
+    return oksObject != null;
+  }
+
+  public boolean hasFeatureProperties() {
+    return featureProperties != null;
+  }
+
+  public static VirtualNode withFeatureProperties(Coordinate coordinate, NodeType type,
+      FeatureProperties featureProperties) {
+    return VirtualNode.of(coordinate, type, featureProperties, null);
+  }
+
+  public static VirtualNode withOksObject(Coordinate coordinate, NodeType type,
+      OksObject oksObject) {
+    return VirtualNode.of(coordinate, type, null, oksObject);
+  }
 
   @Override
   public boolean equals(Object o) {

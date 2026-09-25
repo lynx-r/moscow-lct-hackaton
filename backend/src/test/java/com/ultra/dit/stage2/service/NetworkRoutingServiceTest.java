@@ -17,6 +17,9 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
+import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.helpers.STRtreeVisualizer;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
@@ -34,9 +37,12 @@ class NetworkRoutingServiceTest extends BaseTest {
         private static final double BUFFER_METERS = 500.0;
         private static final double BUFFER_RADIUS_METERS = 0.5;
         private static final double CLUSTER_SIZE_METERS = 100.0;
+        private static final double PATH_UNIQUE_PERCENT = 0.7;
         private static final int MAX_VARIANTS = 3;
         private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
-        private static final int CHOOSE_FROM_PATHS_COUNT = 4; // Максимальная степень узла для камер по ТЗ
+        private static final int CHOOSE_FROM_PATHS_COUNT = 3;
+        private static final int PARALLEL_CLUSTER_COUNT = 3;
+        private static final int CLOSES_SOURCES_COUNT = 5;
 
         @Spy
         private ParseService parserService = new ParseService(OBJECT_MAPPER);
@@ -56,19 +62,39 @@ class NetworkRoutingServiceTest extends BaseTest {
                 // CollisionDetectionService collisionService = new
                 // CollisionDetectionService(BUFFER_RADIUS_METERS);
                 NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
-                                MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT);
+                                MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT, PATH_UNIQUE_PERCENT, CLOSES_SOURCES_COUNT);
 
                 routingService = new NetworkRoutingService(
                                 clusteringService, bboxService,
                                 // collisionService,
-                                topologyGenerator);
+                                topologyGenerator, PARALLEL_CLUSTER_COUNT);
 
                 processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
                                 routingService);
         }
 
         @Test
-        void test1() {
+        void testOrganizer() {
+                var features = featuresOrganizer;
+                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
+
+                AtomicInteger clusterIndex = new AtomicInteger(0);
+                clustersRoutingResult.getRoutes().forEach(cluster -> {
+                        int clusterIdx = clusterIndex.incrementAndGet();
+                        AtomicInteger variantIndex = new AtomicInteger(0);
+                        cluster.getVariants().forEach((variant) -> {
+                                var variantIdx = variantIndex.incrementAndGet();
+                                variant.getFeatures().addAll(features);
+                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
+                                                "result-cluster-" + clusterIdx + "-variant-" + variantIdx);
+                        });
+                });
+
+                assertFalse(clustersRoutingResult.getRoutes().isEmpty());
+        }
+
+        @Test
+        void testBase() {
                 var features = featuresBase;
                 var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
@@ -118,7 +144,11 @@ class NetworkRoutingServiceTest extends BaseTest {
                 });
                 // Добавляем полигон здания ОКС, чтобы к нему можно было протянуть трубу
                 constraintsTree.insert(building.getEnvelopeInternal(), building);
-                OksObject oks = new OksObject("OKS-1", connectionPoint, building, 1.5);
+                OksObject oks = OksObject.of(
+                                Feature.of(connectionPoint,
+                                                new FeatureProperties("OKS-1", ObjectType.OKS_CONNECTION_POINT, null,
+                                                                1.5, null, "OKS-1", null, null)),
+                                building);
                 var oksObjects = List.of(oks);
 
                 // TODO: debug start
@@ -171,8 +201,9 @@ class NetworkRoutingServiceTest extends BaseTest {
 
                 // Проверяем, что ни один сгенерированный отрезок не пересекает буфер
                 // препятствия
-                for (LineString pipeline : clusterVariants.get(0).getNewPipelines()) {
-                        assertFalse(pipeline.buffer(2.0).intersects(obstacle), "Трасса задела препятствие!");
+                for (Feature pipeline : clusterVariants.get(0).getNewPipelines()) {
+                        assertFalse(pipeline.getGeometry().buffer(2.0).intersects(obstacle),
+                                        "Трасса задела препятствие!");
                 }
         }
 }

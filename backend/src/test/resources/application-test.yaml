@@ -1,6 +1,6 @@
 logging:
   level:
-    "[com.ultra.dit]": INFO
+    "[com.ultra.dit]": TRACE
     "[org.springframework.web.filter]": DEBUG
     "[org.springframework.security]": DEBUG
     "[org.postgresql]": DEBUG

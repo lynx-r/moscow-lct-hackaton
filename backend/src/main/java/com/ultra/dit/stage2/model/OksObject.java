@@ -3,6 +3,8 @@ package com.ultra.dit.stage2.model;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 
+import com.ultra.dit.dto.Feature;
+
 import lombok.Value;
 
 /**
@@ -12,8 +14,22 @@ import lombok.Value;
  */
 @Value
 public class OksObject {
-  private final String id;
-  private final Point connectionPoint;
+  private final Feature feature;
   private final Geometry buildingPolygon;
-  private final Double flowTph;
+
+  public static OksObject of(Feature feature, Geometry buildingPolygon) {
+    return new OksObject(feature, buildingPolygon);
+  }
+
+  public String getId() {
+    return feature.getProperties().getId();
+  }
+
+  public Point getConnectionPoint() {
+    return (Point) feature.getGeometry();
+  }
+
+  public double getFlowTph() {
+    return feature.getProperties().getFlowTph();
+  }
 }

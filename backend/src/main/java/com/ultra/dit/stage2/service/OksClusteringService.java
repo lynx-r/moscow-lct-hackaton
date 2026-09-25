@@ -1,7 +1,6 @@
 package com.ultra.dit.stage2.service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +33,6 @@ public class OksClusteringService {
    */
   @LogExecutionTime
   public List<List<OksObject>> clusterOksObjects(List<OksObject> oksList) {
-    if (oksList == null || oksList.isEmpty()) {
-      return Collections.emptyList();
-    }
-
     int n = oksList.size();
     int[] parent = new int[n];
     for (int i = 0; i < n; i++) {

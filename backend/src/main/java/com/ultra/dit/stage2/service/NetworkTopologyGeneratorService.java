@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,18 +13,21 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
+import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.util.Distance;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -42,23 +44,26 @@ public class NetworkTopologyGeneratorService {
   private final int maxVariants;
   private final int maxValence;
   private final int chooseFromPathsCount;
+  private final int closesSourcesCount;
 
-  // TODO: в конфиг
-  // 5 ближайших точек врезки более чем достаточно для генерации 3 вариантов!
-  private static final int CLOSES_SOURCES_COUNT = 5;
   // Критерий уникальности: если более 70% вершин совпадают, считаем варианты
   // идентичными
-  private final double UNIQUE_PERCENT = 0.7;
+  private final double pathUniquePercent;
 
   private final EdgeWeightCalculator angleCalculator;
 
   public NetworkTopologyGeneratorService(
       @Value("${app.solution.stage2.maxVariants:3}") int maxVariants,
       @Value("${app.solution.stage2.maxValence:4}") int maxValence,
-      @Value("${app.solution.stage2.chooseFromPathsCount:5}") int chooseFromPathsCount) {
+      @Value("${app.solution.stage2.chooseFromPathsCount:5}") int chooseFromPathsCount,
+      @Value("${app.solution.stage2.pathUniquePercent:0.7}") double pathUniquePercent,
+      @Value("${app.solution.stage2.closesSourcesCount:0.7}") int closesSourcesCount) {
     this.maxVariants = maxVariants;
     this.maxValence = maxValence;
     this.chooseFromPathsCount = chooseFromPathsCount;
+    this.pathUniquePercent = pathUniquePercent;
+    this.closesSourcesCount = closesSourcesCount;
+
     this.angleCalculator = new EdgeWeightCalculator();
   }
 
@@ -69,88 +74,101 @@ public class NetworkTopologyGeneratorService {
   @LogExecutionTime
   @SuppressWarnings("null")
   public List<RoutingResult> generateNetworkVariants(
+      int clusterId,
       List<OksObject> cluster,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
 
-    List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths = getRawPaths(graph, cluster);
+    log(clusterId, "Generate Network Variants");
 
-    if (rawPaths.isEmpty()) {
-      return List.of();
-    }
-
-    // Динамическая фильтрация и ранжирование путей с учётом геометрии углов
-    List<EvaluatedPath> evaluatedPaths = getEvaluatedPaths(rawPaths);
-
-    // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
-    evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
-
-    var distinctPaths = filterDistinctVariants(evaluatedPaths);
-
-    // Преобразуем выбранные пути в геоинформационные структуры данных
-    List<RoutingResult> finalVariants = getFinalVariants(distinctPaths);
-
-    // Если не удалось проложить ни одного пути, фиксируем кластер как
-    // неподключенный
-    if (finalVariants.isEmpty()) {
-      return List.of();
-    }
-
-    return finalVariants;
-  }
-
-  private List<GraphPath<VirtualNode, DefaultWeightedEdge>> getRawPaths(
-      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<OksObject> cluster) {
     // Оставляем только топ-5 геометрически ближайших камер врезки к потребителям
     // кластера
-    // Coordinate clusterCenter =
-    // cluster.get(0).getConnectionPoint().getCoordinate();
+    var clusterCenter = cluster.get(0).getConnectionPoint().getCoordinate();
 
     // Находим все потенциальные стартовые узлы (точки существующей сети) и финишные
     // (ОКС)
     List<VirtualNode> sourceNodes = graph.vertexSet().stream()
         .filter(v -> v.getType() == NodeType.EXISTING_NETWORK_NODE)
         .collect(Collectors.toList());
-    log.info("SourceNodes Count: " + sourceNodes.size());
 
     // TODO: раскомментировать?
-    // List<VirtualNode> closestSources = sourceNodes.stream()
-    // .sorted(Comparator.comparingDouble(v ->
-    // v.getCoordinate().distance(clusterCenter)))
-    // .limit(CLOSES_SOURCES_COUNT) // 5 ближайших точек врезки более чем достаточно
-    // для генерации 3 вариантов!
-    // .collect(Collectors.toList());
+    List<VirtualNode> closestSources = sourceNodes.stream()
+        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        .limit(closesSourcesCount)
+        // для генерации 3 вариантов!
+        .collect(Collectors.toList());
 
     List<VirtualNode> targetNodes = graph.vertexSet().stream()
         .filter(v -> v.getType() == NodeType.OKS_CONNECTION)
         .collect(Collectors.toList());
-    log.info("TargetNodes Count: " + targetNodes.size());
 
-    if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
-      return List.of();
+    if (closestSources.isEmpty() || targetNodes.isEmpty()) {
+      log(clusterId, "Source Or Target Nodes Not Found");
+      return List.of(RoutingResult.empty(clusterId));
     }
 
-    // if (log.isDebugEnabled()) {
-    // TODO: debug start
-    // System.out.println("=== ДЕБАГ ТРАССИРОВКИ ===");
-    // System.out.println("Потенциальные источники (Sources): " +
-    // sourceNodes.stream()
-    // .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: "
-    // + v.getType())
-    // .collect(Collectors.joining(", ")));
+    log(clusterId, "Source Nodes Count: " + closestSources.size());
+    log(clusterId, "Target Nodes Count: " + targetNodes.size());
 
-    // System.out.println("Потенциальные цели (Targets): " + targetNodes.stream()
-    // .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: "
-    // + v.getType())
-    // .collect(Collectors.joining(", ")));
-    // TODO: debug stop
-    // }
+    var rawPaths = getRawPaths(graph, cluster, closestSources, targetNodes);
+    if (rawPaths.isEmpty()) {
+      log(clusterId, "No Raw Paths Found");
+      logMissedNodes(clusterId, closestSources, targetNodes);
+      return List.of(RoutingResult.empty(clusterId));
+    }
+    log(clusterId, "Paths Raw Count: " + rawPaths.size());
+
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      log.trace("Generated Paths Count " + rawPaths.size());
+      DebugUtils.writeGraphPaths(rawPaths, "cluster-" + clusterId);
+      // TODO: debug stop
+    }
+
+    // Динамическая фильтрация и ранжирование путей с учётом геометрии углов
+    var evaluatedPaths = getEvaluatedPaths(rawPaths);
+
+    if (evaluatedPaths.isEmpty()) {
+      log(clusterId, "No Paths Passed Validation");
+      logMissedNodes(clusterId, closestSources, targetNodes);
+      return List.of(RoutingResult.empty(clusterId));
+    }
+    log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
+
+    // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
+    evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
+
+    var distinctPaths = filterDistinctVariants(evaluatedPaths);
+    if (evaluatedPaths.isEmpty()) {
+      log(clusterId, "No Found Distinct Paths");
+      logMissedNodes(clusterId, closestSources, targetNodes);
+      return List.of(RoutingResult.empty(clusterId));
+    }
+    log(clusterId, "Found Distinct Paths Count: " + distinctPaths.size());
+
+    // Преобразуем выбранные пути в геоинформационные структуры данных
+    var finalVariants = getFinalVariants(distinctPaths, clusterId);
+
+    // Если не удалось проложить ни одного пути, фиксируем кластер как
+    // неподключенный
+    if (finalVariants.isEmpty()) {
+      log(clusterId, "No Network Variants Was Generated");
+      logMissedNodes(clusterId, closestSources, targetNodes);
+      return List.of(RoutingResult.empty(clusterId));
+    }
+
+    log(clusterId, "Found Network Variants Count: " + finalVariants.size());
+    return finalVariants;
+  }
+
+  private List<GraphPath<VirtualNode, DefaultWeightedEdge>> getRawPaths(
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<OksObject> cluster,
+      List<VirtualNode> sourceNodes, List<VirtualNode> targetNodes) {
 
     // Используем алгоритм Йена из JGrapht для поиска простых путей без петель
     var pathFinder = new YenKShortestPath<>(graph);
 
     // Собираем альтернативные пути для всех комбинаций источников и потребителей
     // кластера
-    // AtomicInteger counter = new AtomicInteger(0);
     var rawPaths = new ArrayList<GraphPath<VirtualNode, DefaultWeightedEdge>>();
     for (VirtualNode source : sourceNodes) {
       for (VirtualNode target : targetNodes) {
@@ -173,12 +191,6 @@ public class NetworkTopologyGeneratorService {
           // int i = counter.incrementAndGet();
           var paths = pathFinder.getPaths(source, target, chooseFromPathsCount);
 
-          // if (log.isDebugEnabled()) {
-          // TODO: debug start
-          // DebugUtils.writeGraphPaths(paths, "path-" + clusterIdx + "-" + i);
-          // TODO: debug stop
-          // }
-
           if (!paths.isEmpty()) {
             rawPaths.addAll(paths);
           }
@@ -191,10 +203,11 @@ public class NetworkTopologyGeneratorService {
     return rawPaths;
   }
 
-  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths) {
-    List<RoutingResult> finalVariants = new ArrayList<>();
-    for (var evalPath : distinctPaths) {
-      RoutingResult result = buildTopologicalResult(evalPath.path);
+  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId) {
+    var finalVariants = new ArrayList<RoutingResult>();
+    for (var i = 0; i < distinctPaths.size(); i++) {
+      var evalPath = distinctPaths.get(i);
+      var result = buildTopologicalResult(i, evalPath.path, clusterId);
       if (result.isConnected()) {
         finalVariants.add(result);
         if (finalVariants.size() >= maxVariants) {
@@ -202,6 +215,7 @@ public class NetworkTopologyGeneratorService {
         }
       }
     }
+
     return finalVariants;
   }
 
@@ -237,6 +251,7 @@ public class NetworkTopologyGeneratorService {
         evaluatedPaths.add(new EvaluatedPath(path, totalWeightWithPenalties));
       }
     }
+
     return evaluatedPaths;
   }
 
@@ -244,6 +259,8 @@ public class NetworkTopologyGeneratorService {
    * Фильтрует пути, отсекая косметические дубликаты. Варианты должны быть
    * содержательно разными
    * (проходить через разные свободные коридоры Вороного или точки врезки).
+   * 
+   * @param clusterId
    */
   @SuppressWarnings("null")
   private List<EvaluatedPath> filterDistinctVariants(List<EvaluatedPath> paths) {
@@ -261,7 +278,7 @@ public class NetworkTopologyGeneratorService {
         // идентичными
         double overlap = (double) sharedVertices
             / Math.max(candidate.path.getVertexList().size(), accepted.path.getVertexList().size());
-        if (overlap > UNIQUE_PERCENT) {
+        if (overlap > pathUniquePercent) {
           isSimilar = true;
           break;
         }
@@ -269,23 +286,26 @@ public class NetworkTopologyGeneratorService {
       if (!isSimilar)
         distinct.add(candidate);
     }
+
     return distinct;
   }
 
   /**
    * Строит итоговый валидный граф трассы, проверяет валентность и расставляет
    * камеры.
+   * 
+   * @param clusterId
+   * @param variantId
+   * 
    */
   private RoutingResult buildTopologicalResult(
-      GraphPath<VirtualNode, DefaultWeightedEdge> path) {
+      int clusterId, GraphPath<VirtualNode, DefaultWeightedEdge> path, int variantId) {
 
-    List<VirtualNode> vertices = path.getVertexList();
-    List<LineString> pipelines = new ArrayList<>();
-    List<Point> chambers = new ArrayList<>();
+    var vertices = path.getVertexList();
 
+    var pipelines = new ArrayList<Feature>();
     // Карта для подсчета валентности узлов (degree) в рамках выбранного решения
-    Map<Coordinate, Integer> nodeValence = new HashMap<>();
-
+    var nodeValence = new HashMap<Coordinate, Integer>();
     // Сборка линейных объектов и первичный подсчет степеней вершин
     for (int i = 0; i < vertices.size() - 1; i++) {
       VirtualNode from = vertices.get(i);
@@ -306,24 +326,43 @@ public class NetworkTopologyGeneratorService {
       // TODO: Контроль валентности камер (degree <= 4) по ТЗ
       // TODO: if (valenceMap.get(c1) > 4 || valenceMap.get(c2) > 4) {
       if (totalValence > maxValence) {
-        return new RoutingResult(List.of(), List.of(), false);
+        log(clusterId, "No Topology Built (From " + c1 + ", To " + c2);
+        return RoutingResult.empty(clusterId);
       }
 
       var line = geometryFactory.createLineString(new Coordinate[] { c1, c2 });
-      pipelines.add(line);
+      FeatureProperties properties;
+      if (from.hasFeatureProperties()) {
+        properties = from.getFeatureProperties();
+      } else if (to.hasFeatureProperties()) {
+        properties = to.getFeatureProperties();
+      } else {
+        properties = new FeatureProperties();
+      }
+
+      pipelines.add(Feature.of(line, properties));
     }
 
+    var chambers = new ArrayList<Feature>();
     // Проставление типов узлов согласно ТЗ (Камеры в точках смены атрибутов или
     // ветвления)
     for (VirtualNode node : vertices) {
-      Coordinate coord = node.getCoordinate();
-      int currentValence = nodeValence.getOrDefault(coord, 0);
+      var coordinate = node.getCoordinate();
+      var currentValence = nodeValence.getOrDefault(coordinate, 0);
+      var point = geometryFactory.createPoint(coordinate);
 
       // Если узел является точкой слияния/разветвления (валентность > 2)
       // или это конечная точка ОКС/существующая камера — это объект CHAMBER
-      if (currentValence > 2 || node.getType() == NodeType.OKS_CONNECTION
-          || node.getType() == NodeType.EXISTING_NETWORK_NODE) {
-        chambers.add(geometryFactory.createPoint(coord));
+      if (node.getType() == NodeType.OKS_CONNECTION) {
+        chambers.add(node.getOksObject().getFeature());
+      } else if (node.getType() == NodeType.EXISTING_NETWORK_NODE) {
+        chambers.add(Feature.of(point, node.getFeatureProperties()));
+      } else if (currentValence > 2) {
+        if (node.hasFeatureProperties()) {
+          chambers.add(Feature.of(point, node.getFeatureProperties()));
+        } else {
+          chambers.add(Feature.withDefaultProperties(point));
+        }
       } else if (node.getType() == NodeType.VORONOI_SKELETON && currentValence == 2) {
         // По ТЗ: Изломы без смены параметров остаются просто вершинами внутри
         // LineString.
@@ -334,16 +373,37 @@ public class NetworkTopologyGeneratorService {
       }
     }
 
-    return new RoutingResult(pipelines, chambers, true);
+    log(clusterId, "Topology Built");
+    return RoutingResult.of(pipelines, chambers, clusterId, variantId, true);
   }
 
+  private void log(int clusterId, String message) {
+    log.info("cluster-" + clusterId + ": " + message);
+  }
+
+  private void logMissedNodes(int clusterId, List<VirtualNode> sourceNodes, List<VirtualNode> targetNodes) {
+    if (log.isDebugEnabled()) {
+      // TODO: debug start
+      log(clusterId, "=== Missed Nodes ===");
+      log(clusterId, "Source Nodes:");
+      logCoordinates(clusterId, sourceNodes);
+      log(clusterId, "Target Nodes:");
+      logCoordinates(clusterId, targetNodes);
+      // TODO: debug end
+    }
+  }
+
+  private void logCoordinates(int clusterId, List<VirtualNode> nodes) {
+    var nodesMessage = nodes.stream()
+        .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: "
+            + v.getType())
+        .collect(Collectors.joining(", "));
+    log(clusterId, nodesMessage);
+  }
+
+  @AllArgsConstructor
   private static class EvaluatedPath {
     final GraphPath<VirtualNode, DefaultWeightedEdge> path;
     final double totalCost;
-
-    EvaluatedPath(GraphPath<VirtualNode, DefaultWeightedEdge> path, double totalCost) {
-      this.path = path;
-      this.totalCost = totalCost;
-    }
   }
 }

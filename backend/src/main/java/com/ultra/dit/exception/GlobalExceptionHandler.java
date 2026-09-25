@@ -76,4 +76,16 @@ public class GlobalExceptionHandler {
     // Обычно для ошибок бизнес-валидации/трансформации возвращают 422 код
     return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
   }
+
+  /**
+   * Ошибки построения индекса
+   */
+  @ExceptionHandler(SpatialIndexException.class)
+  public ResponseEntity<ErrorResponse> handleSpatialIndexException(SpatialIndexException ex) {
+    // Берем сообщение, которое вы передали при создании исключения
+    ErrorResponse error = new ErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST.value());
+
+    // Обычно для ошибок бизнес-валидации/трансформации возвращают 422 код
+    return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+  }
 }

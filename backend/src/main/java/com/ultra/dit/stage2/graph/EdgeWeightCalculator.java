@@ -1,8 +1,7 @@
 package com.ultra.dit.stage2.graph;
 
 import org.locationtech.jts.geom.Coordinate;
-
-import com.ultra.dit.stage2.model.Vector2D;
+import org.locationtech.jts.math.Vector2D;
 
 /**
  * Шаг 2.3. Калькулятор весов ребер (Edge Weight) с матрицей приоритетов углов
@@ -32,12 +31,16 @@ public class EdgeWeightCalculator {
    */
   public double calculateWeight(Coordinate p1, Coordinate p2, Coordinate p3) {
     // Вектор захода (откуда пришли в точку p2)
-    Vector2D dirIn = new Vector2D(p2.x - p1.x, p2.y - p1.y);
+    Vector2D dirIn = Vector2D.create(p1, p2);
     // Вектор выхода (куда движемся из точки p2)
-    Vector2D dirOut = new Vector2D(p3.x - p2.x, p3.y - p2.y);
+    Vector2D dirOut = Vector2D.create(p2, p3);
 
     // Математически точный угол изменения траектории
-    double deltaAlpha = dirIn.angleWith(dirOut);
+    // Получаем ориентированный угол в радианах (-PI до PI)
+    double deltaAlphaRadians = dirIn.angleTo(dirOut);
+
+    // Переводим в градусы и берем модуль (от 0° до 180°)
+    double deltaAlpha = Math.abs(Math.toDegrees(deltaAlphaRadians));
 
     // Определение штрафа по матрице приоритетов ТЗ
     double anglePenalty = determineAnglePenalty(deltaAlpha);

@@ -16,6 +16,7 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.dto.RestrictionType;
 import com.ultra.dit.exception.ParseException;
+import com.ultra.dit.exception.SpatialIndexException;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
@@ -37,7 +38,7 @@ public class SpatialIndexService {
     var nodesTree = new STRtree();
 
     // Временный список для накопления точек подключения, у которых еще нет полигона
-    var tempPointsBuffer = Collections.synchronizedList(new ArrayList<TempOksPoint>());
+    var tempPointsBuffer = Collections.synchronizedList(new ArrayList<Feature>());
 
     inputStream.forEachOrdered(feature -> {
       if (feature == null || feature.getGeometry() == null) {
@@ -62,12 +63,8 @@ public class SpatialIndexService {
           nodesTree.insert(envelope, feature);
           break;
         case OKS_CONNECTION_POINT: {
-          var id = properties.getId();
-          var connectionPoint = (Point) feature.getGeometry();
-          var flowTph = properties.getFlowTph();
-
           // Временно откладываем точку, так как её полигон может быть дальше по стриму
-          tempPointsBuffer.add(new TempOksPoint(id, connectionPoint, flowTph));
+          tempPointsBuffer.add(feature);
 
           nodesTree.insert(envelope, feature);
           break;
@@ -82,20 +79,30 @@ public class SpatialIndexService {
 
     var oksBuffer = spatialJoin(tempPointsBuffer, constraintsTree);
 
+    if (oksBuffer.isEmpty()) {
+      throw new SpatialIndexException("Не найдены Feature object_type=oks_connection_point");
+    }
+
+    if (nodesTree.isEmpty()) {
+      throw new SpatialIndexException("Не найдены Feature object_type=oks_connection_point и object_type=heat_chamber");
+    }
+
+    // TODO: проверять RESTRICTION и HEAT_NETWORK?
+
     return new IndexContainer(constraintsTree, networksTree, nodesTree, oksBuffer);
   }
 
   // Пространственная сшивка (Spatial Join) точек с ближайшими полигонами ОКС
-  private List<OksObject> spatialJoin(List<TempOksPoint> tempPointsBuffer, STRtree constraintsTree) {
+  private List<OksObject> spatialJoin(List<Feature> tempFeatureBuffer, STRtree constraintsTree) {
     // Инициализируем потокобезопасный список для сбора ОКС объектов
     var oksBuffer = Collections.synchronizedList(new ArrayList<OksObject>());
 
-    for (var tempPoint : tempPointsBuffer) {
-      Point pointGeom = tempPoint.connectionPoint;
+    for (var feature : tempFeatureBuffer) {
+      var connectionPoint = (Point) feature.getGeometry();
 
       // Делаем микро-окно вокруг точки (расширяем на пару метров, чтобы поймать
       // касание или пересечение)
-      var searchEnvelope = pointGeom.getEnvelopeInternal();
+      var searchEnvelope = connectionPoint.getEnvelopeInternal();
       // oksConnectionPointBufferMeters метра буфера более чем достаточно для точки
       // подключения на границе здания
       searchEnvelope.expandBy(oksConnectionPointBufferMeters);
@@ -113,9 +120,11 @@ public class SpatialIndexService {
           var props = feat.getProperties();
 
           // Нас интересуют строго ограничения с типов OKS
-          if (props.getObjectType() == ObjectType.RESTRICTION && props.getRestrictionType() == RestrictionType.OKS) {
+          boolean isOksRestriction = props.getObjectType() == ObjectType.RESTRICTION
+              && props.getRestrictionType() == RestrictionType.OKS;
+          if (isOksRestriction) {
             var poly = feat.getGeometry();
-            double currentDist = pointGeom.distance(poly);
+            double currentDist = connectionPoint.distance(poly);
 
             // Ищем геометрически самый близкий полигон здания (часто расстояние будет ровно
             // 0.0)
@@ -150,23 +159,10 @@ public class SpatialIndexService {
       }
 
       // Создаем полноценный валидный OksObject с привязанным полигоном
-      var oks = new OksObject(tempPoint.id, pointGeom, buildingPolygon, tempPoint.flowTph);
+      var oks = new OksObject(feature, buildingPolygon);
       oksBuffer.add(oks);
     }
 
     return oksBuffer;
-  }
-
-  // Вспомогательный легковесный рекорд (или внутренний класс) для первого шага
-  private static class TempOksPoint {
-    final String id;
-    final Point connectionPoint;
-    final double flowTph;
-
-    TempOksPoint(String id, Point connectionPoint, double flowTph) {
-      this.id = id;
-      this.connectionPoint = connectionPoint;
-      this.flowTph = flowTph;
-    }
   }
 }

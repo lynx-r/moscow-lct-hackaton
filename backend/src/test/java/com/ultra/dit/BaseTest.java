@@ -11,12 +11,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
 
 @ExtendWith(MockitoExtension.class)
 public abstract class BaseTest {
@@ -47,6 +52,9 @@ public abstract class BaseTest {
 
   @BeforeAll
   public static void initAllTests() throws IOException {
+    LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.DEBUG);
+
     testFeatures = new ArrayList<>();
 
     for (var resource : datasetResources) {

@@ -12,8 +12,8 @@ import com.ultra.dit.stage2.model.RoutingResult;
 public class FeatureMapper {
   public static List<Feature> mapRoutingResultToFeatures(RoutingResult routingResult) {
     return Stream
-        .concat(mapGeometriesToFeatures(routingResult.getNewPipelines()),
-            mapGeometriesToFeatures(routingResult.getChambers()))
+        .concat(routingResult.getNewPipelines().stream(),
+            routingResult.getChambers().stream())
         .collect(Collectors.toList());
   }
 

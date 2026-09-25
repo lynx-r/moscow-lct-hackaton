@@ -38,6 +38,12 @@ app:
       maxValence: 4
       # из скольки кратчайших путей выбирать
       chooseFromPathsCount: 5
+      # Ограничиваемся 3 параллельными кластерами
+      parallelClusterCount: 3
+      # Критерий уникальности: если более 70% вершин совпадают, считаем варианты идентичными
+      pathUniquePercent: 0.7
+      # 5 ближайших точек врезки более чем достаточно при построении сети кластера
+      closesSourcesCount: 5
 
 springdoc:
   api-docs:
@@ -63,7 +69,6 @@ springdoc:
 logging:
   level:
     "[com.ultra.dit]": INFO
-    "[org.aspectj]": DEBUG
     "[org.springframework.web.filter]": DEBUG
     "[org.springframework.security]": DEBUG
     "[org.postgresql]": DEBUG
