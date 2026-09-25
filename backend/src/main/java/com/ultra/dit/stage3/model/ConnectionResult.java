@@ -1,4 +1,4 @@
-package com.ultra.dit.stage3;
+package com.ultra.dit.stage3.model;
 
 import java.util.Collections;
 import java.util.List;

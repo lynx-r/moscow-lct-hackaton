@@ -1,4 +1,4 @@
-package com.ultra.dit.stage3;
+package com.ultra.dit.stage3.model;
 
 import org.locationtech.jts.geom.LineString;
 

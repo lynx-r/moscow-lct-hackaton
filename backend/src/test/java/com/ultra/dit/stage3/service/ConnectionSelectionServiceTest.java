@@ -1,4 +1,4 @@
-package com.ultra.dit.stage3;
+package com.ultra.dit.stage3.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -20,6 +20,8 @@ import com.ultra.dit.dto.FeatureProperties;
 import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.RoutingResult;
+import com.ultra.dit.stage3.model.ConnectionResult;
+import com.ultra.dit.stage3.model.NetworkNode;
 
 class ConnectionSelectionServiceTest {
     private final GeometryFactory gf = new GeometryFactory();

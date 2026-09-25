@@ -1,4 +1,4 @@
-package com.ultra.dit.stage3;
+package com.ultra.dit.stage3.service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +27,9 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.ObjectType;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.RoutingResult;
+import com.ultra.dit.stage3.model.ConnectionResult;
+import com.ultra.dit.stage3.model.NetworkNode;
+import com.ultra.dit.stage3.model.NetworkSegment;
 
 /**
  * Выбор точки присоединения в общей планарной системе координат с единицей
