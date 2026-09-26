@@ -114,6 +114,7 @@ public class NetworkTopologyGeneratorService {
     // TODO: раскомментировать?
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        .limit(chooseFromPathsCount)
         .collect(Collectors.toList());
 
     // TODO: если generateForSources вернет Empty попробовать взять другие sources
