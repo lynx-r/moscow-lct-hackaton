@@ -1,16 +1,14 @@
-package com.ultra.dit.dto.geojson;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
+package com.ultra.dit.dto.geojson.properties;
 
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 @Data
+@SuperBuilder
 public class OksFutureProperties extends FeatureProperties {
 
-  @JsonProperty("heat_load")
   private Double heatLoad;
 
-  @JsonProperty("flow_tph")
   private Double flowTph;
 
 }

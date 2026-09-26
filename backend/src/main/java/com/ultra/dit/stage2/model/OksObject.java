@@ -4,7 +4,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
+import com.ultra.dit.dto.geojson.properties.OksConnectionPointProperties;
 
 import lombok.Value;
 

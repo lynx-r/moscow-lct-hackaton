@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;

@@ -13,7 +13,7 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.WKTWriter;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 
 public class STRtreeVisualizer {
 

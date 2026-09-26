@@ -10,7 +10,7 @@ import org.locationtech.proj4j.CoordinateTransformFactory;
 import org.locationtech.proj4j.ProjCoordinate;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 
 public class GeometryCrsConverter {
 

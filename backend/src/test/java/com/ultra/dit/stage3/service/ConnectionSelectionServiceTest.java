@@ -16,8 +16,8 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.index.strtree.STRtree;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
-import com.ultra.dit.dto.geojson.ObjectType;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage3.model.ConnectionResult;
 import com.ultra.dit.stage3.model.NetworkNode;

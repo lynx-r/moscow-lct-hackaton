@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 import org.locationtech.jts.geom.Geometry;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage2.model.RoutingResult;
 
 public class FeatureMapper {

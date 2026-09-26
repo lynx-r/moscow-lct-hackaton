@@ -1,9 +1,9 @@
-package com.ultra.dit.factory;
+package com.ultra.dit.common.factory;
 
 import java.util.Map;
 
-import com.ultra.dit.constants.FeaturePropertiesStyles;
-import com.ultra.dit.dto.geojson.ObjectType;
+import com.ultra.dit.common.constants.FeaturePropertiesStyles;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 
 public class FeaturePropertiesStyleFactory {
 

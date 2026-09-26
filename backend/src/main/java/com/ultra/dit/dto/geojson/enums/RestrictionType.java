@@ -1,4 +1,4 @@
-package com.ultra.dit.dto.geojson;
+package com.ultra.dit.dto.geojson.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -6,11 +6,18 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public enum GeoJsonType {
-  FEATURE_COLLECTION("FeatureCollection"),
-  FEATURE("Feature"),
-  LINE_STRING("LineString"),
-  POINT("Point");
+public enum RestrictionType {
+  OKS("oks"),
+  PARK("park"),
+  SOCIAL_AREA("social_area"),
+  PROHIBITED_SITE("prohibited_site"),
+  WATER("water"),
+  RAILWAY("railway"),
+  ROAD("road"),
+  TRAM_TRACKS("tram_tracks"),
+  GAS_PIPELINE("gas_pipeline"),
+  POWER_CABLE("power_cable"),
+  HEAT_NETWORK("heat_network");
 
   private final String value;
 
@@ -20,7 +27,7 @@ public enum GeoJsonType {
   }
 
   @JsonCreator
-  public static GeoJsonType fromValue(String value) {
+  public static RestrictionType fromValue(String value) {
     for (var val : values()) {
       if (val.value.equalsIgnoreCase(value)) {
         return val;

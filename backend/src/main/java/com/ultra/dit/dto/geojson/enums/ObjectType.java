@@ -1,4 +1,4 @@
-package com.ultra.dit.dto.geojson;
+package com.ultra.dit.dto.geojson.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -6,9 +6,16 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public enum StyleProperty {
-  MARKER_COLOR("marker-color"),
-  STROKE("stroke");
+public enum ObjectType {
+  SOURCE("source"),
+  HEAT_NETWORK("heat_network"),
+  HEAT_CHAMBER("heat_chamber"),
+  OKS_FUTURE("oks_future"),
+  OKS_CONNECTION_POINT("oks_connection_point"),
+  OKS_EXISTING("oks_existing"),
+  RESTRICTION("restriction"),
+  HEAT_NETWORK_RECONSTRUCTION("heat_network_reconstruction"),
+  GRAPH_EDGE("graph_edge");
 
   private final String value;
 
@@ -18,7 +25,7 @@ public enum StyleProperty {
   }
 
   @JsonCreator
-  public static StyleProperty fromValue(String value) {
+  public static ObjectType fromValue(String value) {
     for (var val : values()) {
       if (val.value.equalsIgnoreCase(value)) {
         return val;

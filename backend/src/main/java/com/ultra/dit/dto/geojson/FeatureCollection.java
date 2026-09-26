@@ -2,6 +2,9 @@ package com.ultra.dit.dto.geojson;
 
 import java.util.List;
 
+import com.ultra.dit.dto.geojson.enums.GeoJsonType;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;

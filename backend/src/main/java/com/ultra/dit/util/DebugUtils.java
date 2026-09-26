@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.FeatureCollection;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.VirtualNode;
 

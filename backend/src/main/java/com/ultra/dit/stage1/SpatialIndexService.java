@@ -12,15 +12,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
+import com.ultra.dit.common.factory.FeaturePropertiesStyleFactory;
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
-import com.ultra.dit.dto.geojson.ObjectType;
-import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
-import com.ultra.dit.dto.geojson.RestrictionProperties;
-import com.ultra.dit.dto.geojson.RestrictionType;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
+import com.ultra.dit.dto.geojson.enums.RestrictionType;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.OksConnectionPointProperties;
+import com.ultra.dit.dto.geojson.properties.RestrictionProperties;
 import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.exception.SpatialIndexException;
-import com.ultra.dit.factory.FeaturePropertiesStyleFactory;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 

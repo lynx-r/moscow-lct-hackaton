@@ -1,8 +1,8 @@
-package com.ultra.dit.constants;
+package com.ultra.dit.common.constants;
 
 import java.util.Map;
 
-import com.ultra.dit.dto.geojson.StyleProperty;
+import com.ultra.dit.dto.geojson.enums.StyleProperty;
 
 public class FeaturePropertiesStyles {
 

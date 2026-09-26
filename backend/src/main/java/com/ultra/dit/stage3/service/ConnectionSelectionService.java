@@ -25,7 +25,7 @@ import org.locationtech.jts.linearref.LengthIndexedLine;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.ObjectType;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage3.model.ConnectionResult;

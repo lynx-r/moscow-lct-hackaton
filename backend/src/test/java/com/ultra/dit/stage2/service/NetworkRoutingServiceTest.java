@@ -19,9 +19,9 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
-import com.ultra.dit.constants.FeaturePropertiesStyles;
+import com.ultra.dit.common.constants.FeaturePropertiesStyles;
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;

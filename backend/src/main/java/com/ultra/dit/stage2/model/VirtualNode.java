@@ -1,13 +1,15 @@
 package com.ultra.dit.stage2.model;
 
+import java.util.HashMap;
+
 import org.locationtech.jts.geom.Coordinate;
 
-import com.ultra.dit.constants.FeaturePropertiesStyles;
-import com.ultra.dit.dto.geojson.FeatureProperties;
-import com.ultra.dit.dto.geojson.GraphEdgeProperties;
-import com.ultra.dit.dto.geojson.ObjectType;
-import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
-import com.ultra.dit.factory.FeaturePropertiesStyleFactory;
+import com.ultra.dit.common.constants.FeaturePropertiesStyles;
+import com.ultra.dit.common.factory.FeaturePropertiesStyleFactory;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
+import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.GraphEdgeProperties;
+import com.ultra.dit.dto.geojson.properties.OksConnectionPointProperties;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -53,10 +55,10 @@ public class VirtualNode {
   }
 
   public static VirtualNode asVoronoiSkeleton(Coordinate coordinate) {
-    var properties = new GraphEdgeProperties();
-    properties.setId("edge-" + coordinate.hashCode());
-    properties.addAdditionalProperties(FeaturePropertiesStyles.VORONOI_SKELETON);
-    properties.setObjectType(ObjectType.GRAPH_EDGE);
+    HashMap<String, String> additionalProperties = new HashMap<>(FeaturePropertiesStyles.VORONOI_SKELETON);
+    var properties = GraphEdgeProperties.builder().id("edge-" + coordinate.hashCode())
+        .additionalProperties(additionalProperties).objectType(ObjectType.GRAPH_EDGE)
+        .build();
     return VirtualNode.of(coordinate, NodeType.VORONOI_SKELETON, properties, null);
   }
 
