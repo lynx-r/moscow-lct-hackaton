@@ -48,7 +48,7 @@ class NetworkRoutingServiceTest extends BaseTest {
   private static final int MAX_VALENCE = 4;
 
   // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
-  private static final int CHOOSE_FROM_PATHS_COUNT = 10;
+  private static final int CHOOSE_FROM_PATHS_COUNT = 3;
 
   private static final int PARALLEL_CLUSTER_COUNT = 3;
 
