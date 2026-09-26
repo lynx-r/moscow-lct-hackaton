@@ -4,6 +4,7 @@ import org.locationtech.jts.geom.Geometry;
 
 import com.ultra.dit.dto.geojson.enums.GeoJsonType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,7 +15,6 @@ import lombok.NonNull;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Feature<T extends FeatureProperties> {
-    @NonNull
     private Geometry geometry;
 
     @NonNull
@@ -29,5 +29,9 @@ public class Feature<T extends FeatureProperties> {
 
     public static Feature<? extends FeatureProperties> withDefaultProperties(Geometry geometry) {
         return Feature.of(geometry, new FeatureProperties());
+    }
+
+    public static Feature<? extends FeatureProperties> asSummary(VariantSummaryProperties properties) {
+        return Feature.of(null, properties);
     }
 }

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import com.ultra.dit.dto.geojson.enums.LayingMethod;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -12,6 +13,7 @@ import lombok.experimental.SuperBuilder;
  */
 @Data
 @SuperBuilder
+@NoArgsConstructor
 public class HeatNetworkSectionProperties extends FeatureProperties {
 
   /**

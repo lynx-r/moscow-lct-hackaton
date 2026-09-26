@@ -87,6 +87,26 @@ class NetworkRoutingServiceTest extends BaseTest {
   @Test
   void testOrganizer() {
     var features = featuresOrganizer;
+    var featureCollection = processStage2RoutesService.buildRoutesAsFeatureCollection(features.stream(), true);
+
+    DebugUtils.writeFeatures(featureCollection.getFeatures().stream(), "result-organizer");
+
+    assertFalse(featureCollection.getFeatures().isEmpty());
+  }
+
+  @Test
+  void testBase() {
+    var features = featuresBase;
+    var featureCollection = processStage2RoutesService.buildRoutesAsFeatureCollection(features.stream(), true);
+
+    DebugUtils.writeFeatures(featureCollection.getFeatures().stream(), "result-base");
+
+    assertFalse(featureCollection.getFeatures().isEmpty());
+  }
+
+  @Test
+  void testOrganizerDetails() {
+    var features = featuresOrganizer;
     var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
     writeResults(clustersRoutingResult);
@@ -95,7 +115,7 @@ class NetworkRoutingServiceTest extends BaseTest {
   }
 
   @Test
-  void testBase() {
+  void testBaseDetails() {
     var features = featuresBase;
     var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 

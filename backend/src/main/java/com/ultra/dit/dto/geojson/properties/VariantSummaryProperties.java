@@ -3,11 +3,17 @@ package com.ultra.dit.dto.geojson.properties;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.ultra.dit.dto.geojson.enums.ObjectType;
+import com.ultra.dit.util.Id;
+
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Data
 @SuperBuilder
+@NoArgsConstructor
 public class VariantSummaryProperties extends FeatureProperties {
   /** 1 – лучший вариант */
   private Integer rank;
@@ -54,5 +60,26 @@ public class VariantSummaryProperties extends FeatureProperties {
 
   /** ID ОКС, для которых маршрут не найден */
   private List<String> unconnectedOksIds;
+
+  /**
+   * Подключен ли вариант
+   */
+  @Builder.Default
+  private boolean isConnected = true;
+
+  public static VariantSummaryProperties emptyVariant(String id, String variantId, List<String> unconnectedOksIds) {
+    return VariantSummaryProperties.builder()
+        .id(id)
+        .variantId(variantId)
+        .unconnectedOksIds(unconnectedOksIds)
+        .objectType(ObjectType.VARIANT_SUMMARY)
+        .isConnected(false).build();
+  }
+
+  public static VariantSummaryProperties notConnected(int clusterId, List<String> unconnectedOksIds) {
+    var id = Id.idForTypeVariantSummary(clusterId, 0);
+    var variantId = Id.variantId(clusterId, 0);
+    return emptyVariant(id, variantId, unconnectedOksIds);
+  }
 
 }

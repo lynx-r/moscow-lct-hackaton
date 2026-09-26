@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.exception.RoutingException;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
@@ -91,7 +92,9 @@ public class NetworkRoutingService {
             if (localData.isInvalid()) {
               log.info("cluster-" + clusterId + ": Invalid Local Data");
               debugLocalData(clusterId, localData);
-              return List.of(RoutingResult.empty(clusterId));
+              var unconnectedOksIds = cluster.stream().map(oks -> oks.getId()).collect(Collectors.toList());
+              var summary = VariantSummaryProperties.notConnected(clusterId, unconnectedOksIds);
+              return List.of(RoutingResult.empty(summary));
             }
 
             debugLocalData(clusterId, localData);

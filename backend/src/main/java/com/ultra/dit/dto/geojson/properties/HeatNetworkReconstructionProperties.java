@@ -3,11 +3,13 @@ package com.ultra.dit.dto.geojson.properties;
 import java.math.BigDecimal;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Data
 @SuperBuilder
-public class ReconstructedHeatNetworkProperties extends FeatureProperties {
+@NoArgsConstructor
+public class HeatNetworkReconstructionProperties extends FeatureProperties {
 
   /**
    * ID входного объекта heat_network, к которому относится реконструируемая часть

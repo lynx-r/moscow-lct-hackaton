@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
@@ -27,6 +29,7 @@ import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.DebugUtils;
 import com.ultra.dit.util.Distance;
+import com.ultra.dit.util.Id;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -106,35 +109,41 @@ public class NetworkTopologyGeneratorService {
         debugSourceNodes(clusterId, firstOks, sourceNodes);
         log(clusterId, "Target Nodes Not Found");
       }
-      return List.of(RoutingResult.empty(clusterId));
+      var unconnectedOksIds = cluster.stream().map(oks -> oks.getId()).collect(Collectors.toList());
+      var summary = VariantSummaryProperties.notConnected(clusterId, unconnectedOksIds);
+      return List.of(RoutingResult.empty(summary));
     }
     debugTarget(clusterId, targetNodes);
     debugSourceNodes(clusterId, firstOks, sourceNodes);
 
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
-        .limit(chooseFromPathsCount)
+        .limit(closesSourcesCount)
         .collect(Collectors.toList());
 
     // TODO: если generateForSources вернет Empty попробовать взять другие sources
     // IntStream.range(0, )
     debugClosestSources(clusterId, closestSources);
-    var variants = generateForSources(clusterId, cluster, graph, targetNodes, closestSources);
+
+    var variants = generateNetworkVariants(clusterId, cluster, graph, targetNodes, closestSources);
     return variants;
   }
 
-  private List<RoutingResult> generateForSources(int clusterId, List<OksObject> cluster,
+  private List<RoutingResult> generateNetworkVariants(int clusterId, List<OksObject> cluster,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<VirtualNode> targetNodes,
       List<VirtualNode> sourceNodes) {
     log(clusterId, "Source Nodes Count: " + sourceNodes.size());
     log(clusterId, "Target Nodes Count: " + targetNodes.size());
+
+    var unconnectedOksIds = cluster.stream().map(oks -> oks.getId()).collect(Collectors.toList());
+    var summary = VariantSummaryProperties.notConnected(clusterId, unconnectedOksIds);
 
     var rawPaths = getRawPaths(graph, cluster, sourceNodes, targetNodes);
     if (rawPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Raw Paths Found");
       logMissedNodes(clusterId, sourceNodes, targetNodes);
-      return List.of(RoutingResult.empty(clusterId));
+      return List.of(RoutingResult.empty(summary));
     }
     log(clusterId, "Paths Raw Count: " + rawPaths.size());
     debugRawPaths(clusterId, rawPaths);
@@ -146,7 +155,7 @@ public class NetworkTopologyGeneratorService {
       logNoVariants(clusterId);
       log(clusterId, "No Paths Passed Validation");
       logMissedNodes(clusterId, sourceNodes, targetNodes);
-      return List.of(RoutingResult.empty(clusterId));
+      return List.of(RoutingResult.empty(summary));
     }
     log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
     debugEvaluatedPaths(clusterId, evaluatedPaths);
@@ -159,20 +168,20 @@ public class NetworkTopologyGeneratorService {
       logNoVariants(clusterId);
       log(clusterId, "No Found Distinct Paths");
       logMissedNodes(clusterId, sourceNodes, targetNodes);
-      return List.of(RoutingResult.empty(clusterId));
+      return List.of(RoutingResult.empty(summary));
     }
     log(clusterId, "Found Distinct Paths Count: " + distinctPaths.size());
     debugDistinctPaths(clusterId, distinctPaths);
 
     // Преобразуем выбранные пути в геоинформационные структуры данных
-    var finalVariants = getFinalVariants(distinctPaths, clusterId);
+    var finalVariants = getFinalVariants(distinctPaths, clusterId, unconnectedOksIds);
 
     // Если не удалось проложить ни одного пути, фиксируем кластер как
     // неподключенный
     if (finalVariants.isEmpty()) {
       logNoVariants(clusterId);
       logMissedNodes(clusterId, sourceNodes, targetNodes);
-      return List.of(RoutingResult.empty(clusterId));
+      return List.of();
     }
 
     log(clusterId, "Found Network Variants Count: " + finalVariants.size());
@@ -209,11 +218,12 @@ public class NetworkTopologyGeneratorService {
     return rawPaths;
   }
 
-  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId) {
+  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId,
+      List<String> unconnectedOksIds) {
     var finalVariants = new ArrayList<RoutingResult>();
-    for (var i = 0; i < distinctPaths.size(); i++) {
-      var evalPath = distinctPaths.get(i);
-      var result = buildTopologicalResult(evalPath.path, clusterId, i);
+    for (var variantIdx = 0; variantIdx < distinctPaths.size(); variantIdx++) {
+      var evalPath = distinctPaths.get(variantIdx);
+      var result = buildTopologicalResult(evalPath.path, clusterId, variantIdx, unconnectedOksIds);
       if (result.isConnected()) {
         finalVariants.add(result);
         if (finalVariants.size() >= maxVariants) {
@@ -300,12 +310,18 @@ public class NetworkTopologyGeneratorService {
    * Строит итоговый валидный граф трассы, проверяет валентность и расставляет
    * камеры.
    * 
-   * @param clusterId
-   * @param variantId
+   * @param clusterIdx
+   * @param variantIdx
+   * @param unconnectedOksIds
    * 
    */
   private RoutingResult buildTopologicalResult(
-      GraphPath<VirtualNode, DefaultWeightedEdge> path, int clusterId, int variantId) {
+      GraphPath<VirtualNode, DefaultWeightedEdge> path, int clusterIdx, int variantIdx,
+      List<String> unconnectedOksIds) {
+
+    var id = Id.idForTypeVariantSummary(clusterIdx, variantIdx);
+    var variantId = Id.idForTypeVariantSummary(clusterIdx, variantIdx);
+    var summary = VariantSummaryProperties.emptyVariant(id, variantId, unconnectedOksIds);
 
     var vertices = path.getVertexList();
 
@@ -332,8 +348,8 @@ public class NetworkTopologyGeneratorService {
       // TODO: Контроль валентности камер (degree <= 4) по ТЗ
       // TODO: if (valenceMap.get(c1) > 4 || valenceMap.get(c2) > 4) {
       if (totalValence > maxValence) {
-        log(clusterId, "No Topology Built (From " + c1 + ", To " + c2);
-        return RoutingResult.empty(clusterId);
+        log(clusterIdx, "No Topology Built (From " + c1 + ", To " + c2);
+        return RoutingResult.empty(summary);
       }
 
       var line = geometryFactory.createLineString(new Coordinate[] { c1, c2 });
@@ -343,31 +359,51 @@ public class NetworkTopologyGeneratorService {
       } else if (to.hasFeatureProperties()) {
         properties = to.getFeatureProperties();
       } else {
-        properties = new FeatureProperties();
+        properties = FeatureProperties.builder().objectType(ObjectType.HEAT_NETWORK).build();
+      }
+      variantId = Id.idByObjectType(clusterIdx, variantIdx, properties.getObjectType());
+      properties.setVariantId(variantId);
+      // TODO: debug start
+      properties.addAdditionalProperty("feature", "pipeline");
+      // TODO: debug end
+
+      var fromId = from.getFeatureProperties().getId();
+      var toId = to.getFeatureProperties().getId();
+      switch (from.getFeatureProperties().getObjectType()) {
+        case HEAT_CHAMBER:
+        case OKS_CONNECTION_POINT:
+          // TODO: debug start
+          properties.addAdditionalProperty("test-start_node_id", fromId);
+          properties.addAdditionalProperty("test-end_node_id", toId);
+          // TODO: debug end
+          break;
+        default:
+          break;
       }
 
       pipelines.add(Feature.of(line, properties));
     }
 
-    var chambers = new ArrayList<Feature<? extends FeatureProperties>>();
     // Проставление типов узлов согласно ТЗ (Камеры в точках смены атрибутов или
     // ветвления)
+    var chambers = new ArrayList<Feature<? extends FeatureProperties>>();
     for (VirtualNode node : vertices) {
       var coordinate = node.getCoordinate();
       var currentValence = nodeValence.getOrDefault(coordinate, 0);
       var point = geometryFactory.createPoint(coordinate);
 
+      Feature<? extends FeatureProperties> feature = null;
       // Если узел является точкой слияния/разветвления (валентность > 2)
       // или это конечная точка ОКС/существующая камера — это объект CHAMBER
       if (node.getType() == NodeType.OKS_CONNECTION) {
-        chambers.add(node.getOksObject().getFeature());
+        feature = node.getOksObject().getFeature();
       } else if (node.getType() == NodeType.EXISTING_NETWORK_NODE) {
-        chambers.add(Feature.of(point, node.getFeatureProperties()));
+        feature = Feature.of(point, node.getFeatureProperties());
       } else if (currentValence > 2) {
         if (node.hasFeatureProperties()) {
-          chambers.add(Feature.of(point, node.getFeatureProperties()));
+          feature = Feature.of(point, node.getFeatureProperties());
         } else {
-          chambers.add(Feature.withDefaultProperties(point));
+          feature = Feature.withDefaultProperties(point);
         }
       } else if (node.getType() == NodeType.VORONOI_SKELETON && currentValence == 2) {
         // По ТЗ: Изломы без смены параметров остаются просто вершинами внутри
@@ -377,12 +413,21 @@ public class NetworkTopologyGeneratorService {
         // (логику деления на обычные/специальные участки можно навесить на метаданные
         // ребра).
       }
+      if (feature != null) {
+        variantId = Id.idByObjectType(clusterIdx, variantIdx, feature.getProperties().getObjectType());
+        feature.getProperties().setVariantId(variantId);
+        // TODO: debug start
+        feature.getProperties().addAdditionalProperty("feature", "chamber");
+        // TODO: debug end
+        chambers.add(feature);
+      }
     }
 
-    log(clusterId, "Topology Built For Variant: " + variantId);
-    log(clusterId, "Pipelines Count: " + pipelines.size());
-    log(clusterId, "Chambers Count: " + chambers.size());
-    return RoutingResult.of(pipelines, chambers, clusterId, variantId, true);
+    log(clusterIdx, "Topology Built For Variant: " + variantIdx);
+    log(clusterIdx, "Pipelines Count: " + pipelines.size());
+    log(clusterIdx, "Chambers Count: " + chambers.size());
+
+    return RoutingResult.of(pipelines, chambers, summary, true);
   }
 
   private void log(int clusterId, String message) {

@@ -14,7 +14,11 @@ public enum ObjectType {
   OKS_CONNECTION_POINT("oks_connection_point"),
   OKS_EXISTING("oks_existing"),
   RESTRICTION("restriction"),
+  TIE_IN("tie_in"),
   HEAT_NETWORK_RECONSTRUCTION("heat_network_reconstruction"),
+  HEAT_CHAMBER_RECONSTRUCTION("heat_chamber_reconstruction"),
+  TECHNICAL_NODE("technical_node"),
+  VARIANT_SUMMARY("variant_summary"),
   GRAPH_EDGE("graph_edge");
 
   private final String value;

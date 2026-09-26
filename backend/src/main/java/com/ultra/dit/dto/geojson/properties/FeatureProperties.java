@@ -27,9 +27,16 @@ import lombok.experimental.SuperBuilder;
     @JsonSubTypes.Type(value = SourceProperties.class, name = "source"),
     @JsonSubTypes.Type(value = HeatNetworkSectionProperties.class, name = "heat_network"),
     @JsonSubTypes.Type(value = HeatChamberProperties.class, name = "heat_chamber"),
-    @JsonSubTypes.Type(value = OksConnectionPointProperties.class, name = "oks_connection_point"),
     @JsonSubTypes.Type(value = OksFutureProperties.class, name = "oks_future"),
-    @JsonSubTypes.Type(value = RestrictionProperties.class, name = "restriction")
+    @JsonSubTypes.Type(value = OksConnectionPointProperties.class, name = "oks_connection_point"),
+    @JsonSubTypes.Type(value = OksExistingProperties.class, name = "oks_existing"),
+    @JsonSubTypes.Type(value = RestrictionProperties.class, name = "restriction"),
+    @JsonSubTypes.Type(value = TieInProperties.class, name = "tie_in"),
+    @JsonSubTypes.Type(value = HeatNetworkReconstructionProperties.class, name = "heat_network_reconstruction"),
+    @JsonSubTypes.Type(value = HeatChamberReconstructionProperties.class, name = "heat_chamber_reconstruction"),
+    @JsonSubTypes.Type(value = TechnicalNodeProperties.class, name = "technical_node"),
+    @JsonSubTypes.Type(value = VariantSummaryProperties.class, name = "variant_summary"),
+    @JsonSubTypes.Type(value = GraphEdgeProperties.class, name = "graph_edge"),
 })
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class FeatureProperties {
