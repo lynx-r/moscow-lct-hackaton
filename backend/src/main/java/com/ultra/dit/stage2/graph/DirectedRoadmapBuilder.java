@@ -59,7 +59,10 @@ public class DirectedRoadmapBuilder {
     existingSourceTree = new STRtree();
     localData.getNetworks().forEach(network -> {
       for (Coordinate c : network.getGeometry().getCoordinates()) {
-        existingSourceTree.insert(new Envelope(c), new ExistingSourceNode(c, network.getProperties()));
+        // TODO: если ????? где nodes?
+        var properties = network.getProperties();
+        // properties.setObjectType(ObjectType.HEAT_CHAMBER);
+        existingSourceTree.insert(new Envelope(c), new ExistingSourceNode(c, properties));
       }
     });
     existingSourceTree.build();
@@ -238,7 +241,6 @@ public class DirectedRoadmapBuilder {
       // VORONOI_SKELETON.
       // При необходимости, если координаты совпадают с точками врезки или ОКС, тип
       // переопределяется.
-
       VirtualNode node1_in = createVirtualNode(c1);
       VirtualNode node2_out = createVirtualNode(c2);
 
@@ -275,7 +277,7 @@ public class DirectedRoadmapBuilder {
       }
     }
 
-    return VirtualNode.of(c, NodeType.VORONOI_SKELETON, null, null);
+    return VirtualNode.asVoronoiSkeleton(c);
   }
 
   private double minDistToCoordinates(Coordinate c) {

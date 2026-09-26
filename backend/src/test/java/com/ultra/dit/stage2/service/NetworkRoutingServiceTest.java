@@ -20,6 +20,7 @@ import com.ultra.dit.BaseTest;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
+import com.ultra.dit.stage2.model.ClustersRoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
 import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
 import com.ultra.dit.util.DebugUtils;
@@ -81,22 +82,7 @@ class NetworkRoutingServiceTest extends BaseTest {
                 var features = featuresOrganizer;
                 var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
-                AtomicInteger clusterIndex = new AtomicInteger(0);
-                clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        int clusterIdx = clusterIndex.incrementAndGet();
-                        AtomicInteger variantIndex = new AtomicInteger(0);
-                        cluster.getVariants().forEach((variant) -> {
-                                if (variant.getFeatures().isEmpty()) {
-                                        DebugUtils.writeFeatures(Stream.of(),
-                                                        clusterIdx + "-cluster-blank-result");
-                                        return;
-                                }
-                                var variantIdx = variantIndex.incrementAndGet();
-                                // variant.getFeatures().addAll(features);
-                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                clusterIdx + "-cluster-" + variantIdx + "-variant-result");
-                        });
-                });
+                writeResults(clustersRoutingResult);
 
                 assertFalse(clustersRoutingResult.getRoutes().isEmpty());
         }
@@ -106,17 +92,7 @@ class NetworkRoutingServiceTest extends BaseTest {
                 var features = featuresBase;
                 var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
 
-                AtomicInteger clusterIndex = new AtomicInteger(0);
-                clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        int clusterIdx = clusterIndex.incrementAndGet();
-                        AtomicInteger variantIndex = new AtomicInteger(0);
-                        cluster.getVariants().forEach((variant) -> {
-                                var variantIdx = variantIndex.incrementAndGet();
-                                variant.getFeatures().addAll(features);
-                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-cluster-" + clusterIdx + "-variant-" + variantIdx);
-                        });
-                });
+                writeResults(clustersRoutingResult);
 
                 assertFalse(clustersRoutingResult.getRoutes().isEmpty());
         }
@@ -231,4 +207,24 @@ class NetworkRoutingServiceTest extends BaseTest {
         // Stream.of(Feature.withDefaultProperties(line));
         // DebugUtils.writeFeaturesIn32637(features, "000-PrintCoords");
         // }
+
+        private void writeResults(ClustersRoutingResult clustersRoutingResult) {
+                AtomicInteger clusterIndex = new AtomicInteger(0);
+                clustersRoutingResult.getRoutes().forEach(cluster -> {
+                        int clusterIdx = clusterIndex.getAndIncrement();
+                        AtomicInteger variantIndex = new AtomicInteger(0);
+                        cluster.getVariants().forEach((variant) -> {
+                                if (variant.getFeatures().isEmpty()) {
+                                        DebugUtils.writeFeatures(Stream.of(),
+                                                        clusterIdx + "-cluster-0-variant-result-blank");
+                                        return;
+                                }
+                                var variantIdx = variantIndex.getAndIncrement();
+                                // variant.getFeatures().addAll(features);
+                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
+                                                clusterIdx + "-cluster-" + variantIdx + "-variant-result");
+                        });
+                });
+        }
+
 }

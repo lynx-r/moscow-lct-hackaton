@@ -55,7 +55,7 @@ public class DebugUtils {
       createDirectoryIfNotExist(TEMP_FOLDER);
 
     } catch (IOException e) {
-      System.err.println("Не удалось создать директорию: " + e.getMessage());
+      throw new RuntimeException("Не удалось создать директорию", e);
     }
   }
 
@@ -92,7 +92,7 @@ public class DebugUtils {
     try (var outputStream = new FileOutputStream(fileName + GEOJSON_EXT)) {
       OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
     } catch (IOException e) {
-      System.out.println(e);
+      throw new RuntimeException("Ошибка записи GeoJSON в файл: " + fileName, e);
     }
   }
 
@@ -153,7 +153,7 @@ public class DebugUtils {
     try (var writer = new FileWriter(path)) {
       exporter.exportGraph(graph, writer);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException("Ошибка экспорта графа " + fileName, e);
     }
   }
 

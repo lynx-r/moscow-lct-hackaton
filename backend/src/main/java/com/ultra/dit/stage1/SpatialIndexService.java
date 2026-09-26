@@ -20,6 +20,7 @@ import com.ultra.dit.dto.geojson.RestrictionProperties;
 import com.ultra.dit.dto.geojson.RestrictionType;
 import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.exception.SpatialIndexException;
+import com.ultra.dit.factory.FeaturePropertiesStyleFactory;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
@@ -27,6 +28,7 @@ import com.ultra.dit.stage2.model.OksObject;
 public class SpatialIndexService {
 
   private final Double oksConnectionPointBufferMeters;
+  private FeatureProperties properties;
 
   public SpatialIndexService(
       @Value("${app.solution.stage2.oksConnectionPointBufferMeters:2.0}") Double oksConnectionPointBufferMeters) {
@@ -48,13 +50,18 @@ public class SpatialIndexService {
         return;
       }
 
-      var properties = feature.getProperties();
+      properties = feature.getProperties();
       var objectType = properties.getObjectType();
+
+      var styleProperties = FeaturePropertiesStyleFactory.getStyleProperties(properties.getAdditionalProperties(),
+          objectType);
+      properties.addAdditionalProperties(styleProperties);
 
       // Вставка по EnvelopeInternal большие объекты вроде restriction_type=railway
       // будут попадать в локальную выборку
       var envelope = feature.getGeometry().getEnvelopeInternal();
 
+      // TODO: добавить оставшиеся object_type
       switch (objectType) {
         case RESTRICTION: {
           constraintsTree.insert(envelope, feature);

@@ -5,10 +5,10 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,15 +35,61 @@ public class FeatureProperties {
   @JsonProperty("object_type")
   private ObjectType objectType;
 
-  private Map<String, JsonNode> additionalProperties = new HashMap<>();
+  @Builder.Default
+  private Map<String, String> additionalProperties = new HashMap<>();
+
+  /**
+   * Geometry: Point
+   * 
+   * @return
+   */
+  @JsonIgnore
+  public boolean isPointGeometry() {
+    if (objectType == null) {
+      return false;
+    }
+    switch (objectType) {
+      case SOURCE:
+      case HEAT_CHAMBER:
+      case OKS_CONNECTION_POINT:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Geometry: LineString / MultiLineString / Polygon / MultiPolygon
+   * 
+   * @return
+   */
+  @JsonIgnore
+  public boolean isComplexGeometry() {
+    if (objectType == null) {
+      return false;
+    }
+    switch (objectType) {
+      case HEAT_NETWORK:
+      case OKS_FUTURE:
+      case OKS_EXISTING:
+      case RESTRICTION:
+        return true;
+      default:
+        return false;
+    }
+  }
 
   @JsonAnySetter
-  public void addAdditionalProperty(String key, JsonNode value) {
+  public void addAdditionalProperty(String key, String value) {
     this.additionalProperties.put(key, value);
   }
 
   @JsonAnyGetter
-  public Map<String, JsonNode> getAdditionalProperties() {
+  public Map<String, String> getAdditionalProperties() {
     return this.additionalProperties;
+  }
+
+  public void addAdditionalProperties(Map<String, String> additionalProperties) {
+    this.additionalProperties.putAll(additionalProperties);
   }
 }

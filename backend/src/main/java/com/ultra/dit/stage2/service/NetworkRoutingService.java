@@ -119,7 +119,7 @@ public class NetworkRoutingService {
             // graph.setEdgeWeight(edge, calculatedWeight);
             // }
 
-            debugGraph(clusterId, graph);
+            debugRoadmapGraph(clusterId, graph);
 
             return topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
           })).get();
@@ -131,10 +131,10 @@ public class NetworkRoutingService {
     }
   }
 
-  private void debugGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
+  private void debugRoadmapGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      DebugUtils.writeGraph(graph, "graph-cluster-" + clusterId);
+      DebugUtils.writeGraph(graph, clusterId + "-cluster-graph-roadmap");
       // TODO: debug end
     }
   }

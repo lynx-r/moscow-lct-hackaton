@@ -130,16 +130,15 @@ public class NetworkTopologyGeneratorService {
 
   private List<RoutingResult> generateForSources(int clusterId, List<OksObject> cluster,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<VirtualNode> targetNodes,
-      List<VirtualNode> closestSources) {
-    log(clusterId, "Source Nodes Count: " + closestSources.size());
+      List<VirtualNode> sourceNodes) {
+    log(clusterId, "Source Nodes Count: " + sourceNodes.size());
     log(clusterId, "Target Nodes Count: " + targetNodes.size());
 
-    var rawPaths = getRawPaths(graph, cluster, closestSources, targetNodes);
+    var rawPaths = getRawPaths(graph, cluster, sourceNodes, targetNodes);
     if (rawPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Raw Paths Found");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugRawPaths(clusterId, rawPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Raw Count: " + rawPaths.size());
@@ -151,8 +150,7 @@ public class NetworkTopologyGeneratorService {
     if (evaluatedPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Paths Passed Validation");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugEvaluatedPaths(clusterId, evaluatedPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
@@ -165,8 +163,7 @@ public class NetworkTopologyGeneratorService {
     if (evaluatedPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Found Distinct Paths");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugDistinctPaths(clusterId, distinctPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Found Distinct Paths Count: " + distinctPaths.size());
@@ -179,7 +176,7 @@ public class NetworkTopologyGeneratorService {
     // неподключенный
     if (finalVariants.isEmpty()) {
       logNoVariants(clusterId);
-      logMissedNodes(clusterId, closestSources, targetNodes);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
 
@@ -420,7 +417,7 @@ public class NetworkTopologyGeneratorService {
     if (log.isTraceEnabled()) {
       // TODO: debug start
       var distPaths = distinctPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(distPaths, "13-distinct-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(distPaths, clusterId + "-cluster-graph-2-distinct");
       // TODO: debug stop
     }
   }
@@ -429,15 +426,17 @@ public class NetworkTopologyGeneratorService {
     if (log.isTraceEnabled()) {
       // TODO: debug start
       var evalPaths = evaluatedPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(evalPaths, "12-evaluated-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(evalPaths, clusterId + "-cluster-graph-1-evaluated");
       // TODO: debug stop
     }
   }
 
   private void debugRawPaths(int clusterId, List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
-    if (log.isTraceEnabled()) {
+    // if (log.isTraceEnabled() && clusterId == 4) {
+    if (log.isTraceEnabled() && clusterId == 4) {
       // TODO: debug start
-      // DebugUtils.writeGraphPaths(rawPaths, "11-raw-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(rawPaths, clusterId + "-cluster-graph-0-raw");
+      // throw new RuntimeException();
       // TODO: debug stop
     }
   }
