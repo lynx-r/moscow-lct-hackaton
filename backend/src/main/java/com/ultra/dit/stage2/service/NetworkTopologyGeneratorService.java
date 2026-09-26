@@ -111,9 +111,9 @@ public class NetworkTopologyGeneratorService {
     debugTarget(clusterId, targetNodes);
     debugSourceNodes(clusterId, firstOks, sourceNodes);
 
-    // TODO: раскомментировать?
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        // TODO: раскомментировать????
         .limit(closesSourcesCount)
         .collect(Collectors.toList());
 
@@ -121,10 +121,6 @@ public class NetworkTopologyGeneratorService {
     // IntStream.range(0, )
     debugClosestSources(clusterId, closestSources);
     var variants = generateForSources(clusterId, cluster, graph, targetNodes, closestSources);
-    if (variants.isEmpty()) {
-
-    }
-
     return variants;
   }
 
@@ -433,7 +429,7 @@ public class NetworkTopologyGeneratorService {
 
   private void debugRawPaths(int clusterId, List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
     // if (log.isTraceEnabled() && clusterId == 4) {
-    if (log.isTraceEnabled() && clusterId == 4) {
+    if (log.isTraceEnabled()) {
       // TODO: debug start
       DebugUtils.writeGraphPaths(rawPaths, clusterId + "-cluster-graph-0-raw");
       // throw new RuntimeException();
@@ -456,7 +452,7 @@ public class NetworkTopologyGeneratorService {
             }
             return Feature.withDefaultProperties(point);
           });
-      DebugUtils.writeFeaturesIn32637(targetF, clusterId + "-cluster-target-nodes");
+      DebugUtils.writeFeaturesIn32637(targetF, clusterId + "-cluster-nodes-target");
     }
   }
 
@@ -469,7 +465,7 @@ public class NetworkTopologyGeneratorService {
 
       Stream<Feature<? extends FeatureProperties>> closestSourceF = closestSources.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
-      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-source-nodes-closest");
+      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-nodes-source-closest");
     }
   }
 
@@ -481,7 +477,7 @@ public class NetworkTopologyGeneratorService {
 
       Stream<Feature<? extends FeatureProperties>> sourceF = sourceNodes.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
-      DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-source-nodes");
+      DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-nodes-source");
       // TODO: debug end
     }
   }

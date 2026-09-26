@@ -30,7 +30,7 @@ public final class LocalIndexContainer {
   private final List<Feature<? extends FeatureProperties>> networks;
 
   /**
-   * Существующие камеры, источники, точки подключения (Точечные
+   * Существующие источники, точки подключения (Точечные
    * объекты)
    */
   private final List<Feature<? extends FeatureProperties>> nodes;

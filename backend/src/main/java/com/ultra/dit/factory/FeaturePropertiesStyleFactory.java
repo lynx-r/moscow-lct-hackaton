@@ -31,6 +31,7 @@ public class FeaturePropertiesStyleFactory {
         additionalProperties.putAll(FeaturePropertiesStyles.RESTRICTION);
         break;
       case SOURCE:
+        additionalProperties.putAll(FeaturePropertiesStyles.SOURCE);
         break;
     }
     return additionalProperties;

@@ -19,6 +19,7 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
 import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.ObjectType;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
@@ -48,7 +49,7 @@ public class DirectedRoadmapBuilder {
   private final DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph;
 
   private final STRtree targetOksTree;
-  private final STRtree existingSourceTree;
+  private final STRtree sourceTree;
 
   public DirectedRoadmapBuilder(LocalIndexContainer localData, List<OksObject> cluster) {
     this.localData = localData;
@@ -56,20 +57,14 @@ public class DirectedRoadmapBuilder {
     this.graph = new DirectedWeightedMultigraph<>(DefaultWeightedEdge.class);
 
     // Собираем все доступные целевые координаты существующих сетей (точки врезки)
-    existingSourceTree = new STRtree();
-    localData.getNetworks().forEach(network -> {
-      for (Coordinate c : network.getGeometry().getCoordinates()) {
-        // TODO: если ????? где nodes?
-        var properties = network.getProperties();
-        // properties.setObjectType(ObjectType.HEAT_CHAMBER);
-        existingSourceTree.insert(new Envelope(c), new ExistingSourceNode(c, properties));
+    sourceTree = new STRtree();
+    localData.getNodes().forEach(node -> {
+      boolean isNodeSourceOrChamber = node.getProperties().getObjectType() != ObjectType.OKS_CONNECTION_POINT;
+      if (isNodeSourceOrChamber) {
+        var c = node.getGeometry().getCoordinate();
+        sourceTree.insert(new Envelope(c), new ExistingSourceNode(c, node.getProperties()));
       }
     });
-    existingSourceTree.build();
-    // TODO: debug start
-    // STRtreeVisualizer.writeSTRtreeToFile(existingSourceTree,
-    // "00-existingSourceTree-" + localData.hashCode());
-    // TODO: debug end
 
     // Собираем целевые координаты точек подключения ОКС
     targetOksTree = new STRtree();
@@ -77,8 +72,13 @@ public class DirectedRoadmapBuilder {
       var c = oks.getConnectionPoint().getCoordinate();
       targetOksTree.insert(new Envelope(c), new TargeOksNode(c, oks));
     }
+
+    sourceTree.build();
     targetOksTree.build();
     // TODO: debug start
+    // STRtreeVisualizer.writeSTRtreeToFile(sourceTree,
+    // "00-existingSourceTree-" + localData.hashCode());
+
     // STRtreeVisualizer.writeSTRtreeToFile(targetOksTree, "00-targetOksTree-" +
     // localData.hashCode());
     // TODO: debug end
@@ -262,7 +262,7 @@ public class DirectedRoadmapBuilder {
 
   private VirtualNode createVirtualNode(Coordinate c) {
     // Ищем кандидатов среди sources
-    List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, existingSourceTree);
+    List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, sourceTree);
     for (var source : sourceCandidates) {
       if (Distance.distanceSq(c, source.coordinate) <= EPSILON_SQ) {
         return VirtualNode.withFeatureProperties(c, NodeType.EXISTING_NETWORK_NODE, source.properties);
@@ -281,7 +281,7 @@ public class DirectedRoadmapBuilder {
   }
 
   private double minDistToCoordinates(Coordinate c) {
-    List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, existingSourceTree);
+    List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, sourceTree);
     double minDist = Double.MAX_VALUE;
     for (var source : sourceCandidates) {
       double d = Distance.distanceSq(c, source.coordinate);

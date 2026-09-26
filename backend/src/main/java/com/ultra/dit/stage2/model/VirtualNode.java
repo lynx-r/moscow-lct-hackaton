@@ -4,6 +4,9 @@ import org.locationtech.jts.geom.Coordinate;
 
 import com.ultra.dit.constants.FeaturePropertiesStyles;
 import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.GraphEdgeProperties;
+import com.ultra.dit.dto.geojson.ObjectType;
+import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
 import com.ultra.dit.factory.FeaturePropertiesStyleFactory;
 
 import lombok.Getter;
@@ -45,16 +48,16 @@ public class VirtualNode {
 
   public static VirtualNode withOksObject(Coordinate coordinate, NodeType type,
       OksObject oksObject) {
-    var featureProperties = FeatureProperties.builder()
-        .additionalProperties(FeaturePropertiesStyles.OKS_CONNECTION_POINT)
-        .build();
-    return VirtualNode.of(coordinate, type, featureProperties, oksObject);
+    OksConnectionPointProperties properties = oksObject.getFeature().getProperties();
+    return VirtualNode.of(coordinate, type, properties, oksObject);
   }
 
   public static VirtualNode asVoronoiSkeleton(Coordinate coordinate) {
-    var featureProperties = FeatureProperties.builder().additionalProperties(FeaturePropertiesStyles.VORONOI_SKELETON)
-        .build();
-    return VirtualNode.of(coordinate, NodeType.VORONOI_SKELETON, featureProperties, null);
+    var properties = new GraphEdgeProperties();
+    properties.setId("edge-" + coordinate.hashCode());
+    properties.addAdditionalProperties(FeaturePropertiesStyles.VORONOI_SKELETON);
+    properties.setObjectType(ObjectType.GRAPH_EDGE);
+    return VirtualNode.of(coordinate, NodeType.VORONOI_SKELETON, properties, null);
   }
 
   @Override

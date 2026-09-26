@@ -148,14 +148,10 @@ public class NetworkRoutingService {
       List<Feature<? extends FeatureProperties>> localBoundList = List
           .of(Feature.withDefaultProperties(localBoundPolygon));
 
-      var localFeatures = List.of(
-          localData.getConstraints(),
-          localData.getNetworks(),
-          localData.getNodes(),
-          localBoundList)
-          .stream().flatMap(l -> l.stream());
-
-      DebugUtils.writeFeaturesIn32637(localFeatures, clusterId + "-cluster-local-data");
+      DebugUtils.writeFeaturesIn32637(localData.getConstraints().stream(), clusterId + "-cluster-data-constraints");
+      DebugUtils.writeFeaturesIn32637(localData.getNetworks().stream(), clusterId + "-cluster-data-networks");
+      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-nodes");
+      DebugUtils.writeFeaturesIn32637(localBoundList.stream(), clusterId + "-cluster-data-execution-envelop");
       // TODO: debug end
     }
   }
@@ -166,7 +162,7 @@ public class NetworkRoutingService {
       log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
 
       Stream<Feature<? extends FeatureProperties>> clusterOks = cluster.stream().map(oks -> oks.getFeature());
-      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks");
+      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks-objects");
       // var clusterBuildings = cluster.stream()
       // .map(oks -> Feature.withDefaultProperties(oks.getBuildingPolygon()));
       // DebugUtils.writeFeaturesIn32637(clusterBuildings,

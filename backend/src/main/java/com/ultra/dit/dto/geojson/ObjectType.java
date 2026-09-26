@@ -13,7 +13,8 @@ public enum ObjectType {
   OKS_FUTURE("oks_future"),
   OKS_CONNECTION_POINT("oks_connection_point"),
   OKS_EXISTING("oks_existing"),
-  RESTRICTION("restriction");
+  RESTRICTION("restriction"),
+  GRAPH_EDGE("graph_edge");
 
   private final String value;
 
