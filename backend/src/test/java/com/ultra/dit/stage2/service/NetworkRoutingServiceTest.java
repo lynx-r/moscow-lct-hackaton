@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,8 +21,6 @@ import com.ultra.dit.BaseTest;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureProperties;
 import com.ultra.dit.dto.ObjectType;
-import com.ultra.dit.helpers.STRtreeVisualizer;
-import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
@@ -31,17 +30,29 @@ import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
 import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
+import com.ultra.dit.util.DebugUtils;
+import com.ultra.dit.util.STRtreeVisualizer;
 
 class NetworkRoutingServiceTest extends BaseTest {
 
-        private static final double BUFFER_METERS = 500.0;
-        private static final double BUFFER_RADIUS_METERS = 0.5;
-        private static final double CLUSTER_SIZE_METERS = 100.0;
+        // Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
+        // для кластера ОКС с учетом технологического буфера
+        private static final double CLUSTER_BUFFER_METERS = 500.0;
+
+        // Размер кластера ОКС
+        private static final double CLUSTER_SIZE_METERS = 10.0;
+
         private static final double PATH_UNIQUE_PERCENT = 0.7;
+
         private static final int MAX_VARIANTS = 3;
-        private static final int MAX_VALENCE = 4; // Максимальная степень узла для камер по ТЗ
+        private static final int MAX_VALENCE = 4;
+
+        // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
         private static final int CHOOSE_FROM_PATHS_COUNT = 3;
+
         private static final int PARALLEL_CLUSTER_COUNT = 3;
+
+        // из скольки кратчайших путей выбирать
         private static final int CLOSES_SOURCES_COUNT = 5;
 
         @Spy
@@ -58,7 +69,7 @@ class NetworkRoutingServiceTest extends BaseTest {
                 SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
 
                 OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
-                LocalBoundingBoxService bboxService = new LocalBoundingBoxService(BUFFER_METERS);
+                LocalBoundingBoxService bboxService = new LocalBoundingBoxService(CLUSTER_BUFFER_METERS);
                 // CollisionDetectionService collisionService = new
                 // CollisionDetectionService(BUFFER_RADIUS_METERS);
                 NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
@@ -83,10 +94,15 @@ class NetworkRoutingServiceTest extends BaseTest {
                         int clusterIdx = clusterIndex.incrementAndGet();
                         AtomicInteger variantIndex = new AtomicInteger(0);
                         cluster.getVariants().forEach((variant) -> {
+                                if (variant.getFeatures().isEmpty()) {
+                                        DebugUtils.writeFeatures(Stream.of(),
+                                                        clusterIdx + "-cluster-blank-result");
+                                        return;
+                                }
                                 var variantIdx = variantIndex.incrementAndGet();
-                                variant.getFeatures().addAll(features);
+                                // variant.getFeatures().addAll(features);
                                 DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-cluster-" + clusterIdx + "-variant-" + variantIdx);
+                                                clusterIdx + "-cluster-" + variantIdx + "-variant-result");
                         });
                 });
 
@@ -205,5 +221,16 @@ class NetworkRoutingServiceTest extends BaseTest {
                         assertFalse(pipeline.getGeometry().buffer(2.0).intersects(obstacle),
                                         "Трасса задела препятствие!");
                 }
+        }
+
+        @Test()
+        void testPrintCoords() {
+                var geometryFactory = new GeometryFactory();
+                var line = geometryFactory.createLineString(new Coordinate[] {
+                                new Coordinate(414545.8493114061, 6175503.658660367),
+                                new Coordinate(412429.8920690528, 6171210.8233968755),
+                });
+                var features = Stream.of(Feature.withDefaultProperties(line));
+                DebugUtils.writeFeaturesIn32637(features, "000-PrintCoords");
         }
 }

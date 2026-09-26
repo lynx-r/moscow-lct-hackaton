@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.YenKShortestPath;
@@ -19,12 +20,12 @@ import org.springframework.stereotype.Service;
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureProperties;
-import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.util.DebugUtils;
 import com.ultra.dit.util.Distance;
 
 import lombok.AllArgsConstructor;
@@ -82,7 +83,8 @@ public class NetworkTopologyGeneratorService {
 
     // Оставляем только топ-5 геометрически ближайших камер врезки к потребителям
     // кластера
-    var clusterCenter = cluster.get(0).getConnectionPoint().getCoordinate();
+    OksObject firstOks = cluster.get(0);
+    var clusterCenter = firstOks.getConnectionPoint().getCoordinate();
 
     // Находим все потенциальные стартовые узлы (точки существующей сети) и финишные
     // (ОКС)
@@ -90,60 +92,84 @@ public class NetworkTopologyGeneratorService {
         .filter(v -> v.getType() == NodeType.EXISTING_NETWORK_NODE)
         .collect(Collectors.toList());
 
-    // TODO: раскомментировать?
-    List<VirtualNode> closestSources = sourceNodes.stream()
-        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
-        .limit(closesSourcesCount)
-        // для генерации 3 вариантов!
-        .collect(Collectors.toList());
-
     List<VirtualNode> targetNodes = graph.vertexSet().stream()
         .filter(v -> v.getType() == NodeType.OKS_CONNECTION)
         .collect(Collectors.toList());
 
-    if (closestSources.isEmpty() || targetNodes.isEmpty()) {
-      log(clusterId, "Source Or Target Nodes Not Found");
+    if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
+      logNoVariants(clusterId);
+      if (sourceNodes.isEmpty()) {
+        debugTarget(clusterId, targetNodes);
+        log(clusterId, "Source Nodes Not Found");
+      }
+      if (targetNodes.isEmpty()) {
+        debugSourceNodes(clusterId, firstOks, sourceNodes);
+        log(clusterId, "Target Nodes Not Found");
+      }
       return List.of(RoutingResult.empty(clusterId));
     }
+    debugTarget(clusterId, targetNodes);
+    debugSourceNodes(clusterId, firstOks, sourceNodes);
 
+    // TODO: раскомментировать?
+    List<VirtualNode> closestSources = sourceNodes.stream()
+        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        .collect(Collectors.toList());
+
+    // TODO: если generateForSources вернет Empty попробовать взять другие sources
+    // IntStream.range(0, )
+    debugClosestSources(clusterId, closestSources);
+    var variants = generateForSources(clusterId, cluster, graph, targetNodes, closestSources);
+    if (variants.isEmpty()) {
+
+    }
+
+    return variants;
+  }
+
+  private List<RoutingResult> generateForSources(int clusterId, List<OksObject> cluster,
+      DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<VirtualNode> targetNodes,
+      List<VirtualNode> closestSources) {
     log(clusterId, "Source Nodes Count: " + closestSources.size());
     log(clusterId, "Target Nodes Count: " + targetNodes.size());
 
     var rawPaths = getRawPaths(graph, cluster, closestSources, targetNodes);
     if (rawPaths.isEmpty()) {
+      logNoVariants(clusterId);
       log(clusterId, "No Raw Paths Found");
       logMissedNodes(clusterId, closestSources, targetNodes);
+      debugRawPaths(clusterId, rawPaths);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Raw Count: " + rawPaths.size());
-
-    if (log.isTraceEnabled()) {
-      // TODO: debug start
-      log.trace("Generated Paths Count " + rawPaths.size());
-      DebugUtils.writeGraphPaths(rawPaths, "cluster-" + clusterId);
-      // TODO: debug stop
-    }
+    debugRawPaths(clusterId, rawPaths);
 
     // Динамическая фильтрация и ранжирование путей с учётом геометрии углов
     var evaluatedPaths = getEvaluatedPaths(rawPaths);
 
     if (evaluatedPaths.isEmpty()) {
+      logNoVariants(clusterId);
       log(clusterId, "No Paths Passed Validation");
       logMissedNodes(clusterId, closestSources, targetNodes);
+      debugEvaluatedPaths(clusterId, evaluatedPaths);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
+    debugEvaluatedPaths(clusterId, evaluatedPaths);
 
     // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
     evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
 
     var distinctPaths = filterDistinctVariants(evaluatedPaths);
     if (evaluatedPaths.isEmpty()) {
+      logNoVariants(clusterId);
       log(clusterId, "No Found Distinct Paths");
       logMissedNodes(clusterId, closestSources, targetNodes);
+      debugDistinctPaths(clusterId, distinctPaths);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Found Distinct Paths Count: " + distinctPaths.size());
+    debugDistinctPaths(clusterId, distinctPaths);
 
     // Преобразуем выбранные пути в геоинформационные структуры данных
     var finalVariants = getFinalVariants(distinctPaths, clusterId);
@@ -151,7 +177,7 @@ public class NetworkTopologyGeneratorService {
     // Если не удалось проложить ни одного пути, фиксируем кластер как
     // неподключенный
     if (finalVariants.isEmpty()) {
-      log(clusterId, "No Network Variants Was Generated");
+      logNoVariants(clusterId);
       logMissedNodes(clusterId, closestSources, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
@@ -173,19 +199,6 @@ public class NetworkTopologyGeneratorService {
     for (VirtualNode source : sourceNodes) {
       for (VirtualNode target : targetNodes) {
         try {
-          // if (log.isDebugEnabled()) {
-          // TODO: debug start
-          // Выводим конкретную пару, для которой сейчас запустится YenKShortestPath
-          // System.out.println("Запуск поиска от Source: [" + source.getCoordinate().x +
-          // ", " + source.getCoordinate().y
-          // + "] тип: " + source.getType());
-          // System.out.println("Запуск поиска к Target: [" + target.getCoordinate().x +
-          // ", " + target.getCoordinate().y
-          // + "] тип: " + target.getType());
-          // System.out.println("===============================");
-          // TODO: debug stop
-          // }
-
           // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
           // структурно уникальных
           // int i = counter.incrementAndGet();
@@ -207,7 +220,7 @@ public class NetworkTopologyGeneratorService {
     var finalVariants = new ArrayList<RoutingResult>();
     for (var i = 0; i < distinctPaths.size(); i++) {
       var evalPath = distinctPaths.get(i);
-      var result = buildTopologicalResult(i, evalPath.path, clusterId);
+      var result = buildTopologicalResult(evalPath.path, clusterId, i);
       if (result.isConnected()) {
         finalVariants.add(result);
         if (finalVariants.size() >= maxVariants) {
@@ -299,7 +312,7 @@ public class NetworkTopologyGeneratorService {
    * 
    */
   private RoutingResult buildTopologicalResult(
-      int clusterId, GraphPath<VirtualNode, DefaultWeightedEdge> path, int variantId) {
+      GraphPath<VirtualNode, DefaultWeightedEdge> path, int clusterId, int variantId) {
 
     var vertices = path.getVertexList();
 
@@ -373,7 +386,9 @@ public class NetworkTopologyGeneratorService {
       }
     }
 
-    log(clusterId, "Topology Built");
+    log(clusterId, "Topology Built For Variant: " + variantId);
+    log(clusterId, "Pipelines Count: " + pipelines.size());
+    log(clusterId, "Chambers Count: " + chambers.size());
     return RoutingResult.of(pipelines, chambers, clusterId, variantId, true);
   }
 
@@ -395,10 +410,89 @@ public class NetworkTopologyGeneratorService {
 
   private void logCoordinates(int clusterId, List<VirtualNode> nodes) {
     var nodesMessage = nodes.stream()
-        .map(v -> "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: "
-            + v.getType())
+        .map(v -> formatVirtualNode(v))
         .collect(Collectors.joining(", "));
     log(clusterId, nodesMessage);
+  }
+
+  private void debugDistinctPaths(int clusterId, List<EvaluatedPath> distinctPaths) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      var distPaths = distinctPaths.stream().map(p -> p.path).collect(Collectors.toList());
+      DebugUtils.writeGraphPaths(distPaths, "13-distinct-cluster-" + clusterId);
+      // TODO: debug stop
+    }
+  }
+
+  private void debugEvaluatedPaths(int clusterId, List<EvaluatedPath> evaluatedPaths) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      var evalPaths = evaluatedPaths.stream().map(p -> p.path).collect(Collectors.toList());
+      DebugUtils.writeGraphPaths(evalPaths, "12-evaluated-cluster-" + clusterId);
+      // TODO: debug stop
+    }
+  }
+
+  private void debugRawPaths(int clusterId, List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      // DebugUtils.writeGraphPaths(rawPaths, "11-raw-cluster-" + clusterId);
+      // TODO: debug stop
+    }
+  }
+
+  private void debugTarget(int clusterId, List<VirtualNode> target) {
+    if (log.isTraceEnabled() && !target.isEmpty()) {
+      var coords = target.stream()
+          .map(s -> formatVirtualNode(s))
+          .collect(Collectors.toList());
+      log(clusterId, "Target Coordinates: " + coords);
+
+      var targetF = target.stream()
+          .map(n -> {
+            var point = geometryFactory.createPoint(n.getCoordinate());
+            if (n.hasFeatureProperties()) {
+              return Feature.of(point, n.getFeatureProperties());
+            }
+            return Feature.withDefaultProperties(point);
+          });
+      DebugUtils.writeFeaturesIn32637(targetF, clusterId + "-cluster-target-nodes");
+    }
+  }
+
+  private void debugClosestSources(int clusterId, List<VirtualNode> closestSources) {
+    if (log.isTraceEnabled()) {
+      var closestCoords = closestSources.stream()
+          .map(s -> formatVirtualNode(s))
+          .collect(Collectors.toList());
+      log(clusterId, "Closest Coordinates: " + closestCoords);
+
+      var closestSourceF = closestSources.stream()
+          .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
+      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-source-nodes-closest");
+    }
+  }
+
+  private void debugSourceNodes(int clusterId, OksObject firstOks, List<VirtualNode> sourceNodes) {
+    if (log.isTraceEnabled() && !sourceNodes.isEmpty()) {
+      // TODO: debug start
+      log(clusterId, "Cluster First Item Id: " + firstOks.getId());
+      DebugUtils.writeFeaturesIn32637(Stream.of(firstOks.getFeature()), clusterId + "-cluster-center");
+
+      var sourceF = sourceNodes.stream()
+          .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
+      DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-source-nodes");
+      // TODO: debug end
+    }
+  }
+
+  private void logNoVariants(int clusterId) {
+    log(clusterId, "No Network Variants Was Generated");
+  }
+
+  private String formatVirtualNode(VirtualNode v) {
+    return "[" + v.getCoordinate().x + ", " + v.getCoordinate().y + "] тип: "
+        + v.getType();
   }
 
   @AllArgsConstructor

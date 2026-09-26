@@ -18,9 +18,26 @@ import lombok.Getter;
  */
 @Getter
 public final class LocalIndexContainer {
+  /**
+   * Пространственные ограничения (Зоны запрета, дороги, здания)
+   */
   private final List<Feature> constraints;
+
+  /**
+   * Существующие тепловые сети (Линейные объекты)
+   */
   private final List<Feature> networks;
+
+  /**
+   * Существующие камеры, источники, точки подключения (Точечные
+   * объекты)
+   */
   private final List<Feature> nodes;
+
+  /**
+   * Общий минимальный охватывающий прямоугольник (Envelope) для
+   * кластера ОКС с учетом технологического буфера clusterBufferMeters.
+   */
   private final Envelope executionEnvelope;
 
   public LocalIndexContainer(List<Feature> constraints, List<Feature> networks,
@@ -33,7 +50,7 @@ public final class LocalIndexContainer {
 
   public boolean isInvalid() {
     // TODO: проверять networks и constraints?
-    return nodes.isEmpty() || executionEnvelope.isNull();
+    return nodes.isEmpty() || networks.isEmpty() || executionEnvelope.isNull();
   }
 
   public Stream<Geometry> getConstraintsGeometryStream() {

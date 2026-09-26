@@ -63,6 +63,10 @@ public class DirectedRoadmapBuilder {
       }
     });
     existingSourceTree.build();
+    // TODO: debug start
+    // STRtreeVisualizer.writeSTRtreeToFile(existingSourceTree,
+    // "00-existingSourceTree-" + localData.hashCode());
+    // TODO: debug end
 
     // Собираем целевые координаты точек подключения ОКС
     targetOksTree = new STRtree();
@@ -71,6 +75,10 @@ public class DirectedRoadmapBuilder {
       targetOksTree.insert(new Envelope(c), new TargeOksNode(c, oks));
     }
     targetOksTree.build();
+    // TODO: debug start
+    // STRtreeVisualizer.writeSTRtreeToFile(targetOksTree, "00-targetOksTree-" +
+    // localData.hashCode());
+    // TODO: debug end
   }
 
   /**
@@ -160,24 +168,28 @@ public class DirectedRoadmapBuilder {
     // 3. ДОБАВЛЯЕМ ТОЧКИ ПОДКЛЮЧЕНИЯ ОКС
     var oksCoordinates = cluster.stream().map(oks -> oks.getConnectionPoint().getCoordinate());
 
+    var executionEnvelop = localData.getExecutionEnvelope();
     // TODO: parallel?
     var coordinates = Stream.of(constraintCoordinates, networkCoordinates, oksCoordinates)
         .parallel().flatMap(s -> s)
+        .filter(c -> executionEnvelop.contains(c))
         .collect(Collectors.toList());
 
     sites.addAll(coordinates);
 
     // Во избежание пустых диаграмм при отсутствии ограничений, добавим углы
     // Bounding Box
-    Envelope env = localData.getExecutionEnvelope();
-    // левый нижний угол
-    sites.add(new Coordinate(env.getMinX(), env.getMinY()));
-    // правый нижний угол
-    sites.add(new Coordinate(env.getMaxX(), env.getMinY()));
-    // левый верхний угол
-    sites.add(new Coordinate(env.getMinX(), env.getMaxY()));
-    // правый верхний угол
-    sites.add(new Coordinate(env.getMaxX(), env.getMaxY()));
+    var geom = geometryFactory.toGeometry(executionEnvelop);
+    List<Coordinate> executionEnvelopCoords = Arrays.asList(geom.getCoordinates());
+    sites.addAll(executionEnvelopCoords);
+
+    // TODO: debug
+    // var geoms = sites.stream().map(c -> geometryFactory.createPoint(c))
+    // .map(g -> Feature.withDefaultProperties(g));
+    // var features = Stream.of(Feature.withDefaultProperties(geom));
+    // DebugUtils.writeFeaturesIn32637(features, "000???-skeleton-" +
+    // localData.hashCode());
+    // TODO: debug end
 
     return new ArrayList<>(sites);
   }

@@ -17,6 +17,9 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         "[format_sql]": true
+  # TODO: проставить timeout ответа сервера
+  tomcat:
+    connection-timeout: 1000
 
 app:
   cors:
@@ -26,14 +29,17 @@ app:
 
   solution:
     stage2:
-      bufferMeters: 150.0
+      # Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
+      # для кластера ОКС с учетом технологического буфера
+      clusterBufferMeters: 200.0
       # Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
       bufferRadiusMeters: 2.0
-      clusterSizeMeters: 50.0
-      # N метра буфера более чем достаточно для точки подключения на границе здания
+      # Размер кластера
+      clusterSizeMeters: 100.0
+      # N метра буфера для точки подключения на границе здания
       oksConnectionPointBufferMeters: 2.0
       # Количество вариантов для генерации
-      maxVariants: 3
+      maxVariants: 10
       # Максимальная степень узла для камер по ТЗ
       maxValence: 4
       # из скольки кратчайших путей выбирать
@@ -42,7 +48,7 @@ app:
       parallelClusterCount: 3
       # Критерий уникальности: если более 70% вершин совпадают, считаем варианты идентичными
       pathUniquePercent: 0.7
-      # 5 ближайших точек врезки более чем достаточно при построении сети кластера
+      # 5 ближайших точек врезки при построении сети кластера
       closesSourcesCount: 5
 
 springdoc:

@@ -59,19 +59,18 @@ public class ProcessStage2RoutesService {
     });
 
     @SuppressWarnings("null")
-    Stream<Stream<List<Feature>>> transformedRoutes = featureCollections;
+    Stream<Stream<Stream<Feature>>> transformedRoutes = featureCollections;
     if (transform) {
       transformedRoutes = featureCollections.map((route) -> {
-        return route.map((clusterVariant) -> transformService.transform32637To4326(clusterVariant.stream())
-            .collect(Collectors.toList()));
+        return route.map((clusterVariant) -> transformService.transform32637To4326(clusterVariant));
       });
     }
 
     var routes = transformedRoutes.map(route -> {
-      var variants = route.map((features) -> {
-        return FeatureCollection.of(features);
+      var variant = route.map((s) -> {
+        return FeatureCollection.of(s.collect(Collectors.toList()));
       }).collect(Collectors.toList());
-      return new ClusterVariantsResult(variants);
+      return new ClusterVariantsResult(variant);
     }).collect(Collectors.toList());
 
     return new ClustersRoutingResult(routes);

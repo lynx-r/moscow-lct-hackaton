@@ -1,7 +1,6 @@
 package com.ultra.dit.stage2_test;
 
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.locationtech.jts.geom.Geometry;
@@ -10,11 +9,10 @@ import com.ultra.dit.dto.Feature;
 import com.ultra.dit.stage2.model.RoutingResult;
 
 public class FeatureMapper {
-  public static List<Feature> mapRoutingResultToFeatures(RoutingResult routingResult) {
+  public static Stream<Feature> mapRoutingResultToFeatures(RoutingResult routingResult) {
     return Stream
         .concat(routingResult.getNewPipelines().stream(),
-            routingResult.getChambers().stream())
-        .collect(Collectors.toList());
+            routingResult.getChambers().stream());
   }
 
   public static <T extends Geometry> Stream<Feature> mapGeometriesToFeatures(List<T> geometries) {

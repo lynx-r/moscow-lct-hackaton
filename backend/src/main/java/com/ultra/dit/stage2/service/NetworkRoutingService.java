@@ -6,7 +6,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.locationtech.jts.geom.Coordinate;
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,11 +15,13 @@ import org.springframework.stereotype.Service;
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.exception.RoutingException;
-import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
+import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
+import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.util.DebugUtils;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -66,25 +69,17 @@ public class NetworkRoutingService {
 
     // Шаг 2.0: Автоматическая пространственная кластеризация ОКС (d <= 100м)
     List<List<OksObject>> clusters = clusteringService.clusterOksObjects(oksList);
-    log.info("Clusters Count " + clusters.size());
+    log.info("Clusters Count: " + clusters.size());
 
     try {
-      var customThreadPool = new ForkJoinPool(parallelClusterCount);
+      var parallelism = Math.min(parallelClusterCount, clusters.size());
+      var customThreadPool = new ForkJoinPool(parallelism);
 
       var pipelineResults = customThreadPool
           .submit(() -> IntStream.range(0, clusters.size()).parallel().mapToObj(clusterId -> {
             var cluster = clusters.get(clusterId);
 
-            if (log.isTraceEnabled()) {
-              // TODO: debug start
-              var clusterFeatures = cluster.stream().flatMap(oks -> {
-                return List.of(Feature.withDefaultProperties(oks.getConnectionPoint()),
-                    Feature.withDefaultProperties(oks.getBuildingPolygon())).stream();
-              });
-              DebugUtils.writeFeaturesIn32637(clusterFeatures,
-                  "0-" + clusterId + "-clusterFeatureCollection");
-              // TODO: debug end
-            }
+            debugCluster(clusterId, cluster);
 
             // Шаг 2.1: Вычисление Bounding Box кластера и локализация выборки данных
             // (+500м)
@@ -92,8 +87,12 @@ public class NetworkRoutingService {
             var localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
 
             if (localData.isInvalid()) {
+              log.info("cluster-" + clusterId + ": Invalid Local Data");
+              debugLocalData(clusterId, localData);
               return List.of(RoutingResult.empty(clusterId));
             }
+
+            debugLocalData(clusterId, localData);
 
             // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
             // Roadmap)
@@ -118,31 +117,7 @@ public class NetworkRoutingService {
             // graph.setEdgeWeight(edge, calculatedWeight);
             // }
 
-            if (log.isTraceEnabled()) {
-              // TODO: debug start
-              GeometryFactory geometryFactory = new GeometryFactory();
-              var env = localData.getExecutionEnvelope();
-              var envCoordinates = new Coordinate[] {
-                  new Coordinate(env.getMinX(), env.getMinY()), new Coordinate(env.getMinX(), env.getMaxY()),
-                  new Coordinate(env.getMaxX(), env.getMaxY()), new Coordinate(env.getMaxX(), env.getMinY()),
-                  new Coordinate(env.getMinX(), env.getMinY())
-
-          };
-
-              var localBoundPolygon = geometryFactory.createPolygon(envCoordinates);
-              List<Feature> localBoundList = List.of(Feature.withDefaultProperties(localBoundPolygon));
-              var localFeatures = List.of(localData.getConstraints(),
-                  localData.getNetworks(),
-                  localData.getNodes(),
-                  localBoundList)
-                  .stream().flatMap(l -> l.stream());
-
-              DebugUtils.writeFeaturesIn32637(localFeatures, "1-" + clusterId + "-localFeatures");
-
-              DebugUtils.writeGraph(graph, "graph-" + clusterId);
-
-              // TODO: debug end
-            }
+            debugGraph(clusterId, graph);
 
             return topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
           })).get();
@@ -151,6 +126,49 @@ public class NetworkRoutingService {
       throw new RoutingException("InterruptedException: Не удалось построить маршруты: " + e.getMessage());
     } catch (ExecutionException e) {
       throw new RoutingException("ExecutionException: Не удалось построить маршруты: " + e.getMessage());
+    }
+  }
+
+  private void debugGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      DebugUtils.writeGraph(graph, "graph-cluster-" + clusterId);
+      // TODO: debug end
+    }
+  }
+
+  private void debugLocalData(int clusterId, LocalIndexContainer localData) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      GeometryFactory geometryFactory = new GeometryFactory();
+      var env = localData.getExecutionEnvelope();
+      var localBoundPolygon = geometryFactory.toGeometry(env);
+      List<Feature> localBoundList = List.of(Feature.withDefaultProperties(localBoundPolygon));
+
+      var localFeatures = List.of(
+          localData.getConstraints(),
+          localData.getNetworks(),
+          localData.getNodes(),
+          localBoundList)
+          .stream().flatMap(l -> l.stream());
+
+      DebugUtils.writeFeaturesIn32637(localFeatures, clusterId + "-cluster-local-data");
+      // TODO: debug end
+    }
+  }
+
+  private void debugCluster(int clusterId, List<OksObject> cluster) {
+    if (log.isTraceEnabled()) {
+      // TODO: debug start
+      log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
+
+      var clusterOks = cluster.stream().map(oks -> oks.getFeature());
+      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks");
+      // var clusterBuildings = cluster.stream()
+      // .map(oks -> Feature.withDefaultProperties(oks.getBuildingPolygon()));
+      // DebugUtils.writeFeaturesIn32637(clusterBuildings,
+      // "oks-buildings-cluster-" + clusterId);
+      // TODO: debug end
     }
   }
 

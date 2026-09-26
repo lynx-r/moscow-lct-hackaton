@@ -16,8 +16,8 @@ import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.Feature;
-import com.ultra.dit.service.DebugUtils;
 import com.ultra.dit.stage1.ParseService;
+import com.ultra.dit.util.DebugUtils;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -53,7 +53,7 @@ public abstract class BaseTest {
   @BeforeAll
   public static void initAllTests() throws IOException {
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.DEBUG);
+    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.TRACE);
 
     testFeatures = new ArrayList<>();
 

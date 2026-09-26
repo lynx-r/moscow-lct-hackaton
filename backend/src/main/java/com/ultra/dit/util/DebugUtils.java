@@ -1,4 +1,4 @@
-package com.ultra.dit.service;
+package com.ultra.dit.util;
 
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -26,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.FeatureProperties;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.VirtualNode;
 
@@ -63,21 +65,22 @@ public class DebugUtils {
       .modules(new JtsModule()).build();
 
   public static void writeFeaturesIn32637(Stream<Feature> featureStream, String fileName) {
-    String fileNamePath32637 = GEOJSON_FOLDER.resolve("32637:" + fileName).toString();
+    // String fileNamePath32637 = GEOJSON_FOLDER.resolve(fileName +
+    // "-32637").toString();
 
     var rawFeatures = featureStream.collect(Collectors.toList());
-    writeFeaturesToFile(rawFeatures, fileNamePath32637);
+    // writeFeaturesToFile(rawFeatures, fileNamePath32637);
 
-    String fileNamePath4326 = GEOJSON_FOLDER.resolve("4326:" + fileName).toString();
+    String fileNamePath4326 = GEOJSON_FOLDER.resolve(fileName + "-4326").toString();
     var features = transform.transform32637To4326(rawFeatures.stream()).collect(Collectors.toList());
     writeFeaturesToFile(features, fileNamePath4326);
   }
 
   public static void writeFeatures(Stream<Feature> featureStream, String fileName) {
-    String fileNamePath32637 = GEOJSON_FOLDER.resolve(fileName).toString();
+    String fileNamePath = GEOJSON_FOLDER.resolve(fileName).toString();
 
     var rawFeatures = featureStream.collect(Collectors.toList());
-    writeFeaturesToFile(rawFeatures, fileNamePath32637);
+    writeFeaturesToFile(rawFeatures, fileNamePath);
   }
 
   public static void writeFeaturesToFile(List<Feature> featureStream, String fileName) {
@@ -101,7 +104,17 @@ public class DebugUtils {
           to.getCoordinate()
       };
       var lineString = geometryFactory.createLineString(lineCoords);
-      return Feature.withDefaultProperties(lineString);
+
+      FeatureProperties properties;
+      if (from.hasFeatureProperties()) {
+        properties = from.getFeatureProperties();
+      } else if (to.hasFeatureProperties()) {
+        properties = to.getFeatureProperties();
+      } else {
+        properties = new FeatureProperties();
+      }
+
+      return Feature.of(lineString, properties);
     });
 
     var allFeatures = Stream.concat(graphEdgeFeatures, featureStream);
@@ -140,8 +153,9 @@ public class DebugUtils {
   }
 
   public static <V extends VirtualNode, E> void writeGraphPaths(List<GraphPath<V, E>> paths, String fileName) {
+    var pathId = new AtomicInteger(0);
     paths.forEach((path) -> {
-      exportPathToGraphML(path, fileName);
+      exportPathToGraphML(path, fileName + "-path-" + pathId.incrementAndGet());
     });
   }
 

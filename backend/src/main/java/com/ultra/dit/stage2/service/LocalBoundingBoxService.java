@@ -20,11 +20,11 @@ import com.ultra.dit.stage2.model.OksObject;
 @Service
 public class LocalBoundingBoxService {
 
-  private final double bufferMeters;
+  private final double clusterBufferMeters;
 
   public LocalBoundingBoxService(
-      @Value("${app.solution.stage2.bufferMeters:500.0}") double bufferMeters) {
-    this.bufferMeters = bufferMeters;
+      @Value("${app.solution.stage2.clusterBufferMeters:15.0}") double clusterBufferMeters) {
+    this.clusterBufferMeters = clusterBufferMeters;
   }
 
   /**
@@ -33,10 +33,6 @@ public class LocalBoundingBoxService {
    */
   @LogExecutionTime
   public Envelope calculateLocalEnvelope(List<OksObject> cluster) {
-    if (cluster == null || cluster.isEmpty()) {
-      return new Envelope();
-    }
-
     Envelope envelope = new Envelope();
 
     // Накапливаем пространственный охват точек подключения ОКС
@@ -48,8 +44,7 @@ public class LocalBoundingBoxService {
     }
 
     // Расширяем Envelope во все стороны на 500 метров (ТЗ)
-    // FIXME: расширить в метрах не получилось. Расширяет в градусах
-    envelope.expandBy(bufferMeters);
+    envelope.expandBy(clusterBufferMeters);
     return envelope;
   }
 
@@ -60,10 +55,6 @@ public class LocalBoundingBoxService {
   @LogExecutionTime
   @SuppressWarnings("unchecked")
   public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes) {
-    if (localEnvelope == null || localEnvelope.isNull()) {
-      return new LocalIndexContainer(List.of(), List.of(), List.of(), localEnvelope);
-    }
-
     // Извлекаем пространственные ограничения (Зоны запрета, дороги, здания)
     List<Feature> localConstraints = globalIndexes.getConstraintsTree().query(localEnvelope);
 

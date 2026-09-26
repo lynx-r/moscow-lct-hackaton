@@ -1,4 +1,4 @@
-package com.ultra.dit.helpers;
+package com.ultra.dit.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,6 @@ import org.locationtech.jts.io.WKTWriter;
 
 import com.ultra.dit.dto.Feature;
 import com.ultra.dit.dto.FeatureProperties;
-import com.ultra.dit.service.DebugUtils;
 
 public class STRtreeVisualizer {
 

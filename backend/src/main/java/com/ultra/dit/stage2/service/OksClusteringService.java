@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,8 +62,8 @@ public class OksClusteringService {
       clusterMap.computeIfAbsent(root, k -> new ArrayList<>()).add(oksList.get(i));
     }
 
-    var result = new ArrayList<>(clusterMap.values());
-    return result;
+    var values = clusterMap.values().stream().filter(l -> !l.isEmpty()).collect(Collectors.toList());
+    return values;
   }
 
   // Вспомогательный метод DSU: Поиск корня с компрессией путей

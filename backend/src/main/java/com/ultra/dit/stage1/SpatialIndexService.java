@@ -48,6 +48,8 @@ public class SpatialIndexService {
       var properties = feature.getProperties();
       var objectType = properties.getObjectType();
 
+      // Вставка по EnvelopeInternal большие объекты вроде restriction_type=railway
+      // будут попадать в локальную выборку
       var envelope = feature.getGeometry().getEnvelopeInternal();
 
       switch (objectType) {
@@ -103,8 +105,8 @@ public class SpatialIndexService {
       // Делаем микро-окно вокруг точки (расширяем на пару метров, чтобы поймать
       // касание или пересечение)
       var searchEnvelope = connectionPoint.getEnvelopeInternal();
-      // oksConnectionPointBufferMeters метра буфера более чем достаточно для точки
-      // подключения на границе здания
+      // oksConnectionPointBufferMeters метра буфера для точки подключения на границе
+      // здания
       searchEnvelope.expandBy(oksConnectionPointBufferMeters);
 
       // Запрашиваем из локального R-Tree только кандидатов, находящихся рядом с

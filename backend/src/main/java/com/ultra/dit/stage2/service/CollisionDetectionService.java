@@ -80,7 +80,6 @@ public class CollisionDetectionService {
         if (segment.intersects(matchingOks.getConnectionPoint())) {
           // Разрешаем проход: коллизия со своим зданием для финишного отрезка
           // игнорируется
-          // TODO: почему не break?
           continue;
         }
 
