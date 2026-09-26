@@ -54,7 +54,7 @@ public abstract class BaseTest {
   @BeforeAll
   public static void initAllTests() throws IOException {
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.TRACE);
+    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.DEBUG);
 
     testFeatures = new ArrayList<>();
 
