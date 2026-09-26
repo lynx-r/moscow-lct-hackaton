@@ -2,7 +2,7 @@ package com.ultra.dit.stage2.model;
 
 import org.locationtech.jts.geom.Coordinate;
 
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

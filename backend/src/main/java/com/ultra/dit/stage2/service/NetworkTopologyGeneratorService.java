@@ -18,8 +18,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
@@ -114,6 +114,7 @@ public class NetworkTopologyGeneratorService {
     // TODO: раскомментировать?
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        .limit(closesSourcesCount)
         .collect(Collectors.toList());
 
     // TODO: если generateForSources вернет Empty попробовать взять другие sources
@@ -316,7 +317,7 @@ public class NetworkTopologyGeneratorService {
 
     var vertices = path.getVertexList();
 
-    var pipelines = new ArrayList<Feature>();
+    var pipelines = new ArrayList<Feature<? extends FeatureProperties>>();
     // Карта для подсчета валентности узлов (degree) в рамках выбранного решения
     var nodeValence = new HashMap<Coordinate, Integer>();
     // Сборка линейных объектов и первичный подсчет степеней вершин
@@ -356,7 +357,7 @@ public class NetworkTopologyGeneratorService {
       pipelines.add(Feature.of(line, properties));
     }
 
-    var chambers = new ArrayList<Feature>();
+    var chambers = new ArrayList<Feature<? extends FeatureProperties>>();
     // Проставление типов узлов согласно ТЗ (Камеры в точках смены атрибутов или
     // ветвления)
     for (VirtualNode node : vertices) {
@@ -467,7 +468,7 @@ public class NetworkTopologyGeneratorService {
           .collect(Collectors.toList());
       log(clusterId, "Closest Coordinates: " + closestCoords);
 
-      var closestSourceF = closestSources.stream()
+      Stream<Feature<? extends FeatureProperties>> closestSourceF = closestSources.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
       DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-source-nodes-closest");
     }
@@ -479,7 +480,7 @@ public class NetworkTopologyGeneratorService {
       log(clusterId, "Cluster First Item Id: " + firstOks.getId());
       DebugUtils.writeFeaturesIn32637(Stream.of(firstOks.getFeature()), clusterId + "-cluster-center");
 
-      var sourceF = sourceNodes.stream()
+      Stream<Feature<? extends FeatureProperties>> sourceF = sourceNodes.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
       DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-source-nodes");
       // TODO: debug end

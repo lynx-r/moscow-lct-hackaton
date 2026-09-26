@@ -8,7 +8,8 @@ import java.util.stream.Stream;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 
 import lombok.Getter;
 
@@ -21,18 +22,18 @@ public final class LocalIndexContainer {
   /**
    * Пространственные ограничения (Зоны запрета, дороги, здания)
    */
-  private final List<Feature> constraints;
+  private final List<Feature<? extends FeatureProperties>> constraints;
 
   /**
    * Существующие тепловые сети (Линейные объекты)
    */
-  private final List<Feature> networks;
+  private final List<Feature<? extends FeatureProperties>> networks;
 
   /**
    * Существующие камеры, источники, точки подключения (Точечные
    * объекты)
    */
-  private final List<Feature> nodes;
+  private final List<Feature<? extends FeatureProperties>> nodes;
 
   /**
    * Общий минимальный охватывающий прямоугольник (Envelope) для
@@ -40,8 +41,9 @@ public final class LocalIndexContainer {
    */
   private final Envelope executionEnvelope;
 
-  public LocalIndexContainer(List<Feature> constraints, List<Feature> networks,
-      List<Feature> nodes, Envelope executionEnvelope) {
+  public LocalIndexContainer(List<Feature<? extends FeatureProperties>> constraints,
+      List<Feature<? extends FeatureProperties>> networks,
+      List<Feature<? extends FeatureProperties>> nodes, Envelope executionEnvelope) {
     this.constraints = Collections.unmodifiableList(constraints);
     this.networks = Collections.unmodifiableList(networks);
     this.nodes = Collections.unmodifiableList(nodes);

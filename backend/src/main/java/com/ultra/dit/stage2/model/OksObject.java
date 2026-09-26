@@ -3,7 +3,8 @@ package com.ultra.dit.stage2.model;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
 
 import lombok.Value;
 
@@ -14,10 +15,10 @@ import lombok.Value;
  */
 @Value
 public class OksObject {
-  private final Feature feature;
+  private final Feature<OksConnectionPointProperties> feature;
   private final Geometry buildingPolygon;
 
-  public static OksObject of(Feature feature, Geometry buildingPolygon) {
+  public static OksObject of(Feature<OksConnectionPointProperties> feature, Geometry buildingPolygon) {
     return new OksObject(feature, buildingPolygon);
   }
 

@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.util.DebugUtils;
 
@@ -45,10 +46,10 @@ public abstract class BaseTest {
 
   protected final double OKS_CONNECTION_POINT_BUFFER_METERS = 2.0;
 
-  protected static List<List<Feature>> testFeatures;
+  protected static List<List<Feature<? extends FeatureProperties>>> testFeatures;
 
-  protected static List<Feature> featuresBase;
-  protected static List<Feature> featuresOrganizer;
+  protected static List<Feature<? extends FeatureProperties>> featuresBase;
+  protected static List<Feature<? extends FeatureProperties>> featuresOrganizer;
 
   @BeforeAll
   public static void initAllTests() throws IOException {
@@ -65,7 +66,7 @@ public abstract class BaseTest {
       try (var datasetInputStream = resource.getInputStream();
           var featureStream = PARSE_SERVICE.streamFeatures(datasetInputStream)) {
 
-        List<Feature> features = featureStream.collect(Collectors.toList());
+        List<Feature<? extends FeatureProperties>> features = featureStream.collect(Collectors.toList());
         testFeatures.add(features);
       }
     }

@@ -24,8 +24,8 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.linearref.LengthIndexedLine;
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.ObjectType;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.ObjectType;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage3.model.ConnectionResult;
@@ -110,13 +110,14 @@ public class ConnectionSelectionService {
                     if (!(g instanceof LineString) && !(g instanceof MultiLineString)) {
                         throw new IllegalArgumentException("Сеть должна быть линейной");
                     }
-                    for (int i = 0; i < g.getNumGeometries(); i++) {
-                        String id = f.getProperties().getId();
-                        String idGeometry = g instanceof LineString ? id : id + ":" + i;
-                        int diameter = f.getProperties().getDiameter() == null ? 0 : f.getProperties().getDiameter();
-                        LineString geometryN = (LineString) g.getGeometryN(i);
-                        addSegment(idGeometry, id, diameter, geometryN);
-                    }
+                    // for (int i = 0; i < g.getNumGeometries(); i++) {
+                    // String id = f.getProperties().getId();
+                    // String idGeometry = g instanceof LineString ? id : id + ":" + i;
+                    // int diameter = f.getProperties().getDiameter() == null ? 0 :
+                    // f.getProperties().getDiameter();
+                    // LineString geometryN = (LineString) g.getGeometryN(i);
+                    // addSegment(idGeometry, id, diameter, geometryN);
+                    // }
                 } else {
                     throw new IllegalArgumentException("Неподдерживаемый элемент индекса сети");
                 }

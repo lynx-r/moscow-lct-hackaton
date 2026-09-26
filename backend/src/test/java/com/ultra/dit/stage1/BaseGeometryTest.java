@@ -8,19 +8,23 @@ import java.util.List;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 
 public abstract class BaseGeometryTest extends BaseStage1Test {
 
-  void assertFeatureGeometriesEqual(List<Feature> expected, List<Feature> actual, double tolerance) {
+  void assertFeatureGeometriesEqual(List<Feature<? extends FeatureProperties>> expected,
+      List<Feature<? extends FeatureProperties>> actual, double tolerance) {
     assertTrue(isGeometriesEqual(expected, actual, tolerance), "Геометрии коллекций не совпадают в пределах допуска");
   }
 
-  void assertFeatureGeometriesNotEqual(List<Feature> expected, List<Feature> actual, double tolerance) {
+  void assertFeatureGeometriesNotEqual(List<Feature<? extends FeatureProperties>> expected,
+      List<Feature<? extends FeatureProperties>> actual, double tolerance) {
     assertFalse(isGeometriesEqual(expected, actual, tolerance), "Геометрия не изменилась");
   }
 
-  boolean isGeometriesEqual(List<Feature> expected, List<Feature> actual, double tolerance) {
+  boolean isGeometriesEqual(List<Feature<? extends FeatureProperties>> expected,
+      List<Feature<? extends FeatureProperties>> actual, double tolerance) {
     GeometryFactory factory = new GeometryFactory();
 
     // Собираем массивы геометрий

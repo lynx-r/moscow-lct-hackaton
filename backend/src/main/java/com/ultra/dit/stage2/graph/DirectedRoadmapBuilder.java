@@ -18,7 +18,7 @@ import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;

@@ -4,9 +4,10 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
 import com.ultra.dit.dto.RoutingResult;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 
@@ -22,7 +23,7 @@ public class RoutingFlowService {
     this.spatialIndexService = spatialIndexService;
   }
 
-  public RoutingResult buildRoute(Stream<Feature> featureCollection) {
+  public RoutingResult buildRoute(Stream<Feature<? extends FeatureProperties>> featureCollection) {
     var readyCollection = transformService.transform4326To32637(featureCollection);
 
     var indexContainer = spatialIndexService.buildSpatialIndices(readyCollection);

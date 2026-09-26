@@ -6,8 +6,9 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.ClusterVariantsResult;
@@ -38,8 +39,9 @@ public class ProcessStage2RoutesService {
    * @param featureCollection
    * @return
    */
-  public ClustersRoutingResult buildRoutes(Stream<Feature> featureCollection, boolean transform) {
-    Stream<Feature> readyCollection = featureCollection;
+  public ClustersRoutingResult buildRoutes(Stream<Feature<? extends FeatureProperties>> featureCollection,
+      boolean transform) {
+    Stream<Feature<? extends FeatureProperties>> readyCollection = featureCollection;
     if (transform) {
       readyCollection = transformService.transform4326To32637(featureCollection);
     }
@@ -59,7 +61,7 @@ public class ProcessStage2RoutesService {
     });
 
     @SuppressWarnings("null")
-    Stream<Stream<Stream<Feature>>> transformedRoutes = featureCollections;
+    Stream<Stream<Stream<Feature<? extends FeatureProperties>>>> transformedRoutes = featureCollections;
     if (transform) {
       transformedRoutes = featureCollections.map((route) -> {
         return route.map((clusterVariant) -> transformService.transform32637To4326(clusterVariant));

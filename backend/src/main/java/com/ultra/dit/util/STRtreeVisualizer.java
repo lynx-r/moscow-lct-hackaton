@@ -2,6 +2,7 @@ package com.ultra.dit.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
@@ -11,14 +12,15 @@ import org.locationtech.jts.index.strtree.Boundable;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.WKTWriter;
 
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 
 public class STRtreeVisualizer {
 
   public static void writeSTRtreeToFile(STRtree tree, String fileName) {
     var boundaries = extractTreeBoundaries(tree);
-    var features = boundaries.stream().map((geo) -> Feature.of(geo, new FeatureProperties()));
+    Stream<Feature<? extends FeatureProperties>> features = boundaries.stream()
+        .map((geo) -> Feature.of(geo, new FeatureProperties()));
 
     DebugUtils.writeFeaturesIn32637(features, fileName);
   }

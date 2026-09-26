@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
@@ -13,7 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.exception.RoutingException;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
@@ -143,7 +145,8 @@ public class NetworkRoutingService {
       GeometryFactory geometryFactory = new GeometryFactory();
       var env = localData.getExecutionEnvelope();
       var localBoundPolygon = geometryFactory.toGeometry(env);
-      List<Feature> localBoundList = List.of(Feature.withDefaultProperties(localBoundPolygon));
+      List<Feature<? extends FeatureProperties>> localBoundList = List
+          .of(Feature.withDefaultProperties(localBoundPolygon));
 
       var localFeatures = List.of(
           localData.getConstraints(),
@@ -162,7 +165,7 @@ public class NetworkRoutingService {
       // TODO: debug start
       log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
 
-      var clusterOks = cluster.stream().map(oks -> oks.getFeature());
+      Stream<Feature<? extends FeatureProperties>> clusterOks = cluster.stream().map(oks -> oks.getFeature());
       DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks");
       // var clusterBuildings = cluster.stream()
       // .map(oks -> Feature.withDefaultProperties(oks.getBuildingPolygon()));
