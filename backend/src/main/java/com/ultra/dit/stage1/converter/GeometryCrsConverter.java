@@ -9,7 +9,8 @@ import org.locationtech.proj4j.CoordinateTransform;
 import org.locationtech.proj4j.CoordinateTransformFactory;
 import org.locationtech.proj4j.ProjCoordinate;
 
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 
 public class GeometryCrsConverter {
 
@@ -46,7 +47,8 @@ public class GeometryCrsConverter {
    * @return
    * @throws Exception
    */
-  public Stream<Feature> convert(Stream<Feature> inputStream) {
+  public Stream<Feature<? extends FeatureProperties>> convert(
+      Stream<Feature<? extends FeatureProperties>> inputStream) {
     return inputStream.parallel()
         .map(feature -> {
           if (feature == null || feature.getGeometry() == null) {

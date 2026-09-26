@@ -1,4 +1,4 @@
-package com.ultra.dit.dto;
+package com.ultra.dit.dto.geojson;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor(staticName = "of")
 public class FeatureCollection {
     @NonNull
-    private List<Feature> features;
+    private List<Feature<? extends FeatureProperties>> features;
 
     private final GeoJsonType type = GeoJsonType.FEATURE_COLLECTION;
 }

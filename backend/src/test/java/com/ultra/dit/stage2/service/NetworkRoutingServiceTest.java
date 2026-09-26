@@ -1,9 +1,10 @@
 package com.ultra.dit.stage2.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -18,219 +19,235 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureProperties;
-import com.ultra.dit.dto.ObjectType;
+import com.ultra.dit.constants.FeaturePropertiesStyles;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.ClustersRoutingResult;
-import com.ultra.dit.stage2.model.IndexContainer;
-import com.ultra.dit.stage2.model.OksObject;
-import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
 import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
 import com.ultra.dit.util.DebugUtils;
 import com.ultra.dit.util.STRtreeVisualizer;
 
+import lombok.NonNull;
+
 class NetworkRoutingServiceTest extends BaseTest {
 
-        // Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
-        // для кластера ОКС с учетом технологического буфера
-        private static final double CLUSTER_BUFFER_METERS = 500.0;
+  // Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
+  // для кластера ОКС с учетом технологического буфера
+  private static final double CLUSTER_BUFFER_METERS = 500.0;
 
-        // Размер кластера ОКС
-        private static final double CLUSTER_SIZE_METERS = 10.0;
+  // Размер кластера ОКС
+  private static final double CLUSTER_SIZE_METERS = 10.0;
 
-        private static final double PATH_UNIQUE_PERCENT = 0.7;
+  private static final double PATH_UNIQUE_PERCENT = 0.7;
 
-        private static final int MAX_VARIANTS = 3;
-        private static final int MAX_VALENCE = 4;
+  private static final int MAX_VARIANTS = 3;
+  private static final int MAX_VALENCE = 4;
 
-        // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
-        private static final int CHOOSE_FROM_PATHS_COUNT = 3;
+  // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
+  private static final int CHOOSE_FROM_PATHS_COUNT = 3;
 
-        private static final int PARALLEL_CLUSTER_COUNT = 3;
+  private static final int PARALLEL_CLUSTER_COUNT = 3;
 
-        // из скольки кратчайших путей выбирать
-        private static final int CLOSES_SOURCES_COUNT = 5;
+  // из скольки кратчайших путей выбирать
+  private static final int CLOSES_SOURCES_COUNT = 5;
 
-        @Spy
-        private ParseService parserService = new ParseService(OBJECT_MAPPER);
+  @Spy
+  private ParseService parserService = new ParseService(OBJECT_MAPPER);
 
-        private ProcessStage2RoutesService processStage2RoutesService;
+  private ProcessStage2RoutesService processStage2RoutesService;
 
-        private NetworkRoutingService routingService;
-        private GeometryFactory gf = new GeometryFactory();
+  private NetworkRoutingService routingService;
+  private GeometryFactory gf = new GeometryFactory();
 
-        @BeforeEach
-        void setUp() {
-                TransformService transformService = new TransformService();
-                SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
+  @BeforeEach
+  void setUp() {
+    TransformService transformService = new TransformService();
+    SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
 
-                OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
-                LocalBoundingBoxService bboxService = new LocalBoundingBoxService(CLUSTER_BUFFER_METERS);
-                // CollisionDetectionService collisionService = new
-                // CollisionDetectionService(BUFFER_RADIUS_METERS);
-                NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
-                                MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT, PATH_UNIQUE_PERCENT, CLOSES_SOURCES_COUNT);
+    OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
+    LocalBoundingBoxService bboxService = new LocalBoundingBoxService(CLUSTER_BUFFER_METERS);
+    // CollisionDetectionService collisionService = new
+    // CollisionDetectionService(BUFFER_RADIUS_METERS);
+    NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
+        MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT, PATH_UNIQUE_PERCENT, CLOSES_SOURCES_COUNT);
 
-                routingService = new NetworkRoutingService(
-                                clusteringService, bboxService,
-                                // collisionService,
-                                topologyGenerator, PARALLEL_CLUSTER_COUNT);
+    routingService = new NetworkRoutingService(
+        clusteringService, bboxService,
+        // collisionService,
+        topologyGenerator, PARALLEL_CLUSTER_COUNT);
 
-                processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
-                                routingService);
+    processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
+        routingService);
+  }
+
+  @Test
+  void testOrganizer() {
+    var features = featuresOrganizer;
+    var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
+
+    writeResults(clustersRoutingResult);
+
+    assertFalse(clustersRoutingResult.getRoutes().isEmpty());
+  }
+
+  @Test
+  void testBase() {
+    var features = featuresBase;
+    var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
+
+    writeResults(clustersRoutingResult);
+
+    assertFalse(clustersRoutingResult.getRoutes().isEmpty());
+  }
+
+  @Test
+  void testSuccessfulRoutingAroundObstacle() {
+    // 1. Создаем тестовое препятствие (здание-полигон) прямо на пути трассы
+    Coordinate[] polyCoords = new Coordinate[] {
+        new Coordinate(17, 5), new Coordinate(20, 5),
+        new Coordinate(20, 15), new Coordinate(17, 15),
+        new Coordinate(17, 5)
+    };
+    Polygon obstacle = gf.createPolygon(polyCoords);
+    STRtree constraintsTree = new STRtree();
+    constraintsTree.insert(obstacle.getEnvelopeInternal(), obstacle);
+
+    // Также можно зарегистрировать конечную точку существующей сети как
+    // точку врезки
+    Point networkNode = gf.createPoint(new Coordinate(13, 7));
+    // 2. Создаем существующую сеть (точка старта)
+    LineString existingNet = gf.createLineString(new Coordinate[] {
+        new Coordinate(12, 10), networkNode.getCoordinate()
+    });
+    STRtree networksTree = new STRtree();
+    networksTree.insert(existingNet.getEnvelopeInternal(), existingNet);
+
+    // 3. Создаем целевой ОКС (точка финиша за препятствием)
+    Point connectionPoint = gf.createPoint(new Coordinate(24, 7));
+    Polygon building = gf.createPolygon(new Coordinate[] {
+        new Coordinate(23, 6), new Coordinate(25, 6),
+        new Coordinate(25, 8), new Coordinate(23, 8),
+        new Coordinate(23, 6)
+    });
+    // Добавляем полигон здания ОКС, чтобы к нему можно было протянуть трубу
+    constraintsTree.insert(building.getEnvelopeInternal(), building);
+    // TODO: закомментровано, чтобы компилировалось
+    // OksObject oks = OksObject.of(
+    // Feature.of(connectionPoint,
+    // new FeatureProperties("OKS-1", ObjectType.OKS_CONNECTION_POINT, null,
+    // 1.5, null, "OKS-1", null, null)),
+    // building);
+    // var oksObjects = List.of(oks);
+    var oksObjects = List.of();
+
+    // TODO: debug start
+    @SuppressWarnings("null")
+    // polyCoords
+    var testGeometries = List.of(obstacle, networkNode, existingNet, connectionPoint, building).stream();
+    // .stream() .flatMap(List::stream);
+    var testMapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(testGeometries);
+    DebugUtils.writeFeaturesIn32637(testMapGeometriesToFeatures, "testFeatureCollection");
+    // TODO: debug stop
+
+    STRtree nodesTree = new STRtree();
+    // Обязательно регистрируем точку подключения ОКС в индексе узлов карты
+    nodesTree.insert(connectionPoint.getEnvelopeInternal(), connectionPoint);
+    nodesTree.insert(networkNode.getEnvelopeInternal(), networkNode);
+
+    // TODO: debug start
+    var constraints = STRtreeVisualizer.extractTreeBoundaries(constraintsTree);
+    var networks = STRtreeVisualizer.extractTreeBoundaries(networksTree);
+    var nodes = STRtreeVisualizer.extractTreeBoundaries(nodesTree);
+
+    @SuppressWarnings("null")
+    var treeGeometries = List.of(constraints, networks, nodes, List.of(building)).stream()
+        .flatMap(List::stream);
+    var mapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(treeGeometries);
+    DebugUtils.writeFeaturesIn32637(mapGeometriesToFeatures,
+        "treeFeatureCollection");
+    // TODO: debug stop
+
+    // IndexContainer globalIndexes = new IndexContainer(constraintsTree,
+    // networksTree, nodesTree, oksObjects);
+
+    // // 4. Запуск оркестратора
+    // List<List<RoutingResult>> results =
+    // routingService.executeRoutingPipeline(globalIndexes);
+
+    // ClustersRoutingResult clustersRoutingResult = processStage2RoutesService
+    // .mapResultsToClustersRoutingResult(results, false);
+
+    // clustersRoutingResult.getRoutes().forEach(cluster -> {
+    // AtomicInteger index = new AtomicInteger(0);
+    // cluster.getVariants().forEach((variant) -> {
+    // DebugUtils.writeFeaturesIn32637(variant.getFeatures().stream(),
+    // "result-variant-" + index.incrementAndGet());
+    // });
+    // });
+
+    // // 5. Проверки
+    // assertFalse(results.isEmpty());
+    // List<RoutingResult> clusterVariants = results.get(0);
+    // assertTrue(clusterVariants.get(0).isConnected(), "Трасса должна найти
+    // обходной путь");
+
+    // // Проверяем, что ни один сгенерированный отрезок не пересекает буфер
+    // // препятствия
+    // for (Feature pipeline : clusterVariants.get(0).getNewPipelines()) {
+    // assertFalse(pipeline.getGeometry().buffer(2.0).intersects(obstacle),
+    // "Трасса задела препятствие!");
+    // }
+  }
+
+  // @Test()
+  // void testPrintCoords() {
+  // var geometryFactory = new GeometryFactory();
+  // var line = geometryFactory.createLineString(new Coordinate[] {
+  // new Coordinate(414545.8493114061, 6175503.658660367),
+  // new Coordinate(412429.8920690528, 6171210.8233968755),
+  // });
+  // Stream<Feature<FeatureProperties>> features =
+  // Stream.of(Feature.withDefaultProperties(line));
+  // DebugUtils.writeFeaturesIn32637(features, "000-PrintCoords");
+  // }
+
+  private void writeResults(ClustersRoutingResult clustersRoutingResult) {
+    AtomicInteger clusterIndex = new AtomicInteger(0);
+    clustersRoutingResult.getRoutes().forEach(cluster -> {
+      int clusterIdx = clusterIndex.getAndIncrement();
+      AtomicInteger variantIndex = new AtomicInteger(0);
+      cluster.getVariants().forEach((variant) -> {
+        if (variant.getFeatures().isEmpty()) {
+          DebugUtils.writeFeatures(Stream.of(),
+              clusterIdx + "-cluster-0-variant-result-blank");
+          return;
         }
+        var variantIdx = variantIndex.getAndIncrement();
+        // variant.getFeatures().addAll(features);
+        @NonNull
+        Stream<Feature<? extends FeatureProperties>> features = variant.getFeatures().stream()
+            .map(f -> {
+              Map<String, String> styleProperties = new HashMap<>();
+              FeatureProperties properties = f.getProperties();
+              if (properties.isPointGeometry()) {
+                styleProperties = FeaturePropertiesStyles.RESULT_POINT;
+              } else if (properties.isComplexGeometry()) {
+                styleProperties = FeaturePropertiesStyles.RESULT_STROKE;
+              }
+              System.out.println("?????");
+              System.out.println(f);
+              System.out.println(properties);
+              properties.addAdditionalProperties(styleProperties);
+              return Feature.of(f.getGeometry(), properties);
+            });
+        DebugUtils.writeFeatures(features,
+            clusterIdx + "-cluster-" + variantIdx + "-variant-result");
+      });
+    });
+  }
 
-        @Test
-        void testOrganizer() {
-                var features = featuresOrganizer;
-                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
-
-                AtomicInteger clusterIndex = new AtomicInteger(0);
-                clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        int clusterIdx = clusterIndex.incrementAndGet();
-                        AtomicInteger variantIndex = new AtomicInteger(0);
-                        cluster.getVariants().forEach((variant) -> {
-                                if (variant.getFeatures().isEmpty()) {
-                                        DebugUtils.writeFeatures(Stream.of(),
-                                                        clusterIdx + "-cluster-blank-result");
-                                        return;
-                                }
-                                var variantIdx = variantIndex.incrementAndGet();
-                                // variant.getFeatures().addAll(features);
-                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                clusterIdx + "-cluster-" + variantIdx + "-variant-result");
-                        });
-                });
-
-                assertFalse(clustersRoutingResult.getRoutes().isEmpty());
-        }
-
-        @Test
-        void testBase() {
-                var features = featuresBase;
-                var clustersRoutingResult = processStage2RoutesService.buildRoutes(features.stream(), true);
-
-                AtomicInteger clusterIndex = new AtomicInteger(0);
-                clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        int clusterIdx = clusterIndex.incrementAndGet();
-                        AtomicInteger variantIndex = new AtomicInteger(0);
-                        cluster.getVariants().forEach((variant) -> {
-                                var variantIdx = variantIndex.incrementAndGet();
-                                variant.getFeatures().addAll(features);
-                                DebugUtils.writeFeatures(variant.getFeatures().stream(),
-                                                "result-cluster-" + clusterIdx + "-variant-" + variantIdx);
-                        });
-                });
-
-                assertFalse(clustersRoutingResult.getRoutes().isEmpty());
-        }
-
-        @Test
-        void testSuccessfulRoutingAroundObstacle() {
-                // 1. Создаем тестовое препятствие (здание-полигон) прямо на пути трассы
-                Coordinate[] polyCoords = new Coordinate[] {
-                                new Coordinate(17, 5), new Coordinate(20, 5),
-                                new Coordinate(20, 15), new Coordinate(17, 15),
-                                new Coordinate(17, 5)
-                };
-                Polygon obstacle = gf.createPolygon(polyCoords);
-                STRtree constraintsTree = new STRtree();
-                constraintsTree.insert(obstacle.getEnvelopeInternal(), obstacle);
-
-                // Также можно зарегистрировать конечную точку существующей сети как
-                // точку врезки
-                Point networkNode = gf.createPoint(new Coordinate(13, 7));
-                // 2. Создаем существующую сеть (точка старта)
-                LineString existingNet = gf.createLineString(new Coordinate[] {
-                                new Coordinate(12, 10), networkNode.getCoordinate()
-                });
-                STRtree networksTree = new STRtree();
-                networksTree.insert(existingNet.getEnvelopeInternal(), existingNet);
-
-                // 3. Создаем целевой ОКС (точка финиша за препятствием)
-                Point connectionPoint = gf.createPoint(new Coordinate(24, 7));
-                Polygon building = gf.createPolygon(new Coordinate[] {
-                                new Coordinate(23, 6), new Coordinate(25, 6),
-                                new Coordinate(25, 8), new Coordinate(23, 8),
-                                new Coordinate(23, 6)
-                });
-                // Добавляем полигон здания ОКС, чтобы к нему можно было протянуть трубу
-                constraintsTree.insert(building.getEnvelopeInternal(), building);
-                OksObject oks = OksObject.of(
-                                Feature.of(connectionPoint,
-                                                new FeatureProperties("OKS-1", ObjectType.OKS_CONNECTION_POINT, null,
-                                                                1.5, null, "OKS-1", null, null)),
-                                building);
-                var oksObjects = List.of(oks);
-
-                // TODO: debug start
-                @SuppressWarnings("null")
-                // polyCoords
-                var testGeometries = List.of(obstacle, networkNode, existingNet, connectionPoint, building).stream();
-                // .stream() .flatMap(List::stream);
-                var testMapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(testGeometries);
-                DebugUtils.writeFeaturesIn32637(testMapGeometriesToFeatures, "testFeatureCollection");
-                // TODO: debug stop
-
-                STRtree nodesTree = new STRtree();
-                // Обязательно регистрируем точку подключения ОКС в индексе узлов карты
-                nodesTree.insert(connectionPoint.getEnvelopeInternal(), connectionPoint);
-                nodesTree.insert(networkNode.getEnvelopeInternal(), networkNode);
-
-                // TODO: debug start
-                var constraints = STRtreeVisualizer.extractTreeBoundaries(constraintsTree);
-                var networks = STRtreeVisualizer.extractTreeBoundaries(networksTree);
-                var nodes = STRtreeVisualizer.extractTreeBoundaries(nodesTree);
-
-                @SuppressWarnings("null")
-                var treeGeometries = List.of(constraints, networks, nodes, List.of(building)).stream()
-                                .flatMap(List::stream);
-                var mapGeometriesToFeatures = FeatureMapper.mapStreamGeometriesToFeatures(treeGeometries);
-                DebugUtils.writeFeaturesIn32637(mapGeometriesToFeatures,
-                                "treeFeatureCollection");
-                // TODO: debug stop
-
-                IndexContainer globalIndexes = new IndexContainer(constraintsTree, networksTree, nodesTree, oksObjects);
-
-                // 4. Запуск оркестратора
-                List<List<RoutingResult>> results = routingService.executeRoutingPipeline(globalIndexes);
-
-                ClustersRoutingResult clustersRoutingResult = processStage2RoutesService
-                                .mapResultsToClustersRoutingResult(results, false);
-
-                clustersRoutingResult.getRoutes().forEach(cluster -> {
-                        AtomicInteger index = new AtomicInteger(0);
-                        cluster.getVariants().forEach((variant) -> {
-                                DebugUtils.writeFeaturesIn32637(variant.getFeatures().stream(),
-                                                "result-variant-" + index.incrementAndGet());
-                        });
-                });
-
-                // 5. Проверки
-                assertFalse(results.isEmpty());
-                List<RoutingResult> clusterVariants = results.get(0);
-                assertTrue(clusterVariants.get(0).isConnected(), "Трасса должна найти обходной путь");
-
-                // Проверяем, что ни один сгенерированный отрезок не пересекает буфер
-                // препятствия
-                for (Feature pipeline : clusterVariants.get(0).getNewPipelines()) {
-                        assertFalse(pipeline.getGeometry().buffer(2.0).intersects(obstacle),
-                                        "Трасса задела препятствие!");
-                }
-        }
-
-        @Test()
-        void testPrintCoords() {
-                var geometryFactory = new GeometryFactory();
-                var line = geometryFactory.createLineString(new Coordinate[] {
-                                new Coordinate(414545.8493114061, 6175503.658660367),
-                                new Coordinate(412429.8920690528, 6171210.8233968755),
-                });
-                var features = Stream.of(Feature.withDefaultProperties(line));
-                DebugUtils.writeFeaturesIn32637(features, "000-PrintCoords");
-        }
 }

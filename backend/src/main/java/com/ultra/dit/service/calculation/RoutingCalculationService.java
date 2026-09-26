@@ -1,6 +1,6 @@
 package com.ultra.dit.service.calculation;
 
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureCollection;
 
 public interface RoutingCalculationService {
 

@@ -5,7 +5,8 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.converter.GeometryCrsConverter;
 
 @Service
@@ -28,7 +29,8 @@ public class TransformService {
    * @throws Exception
    */
   @LogExecutionTime
-  public Stream<Feature> transform4326To32637(Stream<Feature> epsg4326Collection) {
+  public Stream<Feature<? extends FeatureProperties>> transform4326To32637(
+      Stream<Feature<? extends FeatureProperties>> epsg4326Collection) {
     return toUtmTransform.convert(epsg4326Collection);
   }
 
@@ -41,7 +43,8 @@ public class TransformService {
    * @throws Exception
    */
   @LogExecutionTime
-  public Stream<Feature> transform32637To4326(Stream<Feature> epsg32637Collection) {
+  public Stream<Feature<? extends FeatureProperties>> transform32637To4326(
+      Stream<Feature<? extends FeatureProperties>> epsg32637Collection) {
     return toWgsTransform.convert(epsg32637Collection);
   }
 

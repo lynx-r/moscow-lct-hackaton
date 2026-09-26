@@ -12,11 +12,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.ObjectType;
-import com.ultra.dit.dto.RestrictionType;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
+import com.ultra.dit.dto.geojson.ObjectType;
+import com.ultra.dit.dto.geojson.OksConnectionPointProperties;
+import com.ultra.dit.dto.geojson.RestrictionProperties;
+import com.ultra.dit.dto.geojson.RestrictionType;
 import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.exception.SpatialIndexException;
+import com.ultra.dit.factory.FeaturePropertiesStyleFactory;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
@@ -24,6 +28,7 @@ import com.ultra.dit.stage2.model.OksObject;
 public class SpatialIndexService {
 
   private final Double oksConnectionPointBufferMeters;
+  private FeatureProperties properties;
 
   public SpatialIndexService(
       @Value("${app.solution.stage2.oksConnectionPointBufferMeters:2.0}") Double oksConnectionPointBufferMeters) {
@@ -31,27 +36,32 @@ public class SpatialIndexService {
   }
 
   @LogExecutionTime
-  public IndexContainer buildSpatialIndices(Stream<Feature> inputStream) {
+  public IndexContainer buildSpatialIndices(Stream<Feature<? extends FeatureProperties>> inputStream) {
 
     var constraintsTree = new STRtree();
     var networksTree = new STRtree();
     var nodesTree = new STRtree();
 
     // Временный список для накопления точек подключения, у которых еще нет полигона
-    var tempPointsBuffer = Collections.synchronizedList(new ArrayList<Feature>());
+    List<Feature<OksConnectionPointProperties>> tempPointsBuffer = Collections.synchronizedList(new ArrayList<>());
 
     inputStream.forEachOrdered(feature -> {
       if (feature == null || feature.getGeometry() == null) {
         return;
       }
 
-      var properties = feature.getProperties();
+      properties = feature.getProperties();
       var objectType = properties.getObjectType();
+
+      var styleProperties = FeaturePropertiesStyleFactory.getStyleProperties(properties.getAdditionalProperties(),
+          objectType);
+      properties.addAdditionalProperties(styleProperties);
 
       // Вставка по EnvelopeInternal большие объекты вроде restriction_type=railway
       // будут попадать в локальную выборку
       var envelope = feature.getGeometry().getEnvelopeInternal();
 
+      // TODO: добавить оставшиеся object_type
       switch (objectType) {
         case RESTRICTION: {
           constraintsTree.insert(envelope, feature);
@@ -65,8 +75,9 @@ public class SpatialIndexService {
           nodesTree.insert(envelope, feature);
           break;
         case OKS_CONNECTION_POINT: {
+          var oksPoint = (Feature<OksConnectionPointProperties>) feature;
           // Временно откладываем точку, так как её полигон может быть дальше по стриму
-          tempPointsBuffer.add(feature);
+          tempPointsBuffer.add(oksPoint);
 
           nodesTree.insert(envelope, feature);
           break;
@@ -95,7 +106,8 @@ public class SpatialIndexService {
   }
 
   // Пространственная сшивка (Spatial Join) точек с ближайшими полигонами ОКС
-  private List<OksObject> spatialJoin(List<Feature> tempFeatureBuffer, STRtree constraintsTree) {
+  private List<OksObject> spatialJoin(List<Feature<OksConnectionPointProperties>> tempFeatureBuffer,
+      STRtree constraintsTree) {
     // Инициализируем потокобезопасный список для сбора ОКС объектов
     var oksBuffer = Collections.synchronizedList(new ArrayList<OksObject>());
 
@@ -122,8 +134,11 @@ public class SpatialIndexService {
           var props = feat.getProperties();
 
           // Нас интересуют строго ограничения с типов OKS
-          boolean isOksRestriction = props.getObjectType() == ObjectType.RESTRICTION
-              && props.getRestrictionType() == RestrictionType.OKS;
+          if (props.getObjectType() != ObjectType.RESTRICTION) {
+            continue;
+          }
+          var restriction = (RestrictionProperties) props;
+          boolean isOksRestriction = restriction.getRestrictionType() == RestrictionType.OKS;
           if (isOksRestriction) {
             var poly = feat.getGeometry();
             double currentDist = connectionPoint.distance(poly);

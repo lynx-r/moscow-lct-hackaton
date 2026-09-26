@@ -2,7 +2,7 @@ package com.ultra.dit.stage2.model;
 
 import java.util.List;
 
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureCollection;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

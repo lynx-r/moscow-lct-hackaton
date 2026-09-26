@@ -25,9 +25,9 @@ import org.springframework.util.FileSystemUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureCollection;
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage1.TransformService;
 import com.ultra.dit.stage2.model.VirtualNode;
 
@@ -55,7 +55,7 @@ public class DebugUtils {
       createDirectoryIfNotExist(TEMP_FOLDER);
 
     } catch (IOException e) {
-      System.err.println("Не удалось создать директорию: " + e.getMessage());
+      throw new RuntimeException("Не удалось создать директорию", e);
     }
   }
 
@@ -64,7 +64,9 @@ public class DebugUtils {
       .serializationInclusion(JsonInclude.Include.NON_EMPTY)
       .modules(new JtsModule()).build();
 
-  public static void writeFeaturesIn32637(Stream<Feature> featureStream, String fileName) {
+  public static <T extends FeatureProperties> void writeFeaturesIn32637(
+      Stream<Feature<? extends FeatureProperties>> featureStream,
+      String fileName) {
     // String fileNamePath32637 = GEOJSON_FOLDER.resolve(fileName +
     // "-32637").toString();
 
@@ -76,23 +78,26 @@ public class DebugUtils {
     writeFeaturesToFile(features, fileNamePath4326);
   }
 
-  public static void writeFeatures(Stream<Feature> featureStream, String fileName) {
+  public static void writeFeatures(Stream<Feature<? extends FeatureProperties>> featureStream, String fileName) {
     String fileNamePath = GEOJSON_FOLDER.resolve(fileName).toString();
 
     var rawFeatures = featureStream.collect(Collectors.toList());
     writeFeaturesToFile(rawFeatures, fileNamePath);
   }
 
-  public static void writeFeaturesToFile(List<Feature> featureStream, String fileName) {
+  public static void writeFeaturesToFile(
+      List<Feature<? extends FeatureProperties>> featureStream,
+      String fileName) {
     var rawFeatureCollection = FeatureCollection.of(featureStream);
     try (var outputStream = new FileOutputStream(fileName + GEOJSON_EXT)) {
       OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
     } catch (IOException e) {
-      System.out.println(e);
+      throw new RuntimeException("Ошибка записи GeoJSON в файл: " + fileName, e);
     }
   }
 
-  public static <V extends VirtualNode, E> void writeGraphWithFeatures(Graph<V, E> graph, Stream<Feature> featureStream,
+  public static <V extends VirtualNode, E> void writeGraphWithFeatures(Graph<V, E> graph,
+      Stream<Feature<? extends FeatureProperties>> featureStream,
       String fileName) {
 
     var graphEdgeFeatures = StreamSupport.stream(graph.iterables().edges().spliterator(), false).map(edge -> {
@@ -148,7 +153,7 @@ public class DebugUtils {
     try (var writer = new FileWriter(path)) {
       exporter.exportGraph(graph, writer);
     } catch (IOException e) {
-      e.printStackTrace();
+      throw new RuntimeException("Ошибка экспорта графа " + fileName, e);
     }
   }
 

@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 
 import com.ultra.dit.BaseTest;
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureCollection;
 import com.ultra.dit.stage1.ParseService;
 
 public abstract class BaseStage2Test extends BaseTest {

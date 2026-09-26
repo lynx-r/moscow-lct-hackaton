@@ -12,7 +12,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.exception.ParseException;
 
 @Service
@@ -32,7 +33,7 @@ public class ParseService {
    * @throws IOException
    */
   @LogExecutionTime
-  public Stream<Feature> streamFeatures(InputStream inputStream) {
+  public Stream<Feature<? extends FeatureProperties>> streamFeatures(InputStream inputStream) {
     try {
       var factory = mapper.getFactory();
       var parser = factory.createParser(inputStream);
@@ -53,7 +54,14 @@ public class ParseService {
       // КРИТИЧЕСКИЙ ШАГ: Сдвигаем парсер внутрь массива на первый элемент {
       parser.nextToken();
 
-      MappingIterator<Feature> iterator = mapper.readerFor(Feature.class).readValues(parser);
+      ObjectMapper mapper = (ObjectMapper) parser.getCodec();
+
+      // Конструируем тип Feature<FeatureProperties>
+      var featureType = mapper.getTypeFactory()
+          .constructParametricType(Feature.class, FeatureProperties.class);
+
+      // Итератор будет возвращать базовый вид Feature<FeatureProperties>
+      MappingIterator<Feature<? extends FeatureProperties>> iterator = mapper.readerFor(featureType).readValues(parser);
       return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false)
           .onClose(() -> {
             try {

@@ -18,8 +18,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
-import com.ultra.dit.dto.FeatureProperties;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
@@ -111,7 +111,6 @@ public class NetworkTopologyGeneratorService {
     debugTarget(clusterId, targetNodes);
     debugSourceNodes(clusterId, firstOks, sourceNodes);
 
-    // TODO: раскомментировать?
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
         .limit(chooseFromPathsCount)
@@ -121,25 +120,20 @@ public class NetworkTopologyGeneratorService {
     // IntStream.range(0, )
     debugClosestSources(clusterId, closestSources);
     var variants = generateForSources(clusterId, cluster, graph, targetNodes, closestSources);
-    if (variants.isEmpty()) {
-
-    }
-
     return variants;
   }
 
   private List<RoutingResult> generateForSources(int clusterId, List<OksObject> cluster,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<VirtualNode> targetNodes,
-      List<VirtualNode> closestSources) {
-    log(clusterId, "Source Nodes Count: " + closestSources.size());
+      List<VirtualNode> sourceNodes) {
+    log(clusterId, "Source Nodes Count: " + sourceNodes.size());
     log(clusterId, "Target Nodes Count: " + targetNodes.size());
 
-    var rawPaths = getRawPaths(graph, cluster, closestSources, targetNodes);
+    var rawPaths = getRawPaths(graph, cluster, sourceNodes, targetNodes);
     if (rawPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Raw Paths Found");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugRawPaths(clusterId, rawPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Raw Count: " + rawPaths.size());
@@ -151,8 +145,7 @@ public class NetworkTopologyGeneratorService {
     if (evaluatedPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Paths Passed Validation");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugEvaluatedPaths(clusterId, evaluatedPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
@@ -165,8 +158,7 @@ public class NetworkTopologyGeneratorService {
     if (evaluatedPaths.isEmpty()) {
       logNoVariants(clusterId);
       log(clusterId, "No Found Distinct Paths");
-      logMissedNodes(clusterId, closestSources, targetNodes);
-      debugDistinctPaths(clusterId, distinctPaths);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
     log(clusterId, "Found Distinct Paths Count: " + distinctPaths.size());
@@ -179,7 +171,7 @@ public class NetworkTopologyGeneratorService {
     // неподключенный
     if (finalVariants.isEmpty()) {
       logNoVariants(clusterId);
-      logMissedNodes(clusterId, closestSources, targetNodes);
+      logMissedNodes(clusterId, sourceNodes, targetNodes);
       return List.of(RoutingResult.empty(clusterId));
     }
 
@@ -317,7 +309,7 @@ public class NetworkTopologyGeneratorService {
 
     var vertices = path.getVertexList();
 
-    var pipelines = new ArrayList<Feature>();
+    var pipelines = new ArrayList<Feature<? extends FeatureProperties>>();
     // Карта для подсчета валентности узлов (degree) в рамках выбранного решения
     var nodeValence = new HashMap<Coordinate, Integer>();
     // Сборка линейных объектов и первичный подсчет степеней вершин
@@ -357,7 +349,7 @@ public class NetworkTopologyGeneratorService {
       pipelines.add(Feature.of(line, properties));
     }
 
-    var chambers = new ArrayList<Feature>();
+    var chambers = new ArrayList<Feature<? extends FeatureProperties>>();
     // Проставление типов узлов согласно ТЗ (Камеры в точках смены атрибутов или
     // ветвления)
     for (VirtualNode node : vertices) {
@@ -420,7 +412,7 @@ public class NetworkTopologyGeneratorService {
     if (log.isTraceEnabled()) {
       // TODO: debug start
       var distPaths = distinctPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(distPaths, "13-distinct-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(distPaths, clusterId + "-cluster-graph-2-distinct");
       // TODO: debug stop
     }
   }
@@ -429,15 +421,17 @@ public class NetworkTopologyGeneratorService {
     if (log.isTraceEnabled()) {
       // TODO: debug start
       var evalPaths = evaluatedPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(evalPaths, "12-evaluated-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(evalPaths, clusterId + "-cluster-graph-1-evaluated");
       // TODO: debug stop
     }
   }
 
   private void debugRawPaths(int clusterId, List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
+    // if (log.isTraceEnabled() && clusterId == 4) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      // DebugUtils.writeGraphPaths(rawPaths, "11-raw-cluster-" + clusterId);
+      DebugUtils.writeGraphPaths(rawPaths, clusterId + "-cluster-graph-0-raw");
+      // throw new RuntimeException();
       // TODO: debug stop
     }
   }
@@ -457,7 +451,7 @@ public class NetworkTopologyGeneratorService {
             }
             return Feature.withDefaultProperties(point);
           });
-      DebugUtils.writeFeaturesIn32637(targetF, clusterId + "-cluster-target-nodes");
+      DebugUtils.writeFeaturesIn32637(targetF, clusterId + "-cluster-nodes-target");
     }
   }
 
@@ -468,9 +462,9 @@ public class NetworkTopologyGeneratorService {
           .collect(Collectors.toList());
       log(clusterId, "Closest Coordinates: " + closestCoords);
 
-      var closestSourceF = closestSources.stream()
+      Stream<Feature<? extends FeatureProperties>> closestSourceF = closestSources.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
-      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-source-nodes-closest");
+      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-nodes-source-closest");
     }
   }
 
@@ -480,9 +474,9 @@ public class NetworkTopologyGeneratorService {
       log(clusterId, "Cluster First Item Id: " + firstOks.getId());
       DebugUtils.writeFeaturesIn32637(Stream.of(firstOks.getFeature()), clusterId + "-cluster-center");
 
-      var sourceF = sourceNodes.stream()
+      Stream<Feature<? extends FeatureProperties>> sourceF = sourceNodes.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
-      DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-source-nodes");
+      DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-nodes-source");
       // TODO: debug end
     }
   }

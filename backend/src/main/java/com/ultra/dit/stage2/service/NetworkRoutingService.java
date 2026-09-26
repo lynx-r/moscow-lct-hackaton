@@ -5,6 +5,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
@@ -13,7 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.exception.RoutingException;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
@@ -117,7 +119,7 @@ public class NetworkRoutingService {
             // graph.setEdgeWeight(edge, calculatedWeight);
             // }
 
-            debugGraph(clusterId, graph);
+            debugRoadmapGraph(clusterId, graph);
 
             return topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
           })).get();
@@ -129,10 +131,10 @@ public class NetworkRoutingService {
     }
   }
 
-  private void debugGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
+  private void debugRoadmapGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      DebugUtils.writeGraph(graph, "graph-cluster-" + clusterId);
+      DebugUtils.writeGraph(graph, clusterId + "-cluster-graph-roadmap");
       // TODO: debug end
     }
   }
@@ -143,16 +145,13 @@ public class NetworkRoutingService {
       GeometryFactory geometryFactory = new GeometryFactory();
       var env = localData.getExecutionEnvelope();
       var localBoundPolygon = geometryFactory.toGeometry(env);
-      List<Feature> localBoundList = List.of(Feature.withDefaultProperties(localBoundPolygon));
+      List<Feature<? extends FeatureProperties>> localBoundList = List
+          .of(Feature.withDefaultProperties(localBoundPolygon));
 
-      var localFeatures = List.of(
-          localData.getConstraints(),
-          localData.getNetworks(),
-          localData.getNodes(),
-          localBoundList)
-          .stream().flatMap(l -> l.stream());
-
-      DebugUtils.writeFeaturesIn32637(localFeatures, clusterId + "-cluster-local-data");
+      DebugUtils.writeFeaturesIn32637(localData.getConstraints().stream(), clusterId + "-cluster-data-constraints");
+      DebugUtils.writeFeaturesIn32637(localData.getNetworks().stream(), clusterId + "-cluster-data-networks");
+      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-nodes");
+      DebugUtils.writeFeaturesIn32637(localBoundList.stream(), clusterId + "-cluster-data-execution-envelop");
       // TODO: debug end
     }
   }
@@ -162,8 +161,8 @@ public class NetworkRoutingService {
       // TODO: debug start
       log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
 
-      var clusterOks = cluster.stream().map(oks -> oks.getFeature());
-      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks");
+      Stream<Feature<? extends FeatureProperties>> clusterOks = cluster.stream().map(oks -> oks.getFeature());
+      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks-objects");
       // var clusterBuildings = cluster.stream()
       // .map(oks -> Feature.withDefaultProperties(oks.getBuildingPolygon()));
       // DebugUtils.writeFeaturesIn32637(clusterBuildings,

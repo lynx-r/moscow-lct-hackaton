@@ -7,7 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
-import com.ultra.dit.dto.Feature;
+import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.FeatureProperties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
@@ -56,14 +57,15 @@ public class LocalBoundingBoxService {
   @SuppressWarnings("unchecked")
   public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes) {
     // Извлекаем пространственные ограничения (Зоны запрета, дороги, здания)
-    List<Feature> localConstraints = globalIndexes.getConstraintsTree().query(localEnvelope);
+    List<Feature<? extends FeatureProperties>> localConstraints = globalIndexes.getConstraintsTree()
+        .query(localEnvelope);
 
     // Извлекаем существующие тепловые сети (Линейные объекты)
-    List<Feature> localNetworks = globalIndexes.getNetworksTree().query(localEnvelope);
+    List<Feature<? extends FeatureProperties>> localNetworks = globalIndexes.getNetworksTree().query(localEnvelope);
 
     // Извлекаем существующие камеры, источники, точки подключения (Точечные
     // объекты)
-    List<Feature> localNodes = globalIndexes.getNodesTree().query(localEnvelope);
+    List<Feature<? extends FeatureProperties>> localNodes = globalIndexes.getNodesTree().query(localEnvelope);
 
     return new LocalIndexContainer(localConstraints, localNetworks, localNodes, localEnvelope);
   }
