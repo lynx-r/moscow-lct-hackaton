@@ -58,7 +58,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
   const source = geoJsonData.features.find((f) => f.properties?.object_type === 'source')
   if (source) {
-    if (source.geometry.type === 'Point') {
+    if (source.geometry?.type === 'Point') {
       map.value.setCenter(source.geometry.coordinates as [number, number])
       map.value.setZoom(DEFAULT_ZOOM)
     }
@@ -135,6 +135,8 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
           'case',
           ['boolean', ['feature-state', 'selected'], false],
           '#ff4d4f',
+          ['has', 'variant_id'],
+          '#2563eb',
           '#ffa940',
         ],
         'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 5, 3],
@@ -149,10 +151,18 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
       filter: ['==', ['get', 'object_type'], OBJECT_TYPES.heat_chamber],
       paint: {
         'circle-radius': 6,
-        'circle-color': 'orange',
+        'circle-color': ['case', ['has', 'variant_id'], '#2563eb', 'orange'],
         'circle-stroke-width': 2,
         'circle-stroke-color': 'yellow',
       },
+    })
+
+    map.value.addLayer({
+      id: 'layer-technical-node',
+      type: 'circle',
+      source: DATA_SOURCE_NAME,
+      filter: ['==', ['get', 'object_type'], 'technical_node'],
+      paint: { 'circle-radius': 3, 'circle-color': '#2563eb' },
     })
 
     // Слой существующих точек подключения
@@ -210,6 +220,10 @@ onBeforeUnmount(() => {
     <div>
       <span class="rounded-none! h-1! mb-1" style="background-color: #ffa940"></span>
       Существующие тепловые сети
+    </div>
+    <div>
+      <span class="rounded-none! h-1! mb-1" style="background-color: #2563eb"></span>
+      Новая сеть выбранного варианта
     </div>
     <div>
       <span style="background-color: red; border-color: darkred"></span>

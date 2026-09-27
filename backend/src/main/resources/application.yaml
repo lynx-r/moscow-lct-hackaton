@@ -2,6 +2,10 @@ spring:
   profiles:
     active:
       - dev
+  servlet:
+    multipart:
+      max-file-size: 64MB
+      max-request-size: 65MB
   application:
     name: dit
   datasource:
@@ -19,6 +23,10 @@ spring:
         "[format_sql]": true
 
 app:
+  routing:
+    backend: ${ROUTING_BACKEND:solver}
+    solver-url: ${SOLVER_URL:http://localhost:8090}
+    timeout-seconds: ${SOLVER_HTTP_TIMEOUT_SECONDS:900}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
     allowed-methods: ${CORS_ALLOWED_METHODS:*}
