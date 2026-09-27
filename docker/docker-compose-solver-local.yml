@@ -3,6 +3,8 @@ services:
   solver:
     build:
       context: ../solver
+    ports:
+      - "8090:8090"
     environment:
       SOLVER_ENGINE: cpp
       SOLVER_WORKERS: 1

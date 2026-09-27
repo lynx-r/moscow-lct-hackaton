@@ -55,7 +55,7 @@ public class VirtualNode {
   }
 
   public static VirtualNode asVoronoiSkeleton(Coordinate coordinate) {
-    HashMap<String, String> additionalProperties = new HashMap<>(FeaturePropertiesStyles.VORONOI_SKELETON);
+    var additionalProperties = new HashMap<>(FeaturePropertiesStyles.VORONOI_SKELETON);
     var properties = GraphEdgeProperties.builder().id("edge-" + coordinate.hashCode())
         .additionalProperties(additionalProperties).objectType(ObjectType.GRAPH_EDGE)
         .build();

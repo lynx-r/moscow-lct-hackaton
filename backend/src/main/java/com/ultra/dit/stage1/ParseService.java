@@ -16,14 +16,15 @@ import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.exception.ParseException;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+
 @Service
+@Log4j2
+@RequiredArgsConstructor
 public class ParseService {
 
   private final ObjectMapper mapper;
-
-  public ParseService(ObjectMapper mapper) {
-    this.mapper = mapper;
-  }
 
   /**
    * Парсит GeoJson строку с FeatureCollection в GeometryCollection
@@ -67,11 +68,12 @@ public class ParseService {
             try {
               parser.close();
             } catch (Exception e) {
+              log.error(e);
               throw new ParseException("Ошибка парсинга GeoJson: " + e.getMessage());
             }
           });
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error(e);
       throw new ParseException("Не удалось разобрать GeoJson " + e.getMessage());
     }
   }

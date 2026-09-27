@@ -19,8 +19,11 @@ import com.ultra.dit.dto.geojson.FeatureCollection;
 import com.ultra.dit.dto.geojson.enums.GeoJsonType;
 import com.ultra.dit.exception.SolverException;
 
+import lombok.extern.log4j.Log4j2;
+
 @Primary
 @Service
+@Log4j2
 @ConditionalOnProperty(name = "app.routing.backend", havingValue = "solver", matchIfMissing = true)
 public class PythonRoutingCalculationService implements RoutingCalculationService {
     private final ObjectMapper mapper;
@@ -65,11 +68,14 @@ public class PythonRoutingCalculationService implements RoutingCalculationServic
             }
             return result;
         } catch (HttpTimeoutException e) {
+            log.error(e);
             throw new SolverException(HttpStatus.GATEWAY_TIMEOUT, "Routing solver timed out");
         } catch (InterruptedException e) {
+            log.error(e);
             Thread.currentThread().interrupt();
             throw new SolverException(HttpStatus.SERVICE_UNAVAILABLE, "Routing request interrupted");
         } catch (IOException e) {
+            log.error(e);
             throw new SolverException(HttpStatus.BAD_GATEWAY, "Routing solver unavailable or returned invalid JSON");
         }
     }
