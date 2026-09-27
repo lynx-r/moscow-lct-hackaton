@@ -21,7 +21,7 @@ import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
 import com.ultra.dit.common.constants.FeaturePropertiesStyles;
-import com.ultra.dit.config.DebugConfig;
+import com.ultra.dit.config.DebugProperties;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
@@ -68,7 +68,7 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
-    var debugConfig = new DebugConfig(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
+    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
     new DebugUtils(debugConfig);
 
     // SpatialIndexService

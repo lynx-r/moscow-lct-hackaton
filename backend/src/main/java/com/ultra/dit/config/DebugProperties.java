@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @ConfigurationProperties(prefix = "app.debug-utils")
 @AllArgsConstructor
 @NoArgsConstructor
-public class DebugConfig {
+public class DebugProperties {
   private Path debugFolder = DebugUtils.DEFAULT_DEBUG_FOLDER;
 
   private Boolean removeDebugFolderBeforeCreate;

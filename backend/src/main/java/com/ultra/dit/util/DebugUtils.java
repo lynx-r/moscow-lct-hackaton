@@ -26,7 +26,7 @@ import org.springframework.util.FileSystemUtils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ultra.dit.config.DebugConfig;
+import com.ultra.dit.config.DebugProperties;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.FeatureCollection;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
@@ -53,13 +53,13 @@ public class DebugUtils {
       .modules(new JtsModule()).build();
 
   // Статическое поле, куда Spring подставит нужный бин (Dev или Prod)
-  private static DebugConfig debugConfig;
+  private static DebugProperties debugConfig;
 
   private static Path debugFolder;
 
   // Внедряем интерфейс через конструктор компонента и сохраняем в статическое
   // поле
-  public DebugUtils(DebugConfig debugConfig) {
+  public DebugUtils(DebugProperties debugConfig) {
     DebugUtils.debugConfig = debugConfig;
 
     DebugUtils.debugFolder = debugConfig.getDebugFolder();
