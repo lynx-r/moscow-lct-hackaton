@@ -3,30 +3,26 @@ package com.ultra.dit.stage2.service;
 import java.util.List;
 
 import org.locationtech.jts.geom.Envelope;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Шаг 2.1. Сервис динамической локализации геоданных.
  * Вырезает географическое окно (Bounding Box) вокруг кластера потребителей
  * с технологическим буфером +500 метров для оптимизации путевого поиска.
  */
-@Service
+@RequiredArgsConstructor
 public class LocalBoundingBoxService {
 
-  private final double clusterBufferMeters;
-
-  public LocalBoundingBoxService(
-      @Value("${app.solution.stage2.clusterBufferMeters:15.0}") double clusterBufferMeters) {
-    this.clusterBufferMeters = clusterBufferMeters;
-  }
+  private final Stage2Properties properties;
 
   /**
    * Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
@@ -45,7 +41,7 @@ public class LocalBoundingBoxService {
     }
 
     // Расширяем Envelope во все стороны на 500 метров (ТЗ)
-    envelope.expandBy(clusterBufferMeters);
+    envelope.expandBy(properties.getClusterBufferMeters());
     return envelope;
   }
 

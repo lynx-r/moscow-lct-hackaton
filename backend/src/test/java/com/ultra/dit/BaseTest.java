@@ -9,8 +9,11 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
@@ -18,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.util.DebugUtils;
 
 import ch.qos.logback.classic.Level;
@@ -25,12 +29,16 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public abstract class BaseTest {
   // Общие объекты для всех тестов геометрии
   protected static final ObjectMapper OBJECT_MAPPER = DebugUtils.OBJECT_MAPPER;
 
   @Spy
   protected final ObjectMapper objectMapper = OBJECT_MAPPER;
+
+  @Mock
+  protected Stage2Properties properties;
 
   protected static final ParseService PARSE_SERVICE = new ParseService(OBJECT_MAPPER);
 

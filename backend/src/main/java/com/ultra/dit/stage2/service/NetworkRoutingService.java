@@ -10,7 +10,6 @@ import java.util.stream.Stream;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
@@ -18,6 +17,7 @@ import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.exception.RoutingException;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.graph.DirectedRoadmapBuilder;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
@@ -40,23 +40,14 @@ import lombok.extern.log4j.Log4j2;
 public class NetworkRoutingService {
 
   private final OksClusteringService clusteringService;
-  private final LocalBoundingBoxService boundingBoxService;
   // private final CollisionDetectionService collisionService;
-  private final NetworkTopologyGeneratorService topologyGenerator;
 
-  private final int parallelClusterCount;
+  private final Stage2Properties properties;
 
-  public NetworkRoutingService(OksClusteringService clusteringService,
-      LocalBoundingBoxService boundingBoxService,
-      // CollisionDetectionService collisionService,
-      NetworkTopologyGeneratorService topologyGenerator,
-      @Value("${app.solution.stage2.parallelClusterCount:3}") int parallelClusterCount) {
+  public NetworkRoutingService(OksClusteringService clusteringService, Stage2Properties properties) {
     this.clusteringService = clusteringService;
-    this.boundingBoxService = boundingBoxService;
-    // this.collisionService = collisionService;
-    this.topologyGenerator = topologyGenerator;
+    this.properties = properties;
 
-    this.parallelClusterCount = parallelClusterCount;
   }
 
   /**
@@ -68,6 +59,15 @@ public class NetworkRoutingService {
    */
   @LogExecutionTime
   public List<List<RoutingResult>> executeRoutingPipeline(IndexContainer globalIndexes) {
+    // Безопасное копирование свойств (snapshot) в текущем HTTP-потоке.
+    // Защищает от ScopeNotActiveException при обращении к прокси @RequestScope из
+    // ForkJoinPool,
+    // так как интерцептор привязывает параметры строго к оригинальному потоку
+    // запроса.
+    var props = properties.copy();
+    var topologyGenerator = new NetworkTopologyGeneratorService(props);
+    var boundingBoxService = new LocalBoundingBoxService(props);
+
     var oksList = globalIndexes.getOksObjects();
 
     // Шаг 2.0: Автоматическая пространственная кластеризация ОКС (d <= 100м)
@@ -75,7 +75,7 @@ public class NetworkRoutingService {
     log.info("Clusters Count: " + clusters.size());
 
     try {
-      var parallelism = Math.min(parallelClusterCount, clusters.size());
+      var parallelism = Math.min(props.getParallelClusterCount(), clusters.size());
       var customThreadPool = new ForkJoinPool(parallelism);
 
       var pipelineResults = customThreadPool

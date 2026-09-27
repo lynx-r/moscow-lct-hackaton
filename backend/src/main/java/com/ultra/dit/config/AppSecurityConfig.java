@@ -9,21 +9,22 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.ultra.dit.common.constants.Api;
+
+import lombok.RequiredArgsConstructor;
+
 @EnableWebSecurity
 @Configuration
+@RequiredArgsConstructor
 public class AppSecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsProperties corsProperties;
-
-    public AppSecurityConfig(CorsProperties corsProperties) {
-        this.corsProperties = corsProperties;
-    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
                 // В старых версиях вместо securityMatcher используется antMatcher
-                .antMatcher("/**")
+                .antMatcher(Api.API_ENDPOINT + "**")
                 // Настройка CORS без лямбда-выражений
                 .cors().configurationSource(corsConfigurationSource())
                 .and()

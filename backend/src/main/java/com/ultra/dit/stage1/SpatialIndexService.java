@@ -8,7 +8,6 @@ import java.util.stream.Stream;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.index.strtree.STRtree;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
@@ -21,18 +20,17 @@ import com.ultra.dit.dto.geojson.properties.OksConnectionPointProperties;
 import com.ultra.dit.dto.geojson.properties.RestrictionProperties;
 import com.ultra.dit.exception.ParseException;
 import com.ultra.dit.exception.SpatialIndexException;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
 @Service
 public class SpatialIndexService {
 
-  private final Double oksConnectionPointBufferMeters;
-  private FeatureProperties properties;
+  private final Stage2Properties properties;
 
-  public SpatialIndexService(
-      @Value("${app.solution.stage2.oksConnectionPointBufferMeters:2.0}") Double oksConnectionPointBufferMeters) {
-    this.oksConnectionPointBufferMeters = oksConnectionPointBufferMeters;
+  public SpatialIndexService(Stage2Properties properties) {
+    this.properties = properties;
   }
 
   @LogExecutionTime
@@ -50,12 +48,12 @@ public class SpatialIndexService {
         return;
       }
 
-      properties = feature.getProperties();
-      var objectType = properties.getObjectType();
+      var fProperties = feature.getProperties();
+      var objectType = fProperties.getObjectType();
 
-      var styleProperties = FeaturePropertiesStyleFactory.getStyleProperties(properties.getAdditionalProperties(),
+      var styleProperties = FeaturePropertiesStyleFactory.getStyleProperties(fProperties.getAdditionalProperties(),
           objectType);
-      properties.addAdditionalProperties(styleProperties);
+      fProperties.addAdditionalProperties(styleProperties);
 
       // Вставка по EnvelopeInternal большие объекты вроде restriction_type=railway
       // будут попадать в локальную выборку
@@ -119,7 +117,7 @@ public class SpatialIndexService {
       var searchEnvelope = connectionPoint.getEnvelopeInternal();
       // oksConnectionPointBufferMeters метра буфера для точки подключения на границе
       // здания
-      searchEnvelope.expandBy(oksConnectionPointBufferMeters);
+      searchEnvelope.expandBy(properties.getOksConnectionPointBufferMeters());
 
       // Запрашиваем из локального R-Tree только кандидатов, находящихся рядом с
       // точкой

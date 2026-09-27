@@ -25,6 +25,8 @@ public class RoutingServiceTest extends BaseGeometryTest {
 
   @BeforeEach
   void setUp() {
+    Mockito.when(properties.getOksConnectionPointBufferMeters()).thenReturn(OKS_CONNECTION_POINT_BUFFER_METERS);
+
     var parseServiceSpy = Mockito.spy(new ParseService(OBJECT_MAPPER));
     AspectJProxyFactory parseServiceFactory = new AspectJProxyFactory(parseServiceSpy);
     parseServiceFactory.addAspect(new LoggingAspect());
@@ -37,7 +39,7 @@ public class RoutingServiceTest extends BaseGeometryTest {
     transformServiceFactory.setProxyTargetClass(true);
     transformService = transformServiceFactory.getProxy();
 
-    var spatialIndexServiceSpy = Mockito.spy(new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS));
+    var spatialIndexServiceSpy = Mockito.spy(new SpatialIndexService(properties));
     AspectJProxyFactory spatialIndexServiceFactory = new AspectJProxyFactory(spatialIndexServiceSpy);
     spatialIndexServiceFactory.addAspect(new LoggingAspect());
     spatialIndexServiceFactory.setProxyTargetClass(true);

@@ -16,6 +16,7 @@ import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
+import org.mockito.Mockito;
 import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
@@ -65,20 +66,42 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
-    TransformService transformService = new TransformService();
-    SpatialIndexService spatialIndexService = new SpatialIndexService(OKS_CONNECTION_POINT_BUFFER_METERS);
+    // SpatialIndexService
+    Mockito.when(properties.getOksConnectionPointBufferMeters()).thenReturn(OKS_CONNECTION_POINT_BUFFER_METERS);
 
-    OksClusteringService clusteringService = new OksClusteringService(CLUSTER_SIZE_METERS);
-    LocalBoundingBoxService bboxService = new LocalBoundingBoxService(CLUSTER_BUFFER_METERS);
+    // OksClusteringService
+    Mockito.when(properties.getClusterSizeMeters()).thenReturn(CLUSTER_SIZE_METERS);
+
+    // LocalBoundingBoxService
+    Mockito.when(properties.getClusterBufferMeters()).thenReturn(CLUSTER_BUFFER_METERS);
+
+    // NetworkTopologyGeneratorService
+    Mockito.when(properties.getMaxVariants()).thenReturn(MAX_VARIANTS);
+    Mockito.when(properties.getMaxValence()).thenReturn(MAX_VALENCE);
+    Mockito.when(properties.getChooseFromPathsCount()).thenReturn(CHOOSE_FROM_PATHS_COUNT);
+    Mockito.when(properties.getPathUniquePercent()).thenReturn(PATH_UNIQUE_PERCENT);
+    Mockito.when(properties.getClosesSourcesCount()).thenReturn(CLOSES_SOURCES_COUNT);
+
+    // NetworkRoutingService
+    Mockito.when(properties.getParallelClusterCount()).thenReturn(PARALLEL_CLUSTER_COUNT);
+
+    TransformService transformService = new TransformService();
+    SpatialIndexService spatialIndexService = new SpatialIndexService(properties);
+
+    OksClusteringService clusteringService = new OksClusteringService(properties);
+    // LocalBoundingBoxService bboxService = new
+    // LocalBoundingBoxService(properties);
     // CollisionDetectionService collisionService = new
     // CollisionDetectionService(BUFFER_RADIUS_METERS);
-    NetworkTopologyGeneratorService topologyGenerator = new NetworkTopologyGeneratorService(MAX_VARIANTS,
-        MAX_VALENCE, CHOOSE_FROM_PATHS_COUNT, PATH_UNIQUE_PERCENT, CLOSES_SOURCES_COUNT);
+    // NetworkTopologyGeneratorService topologyGenerator = new
+    // NetworkTopologyGeneratorService(properties);
 
     routingService = new NetworkRoutingService(
-        clusteringService, bboxService,
+        clusteringService,
+        // bboxService,
         // collisionService,
-        topologyGenerator, PARALLEL_CLUSTER_COUNT);
+        // topologyGenerator,
+        properties);
 
     processStage2RoutesService = new ProcessStage2RoutesService(transformService, spatialIndexService,
         routingService);

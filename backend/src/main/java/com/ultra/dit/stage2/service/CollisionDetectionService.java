@@ -5,26 +5,23 @@ import java.util.List;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.OksObject;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Шаг 2.4. Сервис проверки пространственных ограничений, 2D буферизации
  * и защиты от самоблокирования при прокладке тепловой сети.
  */
 @Service
+@RequiredArgsConstructor
 public class CollisionDetectionService {
 
-  // Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
-  private final double bufferRadiusMeters;
-
-  CollisionDetectionService(
-      @Value("${app.solution.stage2.bufferRadiusMeters:2.0}") double bufferRadiusMeters) {
-    this.bufferRadiusMeters = bufferRadiusMeters;
-  }
+  private final Stage2Properties properties;
 
   /**
    * Проверяет сегмент (ребро графа) на коллизии с пространственными
@@ -63,7 +60,7 @@ public class CollisionDetectionService {
     // Устанавливаем радиус буфера: 0.1 метра для финального подвода трубы, 2.0
     // метра — для магистрали
     // double radius = isFinalOksInlet ? 0.1 : bufferRadiusMeters;
-    Geometry pipelineBuffer = segment.buffer(bufferRadiusMeters);
+    Geometry pipelineBuffer = segment.buffer(properties.getBufferRadiusMeters());
 
     // 2. Итерируемся по всем локальным ограничениям, попавшим в выборку
     for (Geometry constraint : localConstraints) {

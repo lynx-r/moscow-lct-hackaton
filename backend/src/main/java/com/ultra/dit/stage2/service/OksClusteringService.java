@@ -7,23 +7,22 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Point;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.OksObject;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Шаг 2.0. Автоматическая кластеризация ОКС по пространственной близости.
  */
 @Service
+@RequiredArgsConstructor
 public class OksClusteringService {
 
-  private final Double clusterSizeMeters;
-
-  OksClusteringService(@Value("${app.solution.stage2.clusterSizeMeters:100.0}") Double clusterSize) {
-    this.clusterSizeMeters = clusterSize;
-  }
+  private final Stage2Properties properties;
 
   /**
    * Если целевые точки подключения двух ОКС находятся на расстоянии <= 100
@@ -49,7 +48,7 @@ public class OksClusteringService {
       for (int j = i + 1; j < n; j++) {
         Point pJ = oksList.get(j).getConnectionPoint();
 
-        if (pI.distance(pJ) <= clusterSizeMeters) {
+        if (pI.distance(pJ) <= properties.getClusterSizeMeters()) {
           union(parent, i, j);
         }
       }

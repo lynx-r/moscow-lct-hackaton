@@ -14,14 +14,13 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
@@ -32,6 +31,7 @@ import com.ultra.dit.util.Distance;
 import com.ultra.dit.util.Id;
 
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -40,36 +40,13 @@ import lombok.extern.log4j.Log4j2;
  * объектов.
  */
 @Log4j2
-@Service
+@RequiredArgsConstructor
 public class NetworkTopologyGeneratorService {
 
-  private final GeometryFactory geometryFactory = new GeometryFactory();
+  private static final GeometryFactory geometryFactory = new GeometryFactory();
+  private final static EdgeWeightCalculator angleCalculator = new EdgeWeightCalculator();
 
-  private final int maxVariants;
-  private final int maxValence;
-  private final int chooseFromPathsCount;
-  private final int closesSourcesCount;
-
-  // Критерий уникальности: если более 70% вершин совпадают, считаем варианты
-  // идентичными
-  private final double pathUniquePercent;
-
-  private final EdgeWeightCalculator angleCalculator;
-
-  public NetworkTopologyGeneratorService(
-      @Value("${app.solution.stage2.maxVariants:3}") int maxVariants,
-      @Value("${app.solution.stage2.maxValence:4}") int maxValence,
-      @Value("${app.solution.stage2.chooseFromPathsCount:5}") int chooseFromPathsCount,
-      @Value("${app.solution.stage2.pathUniquePercent:0.7}") double pathUniquePercent,
-      @Value("${app.solution.stage2.closesSourcesCount:0.7}") int closesSourcesCount) {
-    this.maxVariants = maxVariants;
-    this.maxValence = maxValence;
-    this.chooseFromPathsCount = chooseFromPathsCount;
-    this.pathUniquePercent = pathUniquePercent;
-    this.closesSourcesCount = closesSourcesCount;
-
-    this.angleCalculator = new EdgeWeightCalculator();
-  }
+  private final Stage2Properties properties;
 
   /**
    * Генерирует до 3 содержательно отличающихся вариантов прокладки тепловой сети
@@ -118,7 +95,7 @@ public class NetworkTopologyGeneratorService {
 
     List<VirtualNode> closestSources = sourceNodes.stream()
         .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
-        .limit(closesSourcesCount)
+        .limit(properties.getClosesSourcesCount())
         .collect(Collectors.toList());
 
     // TODO: если generateForSources вернет Empty попробовать взять другие sources
@@ -204,7 +181,7 @@ public class NetworkTopologyGeneratorService {
           // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
           // структурно уникальных
           // int i = counter.incrementAndGet();
-          var paths = pathFinder.getPaths(source, target, chooseFromPathsCount);
+          var paths = pathFinder.getPaths(source, target, properties.getChooseFromPathsCount());
 
           if (!paths.isEmpty()) {
             rawPaths.addAll(paths);
@@ -220,6 +197,7 @@ public class NetworkTopologyGeneratorService {
 
   private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId,
       List<String> unconnectedOksIds) {
+    int maxVariants = properties.getMaxVariants();
     var finalVariants = new ArrayList<RoutingResult>();
     for (var variantIdx = 0; variantIdx < distinctPaths.size(); variantIdx++) {
       var evalPath = distinctPaths.get(variantIdx);
@@ -294,7 +272,7 @@ public class NetworkTopologyGeneratorService {
         // идентичными
         double overlap = (double) sharedVertices
             / Math.max(candidate.path.getVertexList().size(), accepted.path.getVertexList().size());
-        if (overlap > pathUniquePercent) {
+        if (overlap > properties.getPathUniquePercent()) {
           isSimilar = true;
           break;
         }
@@ -347,7 +325,7 @@ public class NetworkTopologyGeneratorService {
       // TODO: проверить
       // TODO: Контроль валентности камер (degree <= 4) по ТЗ
       // TODO: if (valenceMap.get(c1) > 4 || valenceMap.get(c2) > 4) {
-      if (totalValence > maxValence) {
+      if (totalValence > properties.getMaxValence()) {
         log(clusterIdx, "No Topology Built (From " + c1 + ", To " + c2);
         return RoutingResult.empty(summary);
       }
