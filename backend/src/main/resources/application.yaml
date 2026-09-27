@@ -30,10 +30,6 @@ app:
     backend: ${ROUTING_BACKEND:solver}
     solver-url: ${SOLVER_URL:http://localhost:8090}
     timeout-seconds: ${SOLVER_HTTP_TIMEOUT_SECONDS:900}
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
-    allowed-methods: ${CORS_ALLOWED_METHODS:*}
-    allow-credentials: ${CORS_ALLOW_CREDENTIALS:false}
 
   solution:
     stage2:
@@ -64,6 +60,11 @@ app:
     debugFolder: debug
     removeDebugFolderBeforeCreate: false
     disabled: true
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+    allowed-methods: ${CORS_ALLOWED_METHODS:*}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:false}
 
 springdoc:
   api-docs:

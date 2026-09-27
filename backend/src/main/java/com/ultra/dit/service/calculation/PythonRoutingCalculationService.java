@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ultra.dit.dto.FeatureCollection;
+import com.ultra.dit.dto.geojson.FeatureCollection;
 import com.ultra.dit.exception.SolverException;
 
 @Primary
