@@ -28,7 +28,7 @@ public class Stage2Properties {
   // из скольки кратчайших путей выбирать
   private int chooseFromPathsCount = 5;
   // Ограничиваемся 3 параллельными кластерами
-  private int parallelClusterCount = 3;
+  private Integer parallelClusterCount = 3;
   // Критерий уникальности=если более 70% вершин совпадают, считаем варианты
   // идентичными
   private double pathUniquePercent = 0.7;

@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 
-import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.OksObject;
 
@@ -31,7 +30,6 @@ public class OksClusteringService {
    * @param oksList Список перспективных ОКС для кластеризации
    * @return Список списков (кластеров) объектов ОКС
    */
-  @LogExecutionTime
   public List<List<OksObject>> clusterOksObjects(List<OksObject> oksList) {
     int n = oksList.size();
     int[] parent = new int[n];

@@ -1,5 +1,7 @@
 package com.ultra.dit.stage2.service;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
@@ -44,10 +46,13 @@ public class NetworkRoutingService {
 
   private final Stage2Properties properties;
 
+  private final ThreadMXBean threadBean;
+
   public NetworkRoutingService(OksClusteringService clusteringService, Stage2Properties properties) {
     this.clusteringService = clusteringService;
     this.properties = properties;
 
+    threadBean = ManagementFactory.getThreadMXBean();
   }
 
   /**
@@ -65,7 +70,7 @@ public class NetworkRoutingService {
     // так как интерцептор привязывает параметры строго к оригинальному потоку
     // запроса.
     var props = properties.copy();
-    var topologyGenerator = new NetworkTopologyGeneratorService(props);
+    var topologyGenerator = new NetworkTopologyGenerator(props);
     var boundingBoxService = new LocalBoundingBoxService(props);
 
     var oksList = globalIndexes.getOksObjects();
@@ -75,11 +80,24 @@ public class NetworkRoutingService {
     log.info("Clusters Count: " + clusters.size());
 
     try {
-      var parallelism = Math.min(props.getParallelClusterCount(), clusters.size());
-      var customThreadPool = new ForkJoinPool(parallelism);
+      var yamlParallelism = props.getParallelClusterCount();
+      var parallelism = (yamlParallelism != null && yamlParallelism > 0)
+          ? yamlParallelism
+          : Runtime.getRuntime().availableProcessors();
+
+      var customThreadPool = new ForkJoinPool(parallelism,
+          ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+          null,
+          true // asyncMode = true
+      );
 
       var pipelineResults = customThreadPool
           .submit(() -> IntStream.range(0, clusters.size()).parallel().mapToObj(clusterId -> {
+            // Внутри вашей параллельной задачи:
+            long threadId = Thread.currentThread().getId();
+            long startCpu = threadBean.getThreadCpuTime(threadId);
+            long startWall = System.nanoTime();
+
             var cluster = clusters.get(clusterId);
 
             debugCluster(clusterId, cluster);
@@ -124,7 +142,24 @@ public class NetworkRoutingService {
 
             debugRoadmapGraph(clusterId, graph);
 
-            return topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
+            var result = topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
+
+            long durationCpuMs = (threadBean.getThreadCpuTime(threadId) - startCpu) / 1_000_000;
+            long durationWallMs = (System.nanoTime() - startWall) / 1_000_000;
+
+            log.debug("cluster-" + clusterId + ": Затрачено CPU времени: " + durationCpuMs + " мс");
+            log.debug(
+                "cluster-" + clusterId + ": Затрачено реального времени: " + durationWallMs + " мс");
+
+            // Если реальное время сильно больше CPU времени — поток где-то простаивал или
+            // был заморожен Docker-ом
+            if (durationWallMs > durationCpuMs * 1.5) {
+              log.warn(
+                  "cluster-" + clusterId + ": [WARN] Поток %d: Высокое ожидание! CPU: %d мс, Реальное время: %d мс%n",
+                  threadId, durationCpuMs, durationWallMs);
+            }
+
+            return result;
           })).get();
       return pipelineResults.collect(Collectors.toList());
     } catch (InterruptedException e) {
