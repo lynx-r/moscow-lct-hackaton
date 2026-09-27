@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ultra.dit.config.DebugConfig;
+import com.ultra.dit.config.DebugProperties;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
@@ -42,7 +42,7 @@ public abstract class BaseTest {
   protected Stage2Properties properties;
 
   @Mock
-  protected DebugConfig debugConfig;
+  protected DebugProperties debugConfig;
 
   protected static final ParseService PARSE_SERVICE = new ParseService(OBJECT_MAPPER);
 

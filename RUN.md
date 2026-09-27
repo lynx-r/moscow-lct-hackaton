@@ -48,3 +48,15 @@ docker compose -f docker-compose-local-5.yml down
 ```
 docker compose -f docker-compose-local-5.yml down -v --remove-orphans
 ```
+
+## Проверка интегрированного Python/C++ solver
+
+Из корня репозитория:
+
+```bash
+docker-compose -p heat-routing-integration -f docker/docker-compose-solver.yml up -d --build
+python3 solver/tools/check_integration.py 'solver/docs/Датасет скорректированный.geojson' --out solver/out/integration_api
+```
+
+Скрипт проверки требует Python-зависимости из `solver/requirements.txt`.
+Подробности, режим native-разработки и ограничения: [solver/README.md](solver/README.md).

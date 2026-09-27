@@ -19,9 +19,10 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ultra.dit.BaseTest;
 import com.ultra.dit.common.constants.FeaturePropertiesStyles;
-import com.ultra.dit.config.DebugConfig;
+import com.ultra.dit.config.DebugProperties;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
@@ -68,7 +69,7 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
-    var debugConfig = new DebugConfig(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
+    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
     new DebugUtils(debugConfig);
 
     // SpatialIndexService
@@ -293,7 +294,7 @@ class NetworkRoutingServiceTest extends BaseTest {
         @NonNull
         Stream<Feature<? extends FeatureProperties>> features = variant.getFeatures().stream()
             .map(f -> {
-              Map<String, String> styleProperties = new HashMap<>();
+              Map<String, JsonNode> styleProperties = new HashMap<>();
               FeatureProperties properties = f.getProperties();
               if (properties.isPointGeometry()) {
                 styleProperties = FeaturePropertiesStyles.RESULT_POINT;

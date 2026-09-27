@@ -1,6 +1,14 @@
 # version: '3.8'
 
 services:
+  solver:
+    image: cr.yandex/crp357kesevoc357mb8a/solver:latest
+    restart: unless-stopped
+    environment:
+      SOLVER_ENGINE: cpp
+      SOLVER_WORKERS: 1
+    mem_limit: 8g
+
   frontend:
     image: cr.yandex/crp357kesevoc357mb8a/frontend:latest
     container_name: frontend
@@ -20,8 +28,11 @@ services:
       - ../backend/.env
     ports:
       - "8080:8080"
+    environment:
+      SOLVER_URL: http://solver:8090
     depends_on:
       - database
+      - solver
     # Ограничения памяти в v1 пишутся напрямую в корень сервиса
     mem_limit: 512m
 

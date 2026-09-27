@@ -13,6 +13,12 @@ import com.ultra.dit.dto.ErrorResponse;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+  @ExceptionHandler(SolverException.class)
+  public ResponseEntity<ErrorResponse> handleSolverException(SolverException ex) {
+    return new ResponseEntity<>(new ErrorResponse(ex.getMessage(), ex.getStatus().value()), ex.getStatus());
+  }
+
+
   /**
    * 1. Ошибки ПАРСИНГА (Встроенное исключение Spring)
    * Срабатывает, если клиент прислал невалидный JSON,

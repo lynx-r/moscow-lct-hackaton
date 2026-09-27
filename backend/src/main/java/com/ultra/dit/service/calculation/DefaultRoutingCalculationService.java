@@ -1,10 +1,10 @@
 package com.ultra.dit.service.calculation;
 
-import org.springframework.stereotype.Service;
+
 
 import com.ultra.dit.dto.geojson.FeatureCollection;
 
-@Service("defaultRoutingCalculationService")
+/** Historical identity implementation; not registered as a routing backend. */
 public class DefaultRoutingCalculationService implements RoutingCalculationService {
 
     @Override

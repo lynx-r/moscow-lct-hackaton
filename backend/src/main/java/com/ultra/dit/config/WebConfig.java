@@ -1,8 +1,6 @@
 package com.ultra.dit.config;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.context.request.RequestContextListener;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -14,18 +12,18 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
-  private final Stage2ParamInterceptor interceptor;
+  private final Stage2ParamInterceptor stage2ParamInterceptor;
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
-    registry.addInterceptor(interceptor).addPathPatterns(Api.API_ENDPOINT + "**"); // Применяем ко всем эндпоинтам
+    registry.addInterceptor(stage2ParamInterceptor).addPathPatterns(Api.API_ENDPOINT + "**");
   }
 
-  @Bean
-  public RequestContextListener requestContextListener() {
-    // Этот бин заставит Spring использовать InheritableThreadLocal внутри
-    // RequestContextHolder
-    // благодаря чему новые потоки унаследуют контекст HTTP-запроса
-    return new RequestContextListener();
-  }
+  // @Bean
+  // public RequestContextListener requestContextListener() {
+  // // Этот бин заставит Spring использовать InheritableThreadLocal внутри
+  // // RequestContextHolder
+  // // благодаря чему новые потоки унаследуют контекст HTTP-запроса
+  // return new RequestContextListener();
+  // }
 }

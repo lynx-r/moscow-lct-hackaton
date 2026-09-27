@@ -8,8 +8,10 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.ultra.dit.dto.geojson.enums.ObjectType;
 
 import lombok.AllArgsConstructor;
@@ -48,7 +50,7 @@ public class FeatureProperties {
   private String variantId;
 
   @Builder.Default
-  private Map<String, String> additionalProperties = new HashMap<>();
+  private Map<String, JsonNode> additionalProperties = new HashMap<>();
 
   /**
    * Geometry: Point
@@ -92,16 +94,20 @@ public class FeatureProperties {
   }
 
   @JsonAnySetter
-  public void addAdditionalProperty(String key, String value) {
+  public void addAdditionalProperty(String key, JsonNode value) {
     this.additionalProperties.put(key, value);
   }
 
   @JsonAnyGetter
-  public Map<String, String> getAdditionalProperties() {
+  public Map<String, JsonNode> getAdditionalProperties() {
     return this.additionalProperties;
   }
 
-  public void addAdditionalProperties(Map<String, String> additionalProperties) {
+  public void addAdditionalTextProperty(String key, String value) {
+    this.additionalProperties.put(key, JsonNodeFactory.instance.textNode(value));
+  }
+
+  public void addAdditionalProperties(Map<String, JsonNode> additionalProperties) {
     this.additionalProperties.putAll(additionalProperties);
   }
 }

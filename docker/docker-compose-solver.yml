@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        ROUTING_API_BASE_URL: http://localhost:8080
+    ports:
+      - "127.0.0.1:8088:80"
+    depends_on:
+      - backend
+  solver:
+    build:
+      context: ../solver
+    environment:
+      SOLVER_ENGINE: cpp
+      SOLVER_WORKERS: 1
+    mem_limit: 8g
+  backend:
+    build:
+      context: ../backend
+    environment:
+      SOLVER_URL: http://solver:8090
+      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      solver:
+        condition: service_healthy

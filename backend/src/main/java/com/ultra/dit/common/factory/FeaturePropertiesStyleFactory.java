@@ -2,12 +2,13 @@ package com.ultra.dit.common.factory;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ultra.dit.common.constants.FeaturePropertiesStyles;
 import com.ultra.dit.dto.geojson.enums.ObjectType;
 
 public class FeaturePropertiesStyleFactory {
 
-  public static Map<String, String> getStyleProperties(Map<String, String> additionalProperties,
+  public static Map<String, JsonNode> getStyleProperties(Map<String, JsonNode> additionalProperties,
       ObjectType objectType) {
 
     switch (objectType) {

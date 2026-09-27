@@ -24,14 +24,13 @@ import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class SpatialIndexService {
 
   private final Stage2Properties properties;
-
-  public SpatialIndexService(Stage2Properties properties) {
-    this.properties = properties;
-  }
 
   @LogExecutionTime
   public IndexContainer buildSpatialIndices(Stream<Feature<? extends FeatureProperties>> inputStream) {

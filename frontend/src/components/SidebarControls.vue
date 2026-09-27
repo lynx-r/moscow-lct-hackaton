@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { isAxiosError } from 'axios'
 // Импорт иконок для красоты
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
 
@@ -65,7 +67,7 @@ const formatCurrency = (value: number) => {
       </div>
 
       <!-- Блок выбора вариантов -->
-      <div class="space-y-2">
+      <div v-if="variants.length" class="space-y-2">
         <label class="text-sm font-medium text-foreground">Выберите вариант</label>
         <ToggleGroup
           v-model="selectedVariant"
@@ -73,9 +75,14 @@ const formatCurrency = (value: number) => {
           variant="outline"
           class="justify-start w-full gap-2"
         >
-          <ToggleGroupItem value="variant-1" class="flex-1"> Вариант 1 </ToggleGroupItem>
-          <ToggleGroupItem value="variant-2" class="flex-1"> Вариант 2 </ToggleGroupItem>
-          <ToggleGroupItem value="variant-3" class="flex-1"> Вариант 3 </ToggleGroupItem>
+          <ToggleGroupItem
+            v-for="variant in variants"
+            :key="variant.id"
+            :value="variant.id"
+            class="flex-1"
+          >
+            Вариант {{ variant.rank }}
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
@@ -90,10 +97,11 @@ const formatCurrency = (value: number) => {
         <span v-if="isCalculating">Расчет...</span>
         <span v-else>Запустить расчет трассировки</span>
       </Button>
+      <p v-if="errorMessage" role="alert" class="text-sm text-destructive">{{ errorMessage }}</p>
     </div>
 
     <!-- Информационный блок с результатами (Card из shadcn) -->
-    <Card class="flex-1 min-h-0 flex flex-col mt-4">
+    <Card v-if="summaryData" class="flex-1 min-h-0 flex flex-col mt-4">
       <CardHeader class="pb-3">
         <CardTitle class="text-base font-semibold flex items-center gap-2">
           Результаты расчета
@@ -104,13 +112,17 @@ const formatCurrency = (value: number) => {
         <!-- Стоимость -->
         <div class="flex items-center justify-between border-b pb-2">
           <span class="text-muted-foreground flex items-center gap-1.5">
-            <DollarSign class="h-4 w-4 text-emerald-500" /> Общая стоимость:
+            <DollarSign class="h-4 w-4 text-emerald-500" /> Стоимость со штрафами:
           </span>
           <span class="font-semibold text-emerald-600 dark:text-emerald-400">
             {{ formatCurrency(summaryData.totalCost) }}
           </span>
         </div>
 
+        <div class="text-xs text-muted-foreground">
+          Строительство: {{ formatCurrency(summaryData.constructionCost) }}<br />
+          Штрафы: {{ formatCurrency(summaryData.penalty) }}
+        </div>
         <!-- Длина сетей -->
         <div class="flex items-center justify-between border-b pb-2">
           <span class="text-muted-foreground flex items-center gap-1.5">

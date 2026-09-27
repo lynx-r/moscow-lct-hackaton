@@ -340,7 +340,7 @@ public class NetworkTopologyGenerator {
       variantId = Id.idByObjectType(clusterIdx, variantIdx, properties.getObjectType());
       properties.setVariantId(variantId);
       // TODO: debug start
-      properties.addAdditionalProperty("feature", "pipeline");
+      properties.addAdditionalTextProperty("feature", "pipeline");
       // TODO: debug end
 
       var fromId = from.getFeatureProperties().getId();
@@ -349,8 +349,8 @@ public class NetworkTopologyGenerator {
         case HEAT_CHAMBER:
         case OKS_CONNECTION_POINT:
           // TODO: debug start
-          properties.addAdditionalProperty("test-start_node_id", fromId);
-          properties.addAdditionalProperty("test-end_node_id", toId);
+          properties.addAdditionalTextProperty("test-start_node_id", fromId);
+          properties.addAdditionalTextProperty("test-end_node_id", toId);
           // TODO: debug end
           break;
         default:
@@ -393,7 +393,7 @@ public class NetworkTopologyGenerator {
         variantId = Id.idByObjectType(clusterIdx, variantIdx, feature.getProperties().getObjectType());
         feature.getProperties().setVariantId(variantId);
         // TODO: debug start
-        feature.getProperties().addAdditionalProperty("feature", "chamber");
+        feature.getProperties().addAdditionalTextProperty("feature", "chamber");
         // TODO: debug end
         chambers.add(feature);
       }
