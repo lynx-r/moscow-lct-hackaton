@@ -28,7 +28,6 @@ public class LocalBoundingBoxService {
    * Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
    * для кластера ОКС с учетом технологического буфера +500м.
    */
-  @LogExecutionTime
   public Envelope calculateLocalEnvelope(List<OksObject> cluster) {
     Envelope envelope = new Envelope();
 

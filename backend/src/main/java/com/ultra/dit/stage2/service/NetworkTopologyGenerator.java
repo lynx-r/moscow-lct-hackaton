@@ -15,7 +15,6 @@ import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 
-import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
@@ -41,7 +40,7 @@ import lombok.extern.log4j.Log4j2;
  */
 @Log4j2
 @RequiredArgsConstructor
-public class NetworkTopologyGeneratorService {
+public class NetworkTopologyGenerator {
 
   private static final GeometryFactory geometryFactory = new GeometryFactory();
   private final static EdgeWeightCalculator angleCalculator = new EdgeWeightCalculator();
@@ -52,7 +51,6 @@ public class NetworkTopologyGeneratorService {
    * Генерирует до 3 содержательно отличающихся вариантов прокладки тепловой сети
    * для кластера ОКС.
    */
-  @LogExecutionTime
   @SuppressWarnings("null")
   public List<RoutingResult> generateNetworkVariants(
       int clusterId,
