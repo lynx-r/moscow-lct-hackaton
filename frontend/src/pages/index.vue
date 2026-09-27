@@ -1,4 +1,10 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useTracingStore } from '@/stores/tracing'
+import { storeToRefs } from 'pinia'
+
+const tracingStore = useTracingStore()
+const { data } = storeToRefs(tracingStore)
+</script>
 
 <template>
   <div class="flex">
@@ -6,6 +12,6 @@
     <SidebarControls />
 
     <!-- Правая часть (70%) -->
-    <MapViewer />
+    <MapViewer :data />
   </div>
 </template>

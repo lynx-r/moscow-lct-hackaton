@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 // Импорт иконок для красоты
-import { useTracingStore } from '@/stores/tracing'
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
 
-const tracingStore = useTracingStore()
-const { trace, traceMock } = tracingStore
+defineProps<{
+  isCalculating: boolean
+}>()
+
+const emit = defineEmits<{
+  startTracing: [File | undefined]
+}>()
 
 const geojsonFile = ref<File>()
 
 // Состояние для выбранного варианта (по умолчанию Вариант 1)
 const selectedVariant = ref('variant-1')
-
-// Флаг загрузки (имитация расчета)
-const isCalculating = ref(false)
 
 // Тестовые данные для информационного блока (в реальном проекте придут из store или emit)
 const summaryData = ref({
@@ -23,22 +24,9 @@ const summaryData = ref({
 })
 
 // Функция обработки клика по кнопке расчета
-const onStartTracing = async () => {
-  isCalculating.value = true
-
+const onStartTracing = () => {
   const file = geojsonFile.value
-
-  try {
-    if (!file) {
-      await traceMock()
-    } else {
-      await trace(file)
-    }
-  } catch (error) {
-    throw error
-  } finally {
-    isCalculating.value = false
-  }
+  emit('startTracing', file)
 }
 
 const onFileUpload = (event: Event) => {
