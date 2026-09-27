@@ -21,6 +21,18 @@ workflows:
           - name: setup-buildx
             action: docker/setup-buildx-action@v3
 
+          # Python/C++ solver, independently built for the deployment CPU/Python ABI.
+          - name: build-and-push-solver
+            action: docker/build-push-action@v6
+            with:
+              context: ./solver
+              file: ./solver/Dockerfile
+              push: true
+              provenance: false
+              cache-from: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/solver:buildcache
+              cache-to: type=registry,ref=cr.yandex/crp357kesevoc357mb8a/solver:buildcache,mode=max
+              tags: cr.yandex/crp357kesevoc357mb8a/solver:latest
+
           # Сборка и пуш образа (заменяем ghcr.io на cr.yandex)
           - name: build-and-push-backend
             action: docker/build-push-action@v6

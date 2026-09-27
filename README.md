@@ -89,3 +89,10 @@
 Материалы с сайта в [docs/materials](docs/materials/)
 
 Ссылка на чат задачи [https://t.me/+kzBoLSnxK543MmMy](https://t.me/+kzBoLSnxK543MmMy)
+
+## Интеграция расчётного ядра Python/C++
+
+Текущее ядро, правила, исходные документы и тесты находятся в [`solver/`](solver/README.md).
+Java API `/routing/process` и `/routing/process-json` вызывает внутренний сервис
+расчёта. Инструкция по запуску и проверке: [solver/README.md](solver/README.md).
+Изолированный локальный запуск без БД: `docker-compose -f docker/docker-compose-solver.yml up -d --build`.

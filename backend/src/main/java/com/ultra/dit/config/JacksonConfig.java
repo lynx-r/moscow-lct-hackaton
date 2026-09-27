@@ -15,7 +15,8 @@ public class JacksonConfig {
     var objectMapper = new Jackson2ObjectMapperBuilder();
     objectMapper.failOnUnknownProperties(false);
     objectMapper.serializationInclusion(JsonInclude.Include.NON_EMPTY);
-    objectMapper.modules(new JtsModule());
+    // Default JTS serialization rounds to 8 decimals, changing lengths and costs.
+    objectMapper.modules(new JtsModule(16));
 
     return objectMapper;
   }
