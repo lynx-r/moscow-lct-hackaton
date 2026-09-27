@@ -51,6 +51,12 @@ app:
       # 5 ближайших точек врезки при построении сети кластера
       closesSourcesCount: 5
 
+  # утилиты для отладки работы алгоритма
+  debug-utils:
+    debugFolder: debug
+    removeDebugFolderBeforeCreate: false
+    disabled: true
+
 springdoc:
   api-docs:
     enabled: true

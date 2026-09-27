@@ -1,3 +1,10 @@
+app:
+  # утилиты для отладки работы алгоритма
+  debug-utils:
+    debugFolder: debug
+    removeDebugFolderBeforeCreate: false
+    disabled: true
+
 logging:
   level:
     "[com.ultra.dit]": DEBUG

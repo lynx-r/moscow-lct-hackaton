@@ -1,7 +1,4 @@
+# Профиль для показа без дополнительных отладочных нагрузок
 logging:
   level:
     "[com.ultra.dit]": INFO
-    "[org.springframework.web.filter]": INFO
-    "[org.springframework.security]": INFO
-    "[org.postgresql]": INFO
-    "[org.hibernate]": INFO

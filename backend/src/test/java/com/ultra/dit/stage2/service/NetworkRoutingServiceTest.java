@@ -21,11 +21,13 @@ import org.mockito.Spy;
 
 import com.ultra.dit.BaseTest;
 import com.ultra.dit.common.constants.FeaturePropertiesStyles;
+import com.ultra.dit.config.DebugConfig;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
 import com.ultra.dit.stage1.SpatialIndexService;
 import com.ultra.dit.stage1.TransformService;
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.ClustersRoutingResult;
 import com.ultra.dit.stage2_test.FeatureMapper;
 import com.ultra.dit.stage2_test.ProcessStage2RoutesService;
@@ -66,6 +68,9 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
+    var debugConfig = new DebugConfig(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
+    new DebugUtils(debugConfig);
+
     // SpatialIndexService
     Mockito.when(properties.getOksConnectionPointBufferMeters()).thenReturn(OKS_CONNECTION_POINT_BUFFER_METERS);
 
@@ -84,6 +89,20 @@ class NetworkRoutingServiceTest extends BaseTest {
 
     // NetworkRoutingService
     Mockito.when(properties.getParallelClusterCount()).thenReturn(PARALLEL_CLUSTER_COUNT);
+
+    // properties.copy() в NetworkRoutingService::executeRoutingPipeline
+    Stage2Properties copy = new Stage2Properties();
+    copy.setBufferRadiusMeters(OKS_CONNECTION_POINT_BUFFER_METERS);
+    copy.setClusterSizeMeters(CLUSTER_SIZE_METERS);
+    copy.setClusterBufferMeters(CLUSTER_BUFFER_METERS);
+
+    copy.setMaxVariants(MAX_VARIANTS);
+    copy.setMaxValence(MAX_VALENCE);
+    copy.setChooseFromPathsCount(CHOOSE_FROM_PATHS_COUNT);
+    copy.setPathUniquePercent(PATH_UNIQUE_PERCENT);
+    copy.setClosesSourcesCount(CLOSES_SOURCES_COUNT);
+
+    Mockito.when(properties.copy()).thenReturn(copy);
 
     TransformService transformService = new TransformService();
     SpatialIndexService spatialIndexService = new SpatialIndexService(properties);

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ultra.dit.config.DebugConfig;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage1.ParseService;
@@ -39,6 +40,9 @@ public abstract class BaseTest {
 
   @Mock
   protected Stage2Properties properties;
+
+  @Mock
+  protected DebugConfig debugConfig;
 
   protected static final ParseService PARSE_SERVICE = new ParseService(OBJECT_MAPPER);
 
@@ -62,7 +66,7 @@ public abstract class BaseTest {
   @BeforeAll
   public static void initAllTests() throws IOException {
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.DEBUG);
+    loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.TRACE);
 
     testFeatures = new ArrayList<>();
 

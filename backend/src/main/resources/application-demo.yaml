@@ -1,0 +1,11 @@
+app:
+  # утилиты для отладки работы алгоритма
+  debug-utils:
+    debugFolder: debug
+    removeDebugFolderBeforeCreate: false
+    disabled: false
+
+# Профиль для генерации отладочных файлов для фронтенда
+logging:
+  level:
+    "[com.ultra.dit]": TRACE
