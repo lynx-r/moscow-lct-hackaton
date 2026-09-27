@@ -2,7 +2,7 @@ app:
   # утилиты для отладки работы алгоритма
   debug-utils:
     debugFolder: debug
-    removeDebugFolderBeforeCreate: false
+    removeDebugFolderBeforeCreate: true
     disabled: true
 
 logging:

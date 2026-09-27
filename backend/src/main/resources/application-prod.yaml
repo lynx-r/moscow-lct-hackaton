@@ -1,3 +1,10 @@
+app:
+  # утилиты для отладки работы алгоритма
+  debug-utils:
+    debugFolder: debug
+    removeDebugFolderBeforeCreate: true
+    disabled: true
+
 # Профиль для показа без дополнительных отладочных нагрузок
 logging:
   level:

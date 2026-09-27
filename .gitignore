@@ -152,3 +152,4 @@ source/database/pg_data/*
 !source/database/pg_data/.gitkeep
 
 backend/debug
+backend/src/main/resources/static/demo

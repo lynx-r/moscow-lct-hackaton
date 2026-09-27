@@ -1,8 +1,8 @@
 app:
   # утилиты для отладки работы алгоритма
   debug-utils:
-    debugFolder: debug
-    removeDebugFolderBeforeCreate: false
+    debugFolder: src/main/resources/static/demo
+    removeDebugFolderBeforeCreate: true
     disabled: false
 
 # Профиль для генерации отладочных файлов для фронтенда
