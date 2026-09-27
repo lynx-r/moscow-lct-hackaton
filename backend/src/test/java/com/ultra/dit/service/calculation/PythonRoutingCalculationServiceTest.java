@@ -56,7 +56,8 @@ class PythonRoutingCalculationServiceTest {
             var pointProps = SourceProperties.builder().id("opaque-id").objectType(ObjectType.SOURCE).build();
             var point = Feature.of(pointG, pointProps);
             var closed = new AtomicBoolean();
-            var pointStream = Stream.of(point).onClose(() -> closed.set(true));
+            Stream<? extends Feature<? extends FeatureProperties>> pointStream = Stream.of(point)
+                    .onClose(() -> closed.set(true));
             var result = new RoutingFlowService(service).buildRoute(pointStream);
             assertTrue(closed.get());
             assertEquals(37.6344054041544, received.get().getFeatures().get(0).getGeometry().getCoordinate().x);

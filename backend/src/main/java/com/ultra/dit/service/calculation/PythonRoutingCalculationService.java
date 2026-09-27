@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ultra.dit.dto.geojson.FeatureCollection;
+import com.ultra.dit.dto.geojson.enums.GeoJsonType;
 import com.ultra.dit.exception.SolverException;
 
 @Primary
@@ -47,8 +48,8 @@ public class PythonRoutingCalculationService implements RoutingCalculationServic
                 var status = response.statusCode();
                 HttpStatus mapped = status == 422 ? HttpStatus.UNPROCESSABLE_ENTITY
                         : status == 413 ? HttpStatus.PAYLOAD_TOO_LARGE
-                        : status == 503 ? HttpStatus.SERVICE_UNAVAILABLE
-                        : status == 504 ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY;
+                                : status == 503 ? HttpStatus.SERVICE_UNAVAILABLE
+                                        : status == 504 ? HttpStatus.GATEWAY_TIMEOUT : HttpStatus.BAD_GATEWAY;
                 String message = "Routing solver returned HTTP " + status;
                 try {
                     message = mapper.readTree(response.body()).path("error").asText(message);
@@ -58,7 +59,8 @@ public class PythonRoutingCalculationService implements RoutingCalculationServic
                 throw new SolverException(mapped, message);
             }
             var result = mapper.readValue(response.body(), FeatureCollection.class);
-            if (result == null || !"FeatureCollection".equals(result.getType()) || result.getFeatures() == null) {
+            if (result == null || (result.getType() != GeoJsonType.FEATURE_COLLECTION)
+                    || result.getFeatures() == null) {
                 throw new SolverException(HttpStatus.BAD_GATEWAY, "Invalid solver response");
             }
             return result;

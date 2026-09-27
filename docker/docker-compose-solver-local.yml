@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  solver:
+    build:
+      context: ../solver
+    environment:
+      SOLVER_ENGINE: cpp
+      SOLVER_WORKERS: 1
+    mem_limit: 8g
+ 
