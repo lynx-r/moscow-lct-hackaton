@@ -281,6 +281,7 @@ declare global {
   const useToNumber: typeof import('@vueuse/core').useToNumber
   const useToString: typeof import('@vueuse/core').useToString
   const useToggle: typeof import('@vueuse/core').useToggle
+  const useTracingDebugStore: typeof import('./src/stores/tracingDebug').useTracingDebugStore
   const useTracingStore: typeof import('./src/stores/tracing').useTracingStore
   const useTransition: typeof import('@vueuse/core').useTransition
   const useUrlSearchParams: typeof import('@vueuse/core').useUrlSearchParams

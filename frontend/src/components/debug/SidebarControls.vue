@@ -1,45 +1,32 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { isAxiosError } from 'axios'
 // Импорт иконок для красоты
-import { useTracingStore } from '@/stores/tracing'
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
 
-const tracingStore = useTracingStore()
-const { trace, traceMock } = tracingStore
+defineProps<{
+  isCalculating: boolean
+}>()
+
+const emit = defineEmits<{
+  startTracing: [File | undefined]
+}>()
 
 const geojsonFile = ref<File>()
 
 // Состояние для выбранного варианта (по умолчанию Вариант 1)
-const { selectedVariant, variants, summaryData } = storeToRefs(tracingStore)
-const errorMessage = ref('')
+const selectedVariant = ref('variant-1')
 
-// Флаг выполнения расчёта
-const isCalculating = ref(false)
+// Тестовые данные для информационного блока (в реальном проекте придут из store или emit)
+const summaryData = ref({
+  totalCost: 1250000,
+  networkLength: 3450,
+  failedOksIds: ['OKS-0024', 'OKS-1152', 'OKS-0981', 'OKS-4412', 'OKS-7721'],
+})
 
 // Функция обработки клика по кнопке расчета
-const onStartTracing = async () => {
-  isCalculating.value = true
-  errorMessage.value = ''
-
+const onStartTracing = () => {
   const file = geojsonFile.value
-
-  try {
-    if (!file) {
-      await traceMock()
-    } else {
-      await trace(file)
-    }
-  } catch (error) {
-    errorMessage.value = isAxiosError(error)
-      ? (error.response?.data?.message ?? error.message)
-      : error instanceof Error
-        ? error.message
-        : 'Не удалось выполнить расчёт'
-  } finally {
-    isCalculating.value = false
-  }
+  emit('startTracing', file)
 }
 
 const onFileUpload = (event: Event) => {
@@ -78,7 +65,7 @@ const formatCurrency = (value: number) => {
       </div>
 
       <!-- Блок выбора вариантов -->
-      <div v-if="variants.length" class="space-y-2">
+      <div class="space-y-2">
         <label class="text-sm font-medium text-foreground">Выберите вариант</label>
         <ToggleGroup
           v-model="selectedVariant"
@@ -86,14 +73,9 @@ const formatCurrency = (value: number) => {
           variant="outline"
           class="justify-start w-full gap-2"
         >
-          <ToggleGroupItem
-            v-for="variant in variants"
-            :key="variant.id"
-            :value="variant.id"
-            class="flex-1"
-          >
-            Вариант {{ variant.rank }}
-          </ToggleGroupItem>
+          <ToggleGroupItem value="variant-1" class="flex-1"> Вариант 1 </ToggleGroupItem>
+          <ToggleGroupItem value="variant-2" class="flex-1"> Вариант 2 </ToggleGroupItem>
+          <ToggleGroupItem value="variant-3" class="flex-1"> Вариант 3 </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
@@ -108,11 +90,10 @@ const formatCurrency = (value: number) => {
         <span v-if="isCalculating">Расчет...</span>
         <span v-else>Запустить расчет трассировки</span>
       </Button>
-      <p v-if="errorMessage" role="alert" class="text-sm text-destructive">{{ errorMessage }}</p>
     </div>
 
     <!-- Информационный блок с результатами (Card из shadcn) -->
-    <Card v-if="summaryData" class="flex-1 min-h-0 flex flex-col mt-4">
+    <Card class="flex-1 min-h-0 flex flex-col mt-4">
       <CardHeader class="pb-3">
         <CardTitle class="text-base font-semibold flex items-center gap-2">
           Результаты расчета
@@ -123,17 +104,13 @@ const formatCurrency = (value: number) => {
         <!-- Стоимость -->
         <div class="flex items-center justify-between border-b pb-2">
           <span class="text-muted-foreground flex items-center gap-1.5">
-            <DollarSign class="h-4 w-4 text-emerald-500" /> Стоимость со штрафами:
+            <DollarSign class="h-4 w-4 text-emerald-500" /> Общая стоимость:
           </span>
           <span class="font-semibold text-emerald-600 dark:text-emerald-400">
             {{ formatCurrency(summaryData.totalCost) }}
           </span>
         </div>
 
-        <div class="text-xs text-muted-foreground">
-          Строительство: {{ formatCurrency(summaryData.constructionCost) }}<br />
-          Штрафы: {{ formatCurrency(summaryData.penalty) }}
-        </div>
         <!-- Длина сетей -->
         <div class="flex items-center justify-between border-b pb-2">
           <span class="text-muted-foreground flex items-center gap-1.5">

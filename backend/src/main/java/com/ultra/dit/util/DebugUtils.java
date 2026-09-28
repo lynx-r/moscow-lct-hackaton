@@ -6,8 +6,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,6 +46,8 @@ public class DebugUtils {
   public static final String GEOJSON_EXT = ".geojson";
   public static final String GRAPHT_EXT = ".graphml";
 
+  private static final String DEBUG_SESSION_FILENAMES_FILENAME = "debug-session-filenames.json";
+
   private static final TransformService transform = new TransformService();
 
   private static final GeometryFactory geometryFactory = new GeometryFactory();
@@ -57,14 +62,103 @@ public class DebugUtils {
 
   private static Path debugFolder;
 
+  // Хранилище списков имен файлов для каждого активного запроса.
+  // Ключ — это уникальное имя сессии, которое мы привяжем к именам потоков.
+  private static final ConcurrentHashMap<String, ConcurrentLinkedQueue<String>> activeSessions = new ConcurrentHashMap<>();
+
+  // ThreadLocal нужен только главному потоку, чтобы в конце знать, какую сессию
+  // закрывать
+  private static final ThreadLocal<String> currentSessionId = new ThreadLocal<>();
+
   // Внедряем интерфейс через конструктор компонента и сохраняем в статическое
   // поле
   public DebugUtils(DebugProperties debugConfig) {
     DebugUtils.debugConfig = debugConfig;
 
     DebugUtils.debugFolder = debugConfig.getDebugFolder();
-    initDebugFolders();
   }
+
+  /** Written file names Session Start */
+
+  /**
+   * Стартуем сессию. Создаем пустой потокобезопасный список в памяти.
+   */
+  public static void startSession(String sessionId) {
+    if (isDisabled()) {
+      return;
+    }
+    initDebugFolders();
+
+    activeSessions.put(sessionId, new ConcurrentLinkedQueue<>());
+    currentSessionId.set(sessionId);
+  }
+
+  /**
+   * Потокобезопасное добавление имени файла из ЛЮБОГО потока ForkJoinPool
+   */
+  private static void logFileName(String fileName) {
+    if (isDisabled()) {
+      return;
+    }
+    String threadName = Thread.currentThread().getName();
+
+    // Ищем, к какому запросу принадлежит текущий воркер-поток
+    for (String sessionId : activeSessions.keySet()) {
+      if (threadName.contains(sessionId)) {
+        ConcurrentLinkedQueue<String> fileNames = activeSessions.get(sessionId);
+        if (fileNames != null) {
+          fileNames.add(fileName); // Операция lock-free, максимально быстрая
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Завершаем сессию: главный поток берет весь накопленный список,
+   * один раз открывает файл, записывает всё и очищает память.
+   */
+  public static void endSession() throws IOException {
+    if (isDisabled()) {
+      return;
+    }
+
+    var sessionId = currentSessionId.get();
+    if (sessionId == null) {
+      return;
+    }
+
+    var debugFileName = getDebugFolder().resolve(DEBUG_SESSION_FILENAMES_FILENAME);
+    System.out.println(debugFileName);
+    try {
+      ConcurrentLinkedQueue<String> fileNames = activeSessions.remove(sessionId);
+      System.out.println(fileNames.size());
+      if (fileNames != null && !fileNames.isEmpty()) {
+
+        var staticDebugFilesUrl = debugConfig.getStaticDebugFilesUrl();
+        var fileUrls = fileNames.stream()
+            .map(n -> n.replaceAll(getDebugFolder().toString(), staticDebugFilesUrl))
+            .collect(Collectors.toList());
+
+        // Открываем файл на перезапись (TRUNCATE_EXISTING)
+        try (var writer = Files.newBufferedWriter(debugFileName,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING)) {
+
+          OBJECT_MAPPER.writeValue(writer, fileUrls);
+        }
+      }
+    } finally {
+      currentSessionId.remove();
+    }
+  }
+
+  // Публичное статическое свойство (опционально, если нужно именно поле)
+  private static Path getDebugFolder() {
+    return debugFolder != null ? debugFolder : DEFAULT_DEBUG_FOLDER;
+  }
+
+  /** Written file names Session End */
 
   /** Debug Features Start */
 
@@ -102,6 +196,10 @@ public class DebugUtils {
     var fileNameExt = fileName + GEOJSON_EXT;
     try (var outputStream = new FileOutputStream(fileNameExt)) {
       DebugUtils.OBJECT_MAPPER.writeValue(outputStream, rawFeatureCollection);
+
+      // Просто добавляет строку в ConcurrentLinkedQueue в памяти.
+      // Никаких блокировок диска, никакой задержки потоков.
+      DebugUtils.logFileName(fileNameExt);
     } catch (IOException e) {
       throw new RuntimeException("Ошибка записи GeoJSON в файл: " + fileName, e);
     }
@@ -109,8 +207,7 @@ public class DebugUtils {
 
   // Публичное статическое свойство (опционально, если нужно именно поле)
   private static Path getGeoJsonFolder() {
-    return debugConfig != null ? debugFolder.resolve(GEOJSON_FOLDER)
-        : DEFAULT_DEBUG_FOLDER.resolve(GEOJSON_FOLDER);
+    return getDebugFolder().resolve(GEOJSON_FOLDER);
   }
 
   /** Debug Features End */
@@ -185,9 +282,12 @@ public class DebugUtils {
       return "N_" + (((VirtualNode) v).getCoordinate().x) + "_" + (((VirtualNode) v).getCoordinate().y);
     });
 
-    var path = getGraphMLFolder().resolve(fileName + GRAPHT_EXT).toString();
+    String fileNameExt = fileName + GRAPHT_EXT;
+    var path = getGraphMLFolder().resolve(fileNameExt).toString();
     try (var writer = new FileWriter(path)) {
       exporter.exportGraph(graph, writer);
+
+      DebugUtils.logFileName(path);
     } catch (IOException e) {
       throw new RuntimeException("Ошибка экспорта графа " + fileName, e);
     }
@@ -206,22 +306,20 @@ public class DebugUtils {
     Graph<V, E> pathGraph = new AsSubgraph<>(baseGraph, pathVertices, pathEdges);
 
     writeGraph(pathGraph, filePath);
-    exportToGraphML(pathGraph, filePath);
   }
 
   // Публичное статическое свойство (опционально, если нужно именно поле)
   private static Path getGraphMLFolder() {
-    return debugConfig != null ? debugFolder.resolve(GRPAHML_FOLDER)
-        : DEFAULT_DEBUG_FOLDER.resolve(GRPAHML_FOLDER);
+    return getDebugFolder().resolve(GRPAHML_FOLDER);
   }
 
   /** Debug Graph Start */
 
   private static boolean isDisabled() {
-    return debugConfig == null || debugConfig.getDisabled();
+    return debugConfig == null || debugConfig.getDisabled() || debugFolder == null;
   }
 
-  private void initDebugFolders() {
+  private static void initDebugFolders() {
     if (isDisabled()) {
       return;
     }
@@ -239,7 +337,7 @@ public class DebugUtils {
     }
   }
 
-  public void createDirectoryIfNotExist(Path path) throws IOException {
+  private static void createDirectoryIfNotExist(Path path) throws IOException {
     if (Files.notExists(path)) {
       // Создает всю цепочку папок, если они не существуют.
       // Если папка уже есть — ничего не произойдет.

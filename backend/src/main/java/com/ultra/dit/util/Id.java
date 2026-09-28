@@ -1,5 +1,6 @@
 package com.ultra.dit.util;
 
+import com.ultra.dit.dto.DebugDataClusterId;
 import com.ultra.dit.dto.geojson.enums.ObjectType;
 
 public class Id {
@@ -15,6 +16,12 @@ public class Id {
 
   public static String variantId(int clusterId, int variantId) {
     return clusterId + ":" + variantId + "_variant";
+  }
+
+  public static DebugDataClusterId parseId(String id) {
+    var clusterId = id.split(":")[0];
+    var variantId = id.split(":")[1];
+    return new DebugDataClusterId(clusterId, variantId);
   }
 
   private static String suffixByObjectType(ObjectType objectType) {

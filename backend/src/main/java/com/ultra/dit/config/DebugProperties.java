@@ -22,4 +22,7 @@ public class DebugProperties {
   private Boolean removeDebugFolderBeforeCreate;
 
   private Boolean disabled;
+
+  // URL по которому будут доступны статические файлы дебага
+  private String staticDebugFilesUrl;
 }

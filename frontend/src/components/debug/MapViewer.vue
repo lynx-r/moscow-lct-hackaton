@@ -1,11 +1,9 @@
 <!-- MapViewer.vue -->
 <script setup lang="ts">
-import { useTracingStore } from '@/stores/tracing'
 import { useColorMode } from '@vueuse/core'
 import type { FeatureCollection } from 'geojson'
 import { GeoJSONSource, Map, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 // ВАЖНО: Используем именно ?worker&url, а не просто ?url
@@ -18,8 +16,9 @@ setWorkerUrl(maplibreWorkerUrl)
 
 const mode = useColorMode()
 
-const tracingStore = useTracingStore()
-const { data } = storeToRefs(tracingStore)
+const { data } = defineProps<{
+  data: FeatureCollection
+}>()
 
 const mapContainer = useTemplateRef('mapContainer')
 const map = shallowRef<Map | null>(null) // Важно: shallowRef, чтобы не ломать WebGL-контекст реактивностью
@@ -46,7 +45,7 @@ onMounted(() => {
   })
 
   map.value.on('load', () => {
-    updateRoutingLayers(data.value)
+    updateRoutingLayers(data)
   })
 })
 
@@ -58,7 +57,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
   const source = geoJsonData.features.find((f) => f.properties?.object_type === 'source')
   if (source) {
-    if (source.geometry?.type === 'Point') {
+    if (source.geometry.type === 'Point') {
       map.value.setCenter(source.geometry.coordinates as [number, number])
       map.value.setZoom(DEFAULT_ZOOM)
     }
@@ -135,8 +134,6 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
           'case',
           ['boolean', ['feature-state', 'selected'], false],
           '#ff4d4f',
-          ['has', 'variant_id'],
-          '#2563eb',
           '#ffa940',
         ],
         'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 5, 3],
@@ -151,18 +148,10 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
       filter: ['==', ['get', 'object_type'], OBJECT_TYPES.heat_chamber],
       paint: {
         'circle-radius': 6,
-        'circle-color': ['case', ['has', 'variant_id'], '#2563eb', 'orange'],
+        'circle-color': 'orange',
         'circle-stroke-width': 2,
         'circle-stroke-color': 'yellow',
       },
-    })
-
-    map.value.addLayer({
-      id: 'layer-technical-node',
-      type: 'circle',
-      source: DATA_SOURCE_NAME,
-      filter: ['==', ['get', 'object_type'], 'technical_node'],
-      paint: { 'circle-radius': 3, 'circle-color': '#2563eb' },
     })
 
     // Слой существующих точек подключения
@@ -183,7 +172,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
 // Следим за изменением данных от бэка (когда алгоритм отработал)
 watch(
-  data,
+  () => data,
   (newData) => {
     if (!newData) {
       return
@@ -220,10 +209,6 @@ onBeforeUnmount(() => {
     <div>
       <span class="rounded-none! h-1! mb-1" style="background-color: #ffa940"></span>
       Существующие тепловые сети
-    </div>
-    <div>
-      <span class="rounded-none! h-1! mb-1" style="background-color: #2563eb"></span>
-      Новая сеть выбранного варианта
     </div>
     <div>
       <span style="background-color: red; border-color: darkred"></span>

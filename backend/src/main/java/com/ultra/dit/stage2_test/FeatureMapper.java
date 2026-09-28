@@ -28,4 +28,5 @@ public class FeatureMapper {
       Stream<T> geometries) {
     return geometries.map(geometry -> Feature.withDefaultProperties(geometry));
   }
+
 }

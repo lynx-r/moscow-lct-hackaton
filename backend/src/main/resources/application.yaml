@@ -60,6 +60,8 @@ app:
     debugFolder: debug
     removeDebugFolderBeforeCreate: false
     disabled: true
+    # URL по которому будут доступны статические файлы дебага
+    staticDebugFilesUrl: ${STATIC_DEBUG_FILES_URL:http://localhost:8080/demo}
 
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
