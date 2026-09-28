@@ -3,9 +3,9 @@
 <template>
   <div class="flex">
     <!-- Левая панель (30%) -->
-    <SidebarControls />
+    <DebugSidebarControls />
 
     <!-- Правая часть (70%) -->
-    <MapViewer />
+    <DebugMapViewer />
   </div>
 </template>

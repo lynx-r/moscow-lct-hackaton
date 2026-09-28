@@ -23,4 +23,11 @@ export default defineConfigWithVueTs(
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
   skipFormatting,
+
+  {
+    files: ['src/pages/**/*.vue', 'src/views/**/*.vue'], // пути к вашим страницам
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
 )
