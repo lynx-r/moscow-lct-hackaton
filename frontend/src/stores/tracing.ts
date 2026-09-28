@@ -5,10 +5,6 @@ import { computed, ref } from 'vue'
 import geojson from '../mock/dataset-default.json'
 
 export const useTracingStore = defineStore('tracing', () => {
-  const data = ref<FeatureCollection>(geojson as FeatureCollection)
-  const isCalculating = ref(false)
-
-
   const input = ref<FeatureCollection>(geojson as FeatureCollection)
   const result = ref<FeatureCollection | null>(null)
   const selectedVariant = ref('1')
@@ -26,12 +22,12 @@ export const useTracingStore = defineStore('tracing', () => {
     )?.properties
     return p
       ? {
-        totalCost: Number(p.calculated_cost),
-        constructionCost: Number(p.construction_cost),
-        penalty: Number(p.unconnected_penalty),
-        networkLength: Number(p.new_network_length),
-        failedOksIds: p.unconnected_oks_ids as (string | number)[],
-      }
+          totalCost: Number(p.calculated_cost),
+          constructionCost: Number(p.construction_cost),
+          penalty: Number(p.unconnected_penalty),
+          networkLength: Number(p.new_network_length),
+          failedOksIds: p.unconnected_oks_ids as (string | number)[],
+        }
       : null
   })
   // Keep source objects on the map; only the chosen variant is displayed.
@@ -55,32 +51,6 @@ export const useTracingStore = defineStore('tracing', () => {
     const source = JSON.parse(await file.text()) as FeatureCollection
     await calculate(source, file)
   }
-
-  const mockTrace = async () => {
-    console.log('Используем GeoJson по-умолчанию')
-    const result = await routingService.traceRouteMock()
-    console.log(result)
-    data.value = result.featureCollection
-  }
-
-  // Функция обработки клика по кнопке расчета
-  const startTracing = async (file: File | undefined) => {
-    isCalculating.value = true
-
-    try {
-      if (!file) {
-        await mockTrace()
-      } else {
-        await trace(file)
-      }
-    } catch (error) {
-      throw error
-    } finally {
-      isCalculating.value = false
-    }
-  }
-
-  return { data, isCalculating, startTracing, mockTrace }
   const traceMock = async () => {
     await calculate(
       geojson as FeatureCollection,

@@ -3,32 +3,43 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { isAxiosError } from 'axios'
 // Импорт иконок для красоты
+import { useTracingStore } from '@/stores/tracing'
 import { AlertCircle, DollarSign, Network, Play } from '@lucide/vue'
 
-defineProps<{
-  isCalculating: boolean
-}>()
-
-const emit = defineEmits<{
-  startTracing: [File | undefined]
-}>()
+const tracingStore = useTracingStore()
+const { trace, traceMock } = tracingStore
 
 const geojsonFile = ref<File>()
 
 // Состояние для выбранного варианта (по умолчанию Вариант 1)
-const selectedVariant = ref('variant-1')
+const { selectedVariant, variants, summaryData } = storeToRefs(tracingStore)
+const errorMessage = ref('')
 
-// Тестовые данные для информационного блока (в реальном проекте придут из store или emit)
-const summaryData = ref({
-  totalCost: 1250000,
-  networkLength: 3450,
-  failedOksIds: ['OKS-0024', 'OKS-1152', 'OKS-0981', 'OKS-4412', 'OKS-7721'],
-})
+// Флаг выполнения расчёта
+const isCalculating = ref(false)
 
 // Функция обработки клика по кнопке расчета
-const onStartTracing = () => {
+const onStartTracing = async () => {
+  isCalculating.value = true
+  errorMessage.value = ''
+
   const file = geojsonFile.value
-  emit('startTracing', file)
+
+  try {
+    if (!file) {
+      await traceMock()
+    } else {
+      await trace(file)
+    }
+  } catch (error) {
+    errorMessage.value = isAxiosError(error)
+      ? (error.response?.data?.message ?? error.message)
+      : error instanceof Error
+        ? error.message
+        : 'Не удалось выполнить расчёт'
+  } finally {
+    isCalculating.value = false
+  }
 }
 
 const onFileUpload = (event: Event) => {

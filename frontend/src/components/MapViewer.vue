@@ -1,9 +1,11 @@
 <!-- MapViewer.vue -->
 <script setup lang="ts">
+import { useTracingStore } from '@/stores/tracing'
 import { useColorMode } from '@vueuse/core'
 import type { FeatureCollection } from 'geojson'
 import { GeoJSONSource, Map, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 // ВАЖНО: Используем именно ?worker&url, а не просто ?url
@@ -16,9 +18,8 @@ setWorkerUrl(maplibreWorkerUrl)
 
 const mode = useColorMode()
 
-const { data } = defineProps<{
-  data: FeatureCollection
-}>()
+const tracingStore = useTracingStore()
+const { data } = storeToRefs(tracingStore)
 
 const mapContainer = useTemplateRef('mapContainer')
 const map = shallowRef<Map | null>(null) // Важно: shallowRef, чтобы не ломать WebGL-контекст реактивностью
@@ -45,7 +46,7 @@ onMounted(() => {
   })
 
   map.value.on('load', () => {
-    updateRoutingLayers(data)
+    updateRoutingLayers(data.value)
   })
 })
 
@@ -182,7 +183,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
 // Следим за изменением данных от бэка (когда алгоритм отработал)
 watch(
-  () => data,
+  data,
   (newData) => {
     if (!newData) {
       return

@@ -15,7 +15,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0g
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="file"; filename="dataset.geojson"
-Content-Type: image/png
+Content-Type: text/plain
 
 < ./data/dataset-19.09.26.geojson
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
@@ -27,7 +27,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0g
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="file"; filename="dataset.geojson"
-Content-Type: image/png
+Content-Type: text/plain
 
 < ./data/dataset-19.09.26.geojson
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
@@ -39,7 +39,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0g
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="file"; filename="dataset.geojson"
-Content-Type: image/png
+Content-Type: text/plain
 
 < ./data/dataset-19.09.26.geojson
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
@@ -51,7 +51,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0g
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="file"; filename="dataset.geojson"
-Content-Type: image/png
+Content-Type: text/plain
 
 < ./data/1-test-dataset.geojson
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
@@ -63,7 +63,7 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0g
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
 Content-Disposition: form-data; name="file"; filename="dataset.geojson"
-Content-Type: image/png
+Content-Type: text/plain
 
 < ./data/1-test-dataset.geojson
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
