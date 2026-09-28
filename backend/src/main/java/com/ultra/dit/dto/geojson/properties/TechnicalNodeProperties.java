@@ -1,5 +1,8 @@
 package com.ultra.dit.dto.geojson.properties;
 
+import com.ultra.dit.dto.geojson.enums.ObjectType;
+
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -8,5 +11,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public class TechnicalNodeProperties extends FeatureProperties {
+  @Builder.Default
+  private ObjectType objectType = ObjectType.TECHNICAL_NODE;
 
 }

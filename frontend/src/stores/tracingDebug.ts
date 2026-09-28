@@ -6,19 +6,16 @@ import geojson from '../mock/dataset-default.json'
 
 export const useTracingDebugStore = defineStore('tracing-debug', () => {
   const data = ref<FeatureCollection>(geojson as FeatureCollection)
+  const debugDataFileUrls = ref<string[]>([])
   const isCalculating = ref(false)
 
   const trace = async (file: Blob) => {
-    const result = await routingService.traceRoute(file)
-    console.log(result)
-    data.value = result.featureCollection
+    data.value = await routingService.traceRouteDebug(file)
   }
 
   const mockTrace = async () => {
     console.log('Используем GeoJson по-умолчанию')
-    const result = await routingService.traceRouteMock()
-    console.log(result)
-    data.value = result.featureCollection
+    data.value = await routingService.traceRouteMockDebug()
   }
 
   // Функция обработки клика по кнопке расчета
@@ -31,10 +28,11 @@ export const useTracingDebugStore = defineStore('tracing-debug', () => {
       } else {
         await trace(file)
       }
+      debugDataFileUrls.value = await routingService.getDebugData()
     } finally {
       isCalculating.value = false
     }
   }
 
-  return { data, isCalculating, startTracing, mockTrace }
+  return { data, isCalculating, debugDataFileUrls, startTracing, mockTrace }
 })

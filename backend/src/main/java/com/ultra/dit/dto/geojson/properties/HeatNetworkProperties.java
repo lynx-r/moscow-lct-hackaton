@@ -3,7 +3,9 @@ package com.ultra.dit.dto.geojson.properties;
 import java.math.BigDecimal;
 
 import com.ultra.dit.dto.geojson.enums.LayingMethod;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -14,7 +16,9 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-public class HeatNetworkSectionProperties extends FeatureProperties {
+public class HeatNetworkProperties extends FeatureProperties {
+  @Builder.Default
+  private ObjectType objectType = ObjectType.HEAT_NETWORK;
 
   /**
    * ID точки врезки, тепловой камеры, технического узла или точки подключения ОКС

@@ -56,8 +56,6 @@ public abstract class BaseTest {
       "files/dataset-19.09.26.geojson");
   protected static final ClassPathResource datasetBaseResource = new ClassPathResource("files/1-test-dataset.geojson");
 
-  protected final double OKS_CONNECTION_POINT_BUFFER_METERS = 2.0;
-
   protected static List<List<Feature<? extends FeatureProperties>>> testFeatures;
 
   protected static List<Feature<? extends FeatureProperties>> featuresBase;

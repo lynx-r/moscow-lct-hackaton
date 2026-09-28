@@ -1,0 +1,95 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 1,
+        "object_type": "restriction",
+        "restriction_type": "water"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [37.63498617514273, 55.70234650962357],
+            [37.6365103, 55.70234650962357],
+            [37.6365103, 55.7007837],
+            [37.63498617514273, 55.7007837],
+            [37.63498617514273, 55.70234650962357]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 2,
+        "object_type": "heat_chamber"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [37.6334371, 55.7017129]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 3,
+        "object_type": "oks_connection_point",
+        "flow_tph": 24.87
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [37.6383093, 55.7015581]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 4,
+        "object_type": "restriction",
+        "restriction_type": "oks",
+        "address": "Автозаводская улица, дом 23, строение 896"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [37.638181536156395, 55.7016551735677],
+            [37.6384121882686, 55.7016551735677],
+            [37.6384121882686, 55.70148081919581],
+            [37.638181536156395, 55.70148081919581],
+            [37.638181536156395, 55.7016551735677]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 5,
+        "diameter": 500,
+        "object_type": "heat_network"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [37.6305387, 55.7018115],
+          [37.6334371, 55.7017129]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 6,
+        "object_type": "source"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [37.630934, 55.7017982]
+      }
+    }
+  ]
+}

@@ -27,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "object_type", visible = true)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = SourceProperties.class, name = "source"),
-    @JsonSubTypes.Type(value = HeatNetworkSectionProperties.class, name = "heat_network"),
+    @JsonSubTypes.Type(value = HeatNetworkProperties.class, name = "heat_network"),
     @JsonSubTypes.Type(value = HeatChamberProperties.class, name = "heat_chamber"),
     @JsonSubTypes.Type(value = OksFutureProperties.class, name = "oks_future"),
     @JsonSubTypes.Type(value = OksConnectionPointProperties.class, name = "oks_connection_point"),

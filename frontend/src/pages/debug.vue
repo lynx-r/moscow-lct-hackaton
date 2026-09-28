@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const tracingDebugStore = useTracingDebugStore()
-const { isCalculating, data } = storeToRefs(tracingDebugStore)
+const { isCalculating, data, debugDataFileUrls } = storeToRefs(tracingDebugStore)
 const { startTracing } = tracingDebugStore
 </script>
 
@@ -10,6 +10,6 @@ const { startTracing } = tracingDebugStore
     <DebugSidebarControls :is-calculating @start-tracing="startTracing" />
 
     <!-- Правая часть (70%) -->
-    <DebugMapViewer :data />
+    <DebugMapViewer :data :debug-data-file-urls />
   </div>
 </template>

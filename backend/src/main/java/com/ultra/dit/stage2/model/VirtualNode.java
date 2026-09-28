@@ -6,9 +6,8 @@ import org.locationtech.jts.geom.Coordinate;
 
 import com.ultra.dit.common.constants.FeaturePropertiesStyles;
 import com.ultra.dit.common.factory.FeaturePropertiesStyleFactory;
-import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
-import com.ultra.dit.dto.geojson.properties.GraphEdgeProperties;
+import com.ultra.dit.dto.geojson.properties.HeatNetworkProperties;
 import com.ultra.dit.dto.geojson.properties.OksConnectionPointProperties;
 
 import lombok.Getter;
@@ -56,8 +55,8 @@ public class VirtualNode {
 
   public static VirtualNode asVoronoiSkeleton(Coordinate coordinate) {
     var additionalProperties = new HashMap<>(FeaturePropertiesStyles.VORONOI_SKELETON);
-    var properties = GraphEdgeProperties.builder().id("edge-" + coordinate.hashCode())
-        .additionalProperties(additionalProperties).objectType(ObjectType.GRAPH_EDGE)
+    var properties = HeatNetworkProperties.builder().id("edge-" + coordinate.hashCode())
+        .additionalProperties(additionalProperties)
         .build();
     return VirtualNode.of(coordinate, NodeType.VORONOI_SKELETON, properties, null);
   }

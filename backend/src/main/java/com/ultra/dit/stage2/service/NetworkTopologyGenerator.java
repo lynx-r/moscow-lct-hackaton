@@ -16,8 +16,8 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.HeatNetworkProperties;
 import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
@@ -335,7 +335,7 @@ public class NetworkTopologyGenerator {
       } else if (to.hasFeatureProperties()) {
         properties = to.getFeatureProperties();
       } else {
-        properties = FeatureProperties.builder().objectType(ObjectType.HEAT_NETWORK).build();
+        properties = HeatNetworkProperties.builder().build();
       }
       variantId = Id.idByObjectType(clusterIdx, variantIdx, properties.getObjectType());
       properties.setVariantId(variantId);

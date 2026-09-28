@@ -46,6 +46,10 @@ class NetworkRoutingServiceTest extends BaseTest {
   // Размер кластера ОКС
   private static final double CLUSTER_SIZE_METERS = 10.0;
 
+  private final double BUFFER_RADIUS_METERS = 2.0;
+
+  private final double OKS_CONNECTION_POINT_BUFFER_METERS = 2.0;
+
   private static final double PATH_UNIQUE_PERCENT = 0.7;
 
   private static final int MAX_VARIANTS = 3;
@@ -59,6 +63,9 @@ class NetworkRoutingServiceTest extends BaseTest {
   // из скольки кратчайших путей выбирать
   private static final int CLOSES_SOURCES_COUNT = 5;
 
+  // Шаг дискретизации (нормативный отступ от препятствий в метрах)
+  private static final double OBSTACLE_OFFSET_METERS = 3.0;
+
   @Spy
   private ParseService parserService = new ParseService(OBJECT_MAPPER);
 
@@ -69,7 +76,7 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
-    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false);
+    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, true, "");
     new DebugUtils(debugConfig);
 
     // SpatialIndexService
@@ -91,9 +98,12 @@ class NetworkRoutingServiceTest extends BaseTest {
     // NetworkRoutingService
     Mockito.when(properties.getParallelClusterCount()).thenReturn(PARALLEL_CLUSTER_COUNT);
 
+    // DirectedRoadmapBuilder
+    Mockito.when(properties.getObstacleOffsetMeters()).thenReturn(OBSTACLE_OFFSET_METERS);
+
     // properties.copy() в NetworkRoutingService::executeRoutingPipeline
     Stage2Properties copy = new Stage2Properties();
-    copy.setBufferRadiusMeters(OKS_CONNECTION_POINT_BUFFER_METERS);
+    copy.setBufferRadiusMeters(BUFFER_RADIUS_METERS);
     copy.setClusterSizeMeters(CLUSTER_SIZE_METERS);
     copy.setClusterBufferMeters(CLUSTER_BUFFER_METERS);
 
@@ -102,6 +112,8 @@ class NetworkRoutingServiceTest extends BaseTest {
     copy.setChooseFromPathsCount(CHOOSE_FROM_PATHS_COUNT);
     copy.setPathUniquePercent(PATH_UNIQUE_PERCENT);
     copy.setClosesSourcesCount(CLOSES_SOURCES_COUNT);
+
+    copy.setObstacleOffsetMeters(OBSTACLE_OFFSET_METERS);
 
     Mockito.when(properties.copy()).thenReturn(copy);
 

@@ -2,11 +2,11 @@ import { fileURLToPath, URL } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
+import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import VueRouter from 'vue-router/vite'
-import AutoImport from 'unplugin-auto-import/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,7 +22,7 @@ export default defineConfig({
     }),
     Components({
       // Указываем папки, из которых нужно автоматически импортировать компоненты
-      dirs: ['src/components'],
+      dirs: ['src/components/ui', 'src/components'],
       // Генерировать типы для TypeScript (выключите, если используете чистый JS)
       dts: true,
       directoryAsNamespace: true,

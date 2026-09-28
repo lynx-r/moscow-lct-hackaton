@@ -35,15 +35,15 @@ app:
     stage2:
       # Вычисляет общий минимальный охватывающий прямоугольник (Envelope)
       # для кластера ОКС с учетом технологического буфера
-      clusterBufferMeters: 200.0
+      clusterBufferMeters: 500.0
       # Пессимистичный радиус буфера для максимального ДУ 1400 мм по ТЗ (в метрах)
       bufferRadiusMeters: 2.0
       # Размер кластера
-      clusterSizeMeters: 100.0
+      clusterSizeMeters: 10.0
       # N метра буфера для точки подключения на границе здания
       oksConnectionPointBufferMeters: 2.0
       # Количество вариантов для генерации
-      maxVariants: 10
+      maxVariants: 3
       # Максимальная степень узла для камер по ТЗ
       maxValence: 4
       # из скольки кратчайших путей выбирать
@@ -54,6 +54,8 @@ app:
       pathUniquePercent: 0.7
       # 5 ближайших точек врезки при построении сети кластера
       closesSourcesCount: 5
+      # Шаг дискретизации (нормативный отступ от препятствий в метрах)
+      obstacleOffsetMeters: 3.0
 
   # утилиты для отладки работы алгоритма
   debug-utils:

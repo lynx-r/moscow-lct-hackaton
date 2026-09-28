@@ -9,6 +9,7 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 
 import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 
 import lombok.Getter;
@@ -78,4 +79,22 @@ public final class LocalIndexContainer {
   public List<Geometry> getNodesGeometry() {
     return getNodesGeometryStream().collect(Collectors.toList());
   }
+
+  /**
+   * Источники без точек подключения
+   * 
+   * @return
+   */
+  public Stream<Feature<? extends FeatureProperties>> getSourceNodesStream() {
+    return nodes.stream().filter((n) -> n.getProperties().getObjectType() != ObjectType.OKS_CONNECTION_POINT);
+  }
+
+  public List<Feature<? extends FeatureProperties>> getSourceNodes() {
+    return getSourceNodesStream().collect(Collectors.toList());
+  }
+
+  public Stream<Geometry> getSourceNodesGeometryStream() {
+    return getSourceNodesStream().map(c -> c.getGeometry());
+  }
+
 }

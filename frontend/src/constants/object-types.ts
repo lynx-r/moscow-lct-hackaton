@@ -4,4 +4,5 @@ export const OBJECT_TYPES = {
   heat_chamber: 'heat_chamber',
   oks_connection_point: 'oks_connection_point',
   restriction: 'restriction',
+  graph_edge: 'graph_edge',
 }

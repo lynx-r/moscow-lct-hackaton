@@ -45,6 +45,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollArea: typeof import('./src/components/ui/scroll-area/ScrollArea.vue')['default']
+    ScrollAreaScrollBar: typeof import('./src/components/ui/scroll-area/ScrollBar.vue')['default']
     ScrollBar: typeof import('./src/components/ui/scroll-area/ScrollBar.vue')['default']
     SidebarControls: typeof import('./src/components/SidebarControls.vue')['default']
     Toggle: typeof import('./src/components/ui/toggle/Toggle.vue')['default']

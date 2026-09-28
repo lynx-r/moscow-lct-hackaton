@@ -16,8 +16,9 @@ setWorkerUrl(maplibreWorkerUrl)
 
 const mode = useColorMode()
 
-const { data } = defineProps<{
+const { data, debugDataFileUrls } = defineProps<{
   data: FeatureCollection
+  debugDataFileUrls: string[]
 }>()
 
 const mapContainer = useTemplateRef('mapContainer')
@@ -140,6 +141,23 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
       },
     })
 
+    // Слой существующей тепловой сети
+    map.value.addLayer({
+      id: `layer-line-${OBJECT_TYPES.graph_edge}`,
+      type: 'line',
+      source: DATA_SOURCE_NAME,
+      filter: ['==', ['get', 'object_type'], OBJECT_TYPES.graph_edge],
+      // paint: {
+      //   'line-color': [
+      //     'case',
+      //     ['boolean', ['feature-state', 'selected'], false],
+      //     '#ff4d4f',
+      //     '#ffa940',
+      //   ],
+      //   'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 5, 3],
+      // },
+    })
+
     // Слой существующих тепловых камер
     map.value.addLayer({
       id: `layer-circle-${OBJECT_TYPES.heat_chamber}`,
@@ -174,6 +192,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 watch(
   () => data,
   (newData) => {
+    console.log('new data', newData)
     if (!newData) {
       return
     }
@@ -181,6 +200,13 @@ watch(
   },
   { deep: false },
 ) // Важно: deep: false, передаем объект целиком, не сканируем его внутри
+
+watch(
+  () => debugDataFileUrls,
+  (debugUrls) => {
+    console.log('???', debugUrls)
+  },
+)
 
 // Следим за выбором конкретного варианта в боковой панели UI
 // watch(

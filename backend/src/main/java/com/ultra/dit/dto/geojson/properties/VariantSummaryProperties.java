@@ -15,6 +15,9 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public class VariantSummaryProperties extends FeatureProperties {
+  @Builder.Default
+  private ObjectType objectType = ObjectType.VARIANT_SUMMARY;
+
   /** 1 – лучший вариант */
   private Integer rank;
 
@@ -72,7 +75,6 @@ public class VariantSummaryProperties extends FeatureProperties {
         .id(id)
         .variantId(variantId)
         .unconnectedOksIds(unconnectedOksIds)
-        .objectType(ObjectType.VARIANT_SUMMARY)
         .isConnected(false).build();
   }
 

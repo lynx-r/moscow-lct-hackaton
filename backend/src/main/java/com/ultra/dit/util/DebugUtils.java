@@ -220,7 +220,7 @@ public class DebugUtils {
       return;
     }
 
-    writeGraphWithFeatures(graph, Stream.empty(), fileName);
+    writeGraphWithFeatures(graph, fileName);
 
     exportToGraphML(graph, fileName);
   }
@@ -237,7 +237,6 @@ public class DebugUtils {
   }
 
   private static <V extends VirtualNode, E> void writeGraphWithFeatures(Graph<V, E> graph,
-      Stream<Feature<? extends FeatureProperties>> featureStream,
       String fileName) {
 
     Stream<Feature<? extends FeatureProperties>> graphEdgeFeatures = StreamSupport
@@ -263,8 +262,7 @@ public class DebugUtils {
           return Feature.of(lineString, properties);
         });
 
-    var allFeatures = Stream.concat(graphEdgeFeatures, featureStream);
-    writeFeaturesIn32637(allFeatures, fileName);
+    writeFeaturesIn32637(graphEdgeFeatures, fileName);
   }
 
   private static <V, E> void exportToGraphML(Graph<V, E> graph,

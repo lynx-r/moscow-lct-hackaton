@@ -22,7 +22,6 @@ import com.sun.net.httpserver.HttpServer;
 import com.ultra.dit.config.JacksonConfig;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.FeatureCollection;
-import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.dto.geojson.properties.HeatChamberProperties;
 import com.ultra.dit.dto.geojson.properties.SourceProperties;
@@ -36,7 +35,7 @@ class PythonRoutingCalculationServiceTest {
     @Test
     void forwardsWgs84PreservesSummaryAndClosesInput() throws Exception {
         var received = new AtomicReference<FeatureCollection>();
-        var summaryVariant = VariantSummaryProperties.builder().id("summary").objectType(ObjectType.VARIANT_SUMMARY)
+        var summaryVariant = VariantSummaryProperties.builder().id("summary")
                 .variantId("1").score(23.2).build();
         var summary = Feature.of(null, summaryVariant);
         var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -53,7 +52,7 @@ class PythonRoutingCalculationServiceTest {
             var service = new PythonRoutingCalculationService(mapper,
                     "http://127.0.0.1:" + server.getAddress().getPort(), 5);
             var pointG = new GeometryFactory().createPoint(new Coordinate(37.6344054041544, 55.6994810644531));
-            var pointProps = SourceProperties.builder().id("opaque-id").objectType(ObjectType.SOURCE).build();
+            var pointProps = SourceProperties.builder().id("opaque-id").build();
             var point = Feature.of(pointG, pointProps);
             var closed = new AtomicBoolean();
             Stream<? extends Feature<? extends FeatureProperties>> pointStream = Stream.of(point)
