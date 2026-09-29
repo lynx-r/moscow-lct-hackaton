@@ -3,10 +3,13 @@ services:
   frontend:
     build:
       context: ../frontend
+    env_file:
+      - ../frontend/.env
     ports:
       - "80:80"
     depends_on:
       - backend
+
   solver:
     build:
       context: ../solver
@@ -14,16 +17,14 @@ services:
       SOLVER_ENGINE: cpp
       SOLVER_WORKERS: 1
     mem_limit: 8g
+
   backend:
     build:
       context: ../backend
-    environment:
-      SOLVER_URL: http://solver:8090
-      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+    env_file:
+      - ../backend/.env
     ports:
       - "8080:8080"
-    environment:
-      SOLVER_URL: http://solver:8090
     depends_on:
       - database
       - solver
