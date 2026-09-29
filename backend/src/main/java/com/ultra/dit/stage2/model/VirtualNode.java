@@ -61,6 +61,11 @@ public class VirtualNode {
     return VirtualNode.of(coordinate, NodeType.VORONOI_SKELETON, properties, null);
   }
 
+  public static VirtualNode asSuperSource(Coordinate coordinate) {
+    var properties = FeatureProperties.builder().build();
+    return VirtualNode.of(coordinate, NodeType.SUPER_SOURCE, properties, null);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {

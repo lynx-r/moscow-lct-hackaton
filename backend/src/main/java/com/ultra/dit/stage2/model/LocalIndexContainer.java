@@ -1,5 +1,6 @@
 package com.ultra.dit.stage2.model;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -110,8 +111,16 @@ public final class LocalIndexContainer {
     return getNodesGeometryStream().collect(Collectors.toList());
   }
 
-  public Stream<Geometry> getSourceNodesGeometryStream() {
-    return sourceNodes.stream().map(c -> c.getGeometry());
+  public Stream<Coordinate> getSourceNodesGeometryStream() {
+    return sourceNodes.stream().map(c -> c.getGeometry()).flatMap(g -> Arrays.stream(g.getCoordinates()));
+  }
+
+  public List<Coordinate> getSourceNodesGeometry() {
+    return getSourceNodesGeometryStream().collect(Collectors.toList());
+  }
+
+  public Stream<Coordinate> getClusterOksCoordinatesStream() {
+    return cluster.stream().map(oks -> oks.getConnectionPoint().getCoordinate());
   }
 
   @Value

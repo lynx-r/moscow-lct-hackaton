@@ -23,6 +23,9 @@ import org.jgrapht.nio.graphml.GraphMLExporter;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.proj4j.CRSFactory;
+import org.locationtech.proj4j.CoordinateTransformFactory;
+import org.locationtech.proj4j.ProjCoordinate;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.stereotype.Component;
@@ -368,7 +371,7 @@ public class DebugUtils {
     var pathId = new AtomicInteger(0);
     results.stream().map(FeatureMapper::mapRoutingResultToFeatures).forEach(features -> {
       var l = features.collect(Collectors.toList());
-      var status = "-0-success--";
+      var status = "-cluster-0----success----";
       var isEmpty = l.isEmpty() || l.stream().anyMatch(s -> {
         var p = s.getProperties();
         if (p instanceof VariantSummaryProperties) {
@@ -377,10 +380,42 @@ public class DebugUtils {
         return false;
       });
       if (isEmpty) {
-        status = "-0-empty--";
+        status = "-cluster-0----empty----";
       }
       String fn = fileName + status + "-" + pathId.incrementAndGet() + "-variant";
       writeFeaturesIn32637(l.stream(), fn);
     });
+  }
+
+  public static void writeVirtualNodes(List<VirtualNode> smoothVertices, String fileName) {
+    var nodesCoords = smoothVertices.stream().map(n -> n.getCoordinate()).collect(Collectors.toList());
+    writeCoordinates(nodesCoords.stream(), fileName);
+  }
+
+  public static void printCoordinateIn32637(Coordinate sourceJtsCoord) {
+    var crsFactory = new CRSFactory();
+    // Исходная система: WGS 84 (градусы)
+    var sourceCrs = crsFactory.createFromName("EPSG:32637");
+    // Целевая система: WGS 84 / UTM zone 37N (метры)
+    var targetCrs = crsFactory.createFromName("EPSG:4326");
+    var transformFactory = new CoordinateTransformFactory();
+    var transformer = transformFactory.createTransform(sourceCrs, targetCrs);
+
+    // 3. Переводим координату
+    // Обертываем данные JTS в формат Proj4J для расчета
+    ProjCoordinate srcProj = new ProjCoordinate(sourceJtsCoord.x, sourceJtsCoord.y);
+    ProjCoordinate dstProj = new ProjCoordinate();
+
+    transformer.transform(srcProj, dstProj);
+
+    // 4. Записываем результат обратно в объект JTS Coordinate (или создаем новый)
+    Coordinate targetJtsCoord = new Coordinate(dstProj.x, dstProj.y);
+
+    // 5. Выводим результат в консоль
+    // В EPSG:4326 x — это Долгота (Lon), y — это Широта (Lat)
+    System.out.println("=== РЕЗУЛЬТАТ ТРАНСФОРМАЦИИ ===");
+    System.out.println("Объект Coordinate: " + targetJtsCoord);
+    System.out.printf("Долгота (Lon): %.6f\n", targetJtsCoord.x);
+    System.out.printf("Широта (Lat) : %.6f\n", targetJtsCoord.y);
   }
 }

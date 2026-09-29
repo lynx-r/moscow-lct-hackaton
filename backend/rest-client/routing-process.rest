@@ -34,7 +34,7 @@ Content-Type: text/plain
 
 ###
 
-POST http://localhost:8080/routing/process-stage2?maxVariants=10
+POST http://localhost:8080/routing/process-stage2?maxVariants=5
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW

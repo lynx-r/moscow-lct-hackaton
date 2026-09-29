@@ -93,14 +93,18 @@ public class FeatureProperties {
     }
   }
 
-  @JsonAnySetter
-  public void addAdditionalProperty(String key, JsonNode value) {
-    this.additionalProperties.put(key, value);
-  }
-
   @JsonAnyGetter
   public Map<String, JsonNode> getAdditionalProperties() {
     return this.additionalProperties;
+  }
+
+  public String getAdditionalTextProperty(String key) {
+    return this.additionalProperties.get(key).asText();
+  }
+
+  @JsonAnySetter
+  public void addAdditionalProperty(String key, JsonNode value) {
+    this.additionalProperties.put(key, value);
   }
 
   public void addAdditionalTextProperty(String key, String value) {

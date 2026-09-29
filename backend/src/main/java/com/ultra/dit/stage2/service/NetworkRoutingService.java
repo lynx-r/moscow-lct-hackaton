@@ -13,7 +13,6 @@ import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
@@ -139,7 +138,7 @@ public class NetworkRoutingService {
               props.getConstraintOffsetMeters(), clusterId);
           var graph = roadmapBuilder.build();
 
-          debugRoadmapGraph(clusterId, graph);
+          // debugRoadmapGraph(clusterId, graph);
 
           // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
           // (габарит 2.0м)
@@ -224,7 +223,7 @@ public class NetworkRoutingService {
 
       DebugUtils.writeFeaturesIn32637(localData.getConstraints().stream(), clusterId + "-cluster-data-constraints");
       DebugUtils.writeFeaturesIn32637(localData.getNetworks().stream(), clusterId + "-cluster-data-networks");
-      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-nodes");
+      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-all-nodes");
       DebugUtils.writeFeaturesIn32637(localData.getSourceNodes().stream(), clusterId + "-cluster-data-source-nodes");
       DebugUtils.writeFeaturesIn32637(localBoundList.stream(), clusterId + "-cluster-data-execution-envelop");
       // TODO: debug end
@@ -234,10 +233,12 @@ public class NetworkRoutingService {
   private void debugCluster(int clusterId, List<OksObject> cluster) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
+      // log.debug("cluster-" + clusterId + ": Size: " + cluster.size());
 
-      Stream<Feature<? extends FeatureProperties>> clusterOks = cluster.stream().map(oks -> oks.getFeature());
-      DebugUtils.writeFeaturesIn32637(clusterOks, clusterId + "-cluster-oks-objects");
+      // Stream<Feature<? extends FeatureProperties>> clusterOks =
+      // cluster.stream().map(oks -> oks.getFeature());
+      // DebugUtils.writeFeaturesIn32637(clusterOks, clusterId +
+      // "-cluster-oks-objects");
       // var clusterBuildings = cluster.stream()
       // .map(oks -> Feature.withDefaultProperties(oks.getBuildingPolygon()));
       // DebugUtils.writeFeaturesIn32637(clusterBuildings,

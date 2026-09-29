@@ -130,8 +130,7 @@ public class DirectedRoadmapBuilder {
     // Собираем целевые координаты точек подключения ОКС
     targetOksTree = localData.getTargetOksTree();
 
-    sources = localData.getSourceNodesGeometryStream()
-        .flatMap(g -> Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
+    sources = localData.getSourceNodesGeometry();
     targets = cluster.stream()
         .map(o -> o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
 
@@ -187,7 +186,7 @@ public class DirectedRoadmapBuilder {
     // и ребра без направления)
     populateUndirectedGraph(tempGraph, skeletonEdges);
 
-    DebugUtils.writeGraph(tempGraph, clusterId + "-0-graph-1-temp");
+    DebugUtils.writeGraph(tempGraph, clusterId + "-cluster-graph-build-1-temp");
 
     // 6. ОЧИЩАЕМ НЕОРИЕНТИРОВАННЫЙ ГРАФ ОТ УСОВ И РАМОК
     // Передаем туда tempGraph. Он удалит внешнюю рамку и усы, но ОСТАВИТ
@@ -196,7 +195,7 @@ public class DirectedRoadmapBuilder {
     // защищенным точкам!
     pruneUndirectedDeadEnds(tempGraph);
 
-    DebugUtils.writeGraph(tempGraph, clusterId + "-0-graph-2-prune");
+    DebugUtils.writeGraph(tempGraph, clusterId + "-cluster-graph-build--2-prune");
 
     // 7. ПЕРЕНОСИМ ОЧИЩЕННУЮ ТОПОЛОГИЮ В ИТОГОВЫЙ НАПРАВЛЕННЫЙ ГРАФ
     // Теперь, когда в tempGraph остались ТОЛЬКО идеальные чистые трассы и
@@ -204,7 +203,7 @@ public class DirectedRoadmapBuilder {
     // мы переносим их в DirectedWeightedMultigraph и задаем направления.
     populateFinalOrientedGraph(tempGraph);
 
-    DebugUtils.writeGraph(graph, clusterId + "-0-graph-3-final");
+    DebugUtils.writeGraph(graph, clusterId + "-cluster-graph-build-3-final");
 
     return graph;
   }
@@ -394,7 +393,7 @@ public class DirectedRoadmapBuilder {
     // localData.hashCode());
     // TODO: debug end
 
-    DebugUtils.writeCoordinates((sites).stream(), clusterId + "-00-sites");
+    // DebugUtils.writeCoordinates((sites).stream(), clusterId + "-00-sites");
 
     return new ArrayList<>(sites);
   }

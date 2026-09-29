@@ -55,7 +55,7 @@ app:
       # 5 ближайших точек врезки при построении сети кластера
       closesSourcesCount: 5
       # Шаг дискретизации (нормативный отступ от препятствий в метрах)
-      constraintOffsetMeters: 3.0
+      obstacleOffsetMeters: 3.0
 
   # утилиты для отладки работы алгоритма
   debug-utils:
