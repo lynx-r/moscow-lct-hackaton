@@ -202,13 +202,6 @@ public class NetworkRoutingService {
 
   }
 
-  private void debugRoadmapGraph(int clusterId, DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
-    if (log.isTraceEnabled()) {
-      // TODO: debug start
-      DebugUtils.writeGraph(graph, clusterId + "-cluster-graph-roadmap");
-      // TODO: debug end
-    }
-  }
 
   private void debugLocalData(int clusterId, LocalIndexContainer localData) {
     if (log.isTraceEnabled()) {

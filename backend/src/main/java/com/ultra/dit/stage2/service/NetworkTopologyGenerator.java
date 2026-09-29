@@ -26,6 +26,7 @@ import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
+import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.DebugUtils;
@@ -63,6 +64,11 @@ public class NetworkTopologyGenerator {
     var clusterId = localData.getClusterId();
     log(clusterId, "Generate Network Variants");
 
+    // Оставляем только топ-5 геометрически ближайших камер врезки к потребителям
+    // кластера
+    OksObject firstOks = cluster.get(0);
+    var clusterCenter = firstOks.getConnectionPoint().getCoordinate();
+
     // Находим все потенциальные стартовые узлы (точки существующей сети) и финишные
     // (ОКС)
     List<VirtualNode> sourceNodes = graph.vertexSet().stream()
@@ -90,7 +96,12 @@ public class NetworkTopologyGenerator {
     debugTarget(clusterId, targetNodes);
     debugSourceNodes(clusterId, sourceNodes);
 
-    var variants = generateNetworkVariants(localData, graph, targetNodes, sourceNodes);
+    List<VirtualNode> closestSources = sourceNodes.stream()
+        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
+        .limit(properties.getClosesSourcesCount())
+        .collect(Collectors.toList());
+
+    var variants = generateNetworkVariants(localData, graph, targetNodes, closestSources);
     return variants;
   }
 
@@ -160,22 +171,6 @@ public class NetworkTopologyGenerator {
       Graph<VirtualNode, DefaultWeightedEdge> graph,
       List<VirtualNode> sourceNodes, List<VirtualNode> targetNodes) {
 
-    // 1. Находим географический центр вашей рабочей области хакатона (в EPSG:32637)
-    var env = localData.getExecutionEnvelope();
-    Coordinate centerCoordinate = env.centre(); // Безопасная локальная координата
-
-    // Схлопывание множества источников в один узел
-    var superSource = VirtualNode.asSuperSource(centerCoordinate); // Фиктивный узел
-    graph.addVertex(superSource);
-
-    for (VirtualNode source : sourceNodes) {
-      if (graph.containsVertex(source)) {
-        DefaultWeightedEdge e = graph.addEdge(superSource, source);
-        if (e != null)
-          graph.setEdgeWeight(e, 0.0); // Нулевой вес
-      }
-    }
-
     // Используем алгоритм Йена из JGrapht для поиска простых путей без петель
     var pathFinder = new YenKShortestPath<>(graph);
 
@@ -187,24 +182,26 @@ public class NetworkTopologyGenerator {
         continue;
       }
 
-      try {
-        // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
-        // структурно уникальных
-        // int i = counter.incrementAndGet();
-        var paths = pathFinder.getPaths(superSource, target, properties.getChooseFromPathsCount());
-
-        if (!paths.isEmpty()) {
-          rawPaths.addAll(paths);
+      for (VirtualNode source : sourceNodes) {
+        if (!graph.containsVertex(source)) {
+          continue;
         }
-      } catch (IllegalArgumentException ignored) {
-        // Вызывается JGrapht, если компоненты графа изолированы
+        try {
+          // Запрашиваем избыточное количество путей (например, 10), чтобы выбрать 3
+          // структурно уникальных
+          // int i = counter.incrementAndGet();
+          var paths = pathFinder.getPaths(source, target, properties.getChooseFromPathsCount());
+
+          if (!paths.isEmpty()) {
+            rawPaths.addAll(paths);
+          }
+        } catch (IllegalArgumentException e) {
+          e.printStackTrace();
+          log.error(e);
+          // Вызывается JGrapht, если компоненты графа изолированы
+        }
       }
     }
-
-    // 5. ОЧИСТКА ТОПОЛОГИИ: Удаляем виртуальный узел из графа перед возвратом
-    // путей.
-    // JGraphT автоматически сотрет и все добавленные нами нулевые ребра.
-    graph.removeVertex(superSource);
 
     return rawPaths;
   }
@@ -217,7 +214,9 @@ public class NetworkTopologyGenerator {
 
     // Фиксированные технологические радиусы для EPSG:32637 (в метрах)
     final double SNAP_MAX_DISTANCE = 50.0; // Радиус для поиска своей котельной
-    final double DOCKYARD_ZONE_RADIUS = 20.0; // Радиус двора для отключения штрафов углов
+    final double DOCKYARD_ZONE_RADIUS = 45.0;
+
+    // var testi = new AtomicInteger(0);
 
     for (var path : rawPaths) {
       List<VirtualNode> vertices = path.getVertexList();
@@ -231,47 +230,48 @@ public class NetworkTopologyGenerator {
       // "-0-startVert");
 
       // Если путь не пустой и самый первый узел — это наш супер-источник
-      if (cleanVertices.get(0).getType() == NodeType.SUPER_SOURCE) {
-        cleanVertices.remove(0); // Просто удаляем первый элемент O(1)
-      }
+      // if (cleanVertices.get(0).getType() == NodeType.SUPER_SOURCE) {
+      // cleanVertices.remove(0); // Просто удаляем первый элемент O(1)
+      // }
 
-      if (cleanVertices.isEmpty()) {
-        continue;
-      }
+      // if (cleanVertices.isEmpty()) {
+      // continue;
+      // }
 
       // 2. ГАРАНТИЯ СТАРТА: Возвращаем на место желтую точку-источник, если её съел
       // BFS/SuperSource
-      var firstNode = cleanVertices.get(0);
-      var expectedSource = sourceNodes.stream()
-          .filter(s -> s.getCoordinate().distance(firstNode.getCoordinate()) < SNAP_MAX_DISTANCE)
-          .findFirst().orElse(null);
+      // var firstNode = cleanVertices.get(0);
+      // var expectedSource = sourceNodes.stream()
+      // .filter(s -> s.getCoordinate().distance(firstNode.getCoordinate()) <
+      // SNAP_MAX_DISTANCE)
+      // .findFirst().orElse(null);
 
-      if (expectedSource != null && !cleanVertices.contains(expectedSource)) {
-        cleanVertices.add(0, expectedSource);
-      }
+      // if (expectedSource != null && !cleanVertices.contains(expectedSource)) {
+      // cleanVertices.add(0, expectedSource);
+      // }
 
       // 3. ГАРАНТИЯ ФИНИША: Находим, для какого ОКС строился этот путь.
       // Так как путь Йена заканчивается на ОКС, целевой узел лежит на самом конце
       // оригинального path
-      VirtualNode targetNode = path.getEndVertex();
+      // VirtualNode targetNode = path.getEndVertex();
 
-      // Если конечная вершина по какой-то причине не совпадает с целевым ОКС,
-      // принудительно восстанавливаем её
-      VirtualNode lastNode = cleanVertices.get(cleanVertices.size() - 1);
-      if (!lastNode.getCoordinate().equals2D(targetNode.getCoordinate())) {
-        if (!cleanVertices.contains(targetNode)) {
-          cleanVertices.add(targetNode);
-        }
-      }
+      // // Если конечная вершина по какой-то причине не совпадает с целевым ОКС,
+      // // принудительно восстанавливаем её
+      // VirtualNode lastNode = cleanVertices.get(cleanVertices.size() - 1);
+      // if (!lastNode.getCoordinate().equals2D(targetNode.getCoordinate())) {
+      // if (!cleanVertices.contains(targetNode)) {
+      // cleanVertices.add(targetNode);
+      // }
+      // }
 
-      DebugUtils.writeVirtualNodes(cleanVertices, localData.getClusterId() +
-          "-0-cleanVertices");
+      // DebugUtils.writeVirtualNodes(cleanVertices, localData.getClusterId() +
+      // "-0-cleanVertices");
 
       // 2. ВЫПРЯМЛЯЕМ ПУТЬ: убираем лесенки Вороного с помощью String Pulling
       List<VirtualNode> smoothVertices = pullString(cleanVertices, localData);
 
-      DebugUtils.writeVirtualNodes(smoothVertices, localData.getClusterId() +
-          "-0-smoothVertices");
+      // DebugUtils.writeVirtualNodes(smoothVertices, localData.getClusterId() +
+      // "-0-smoothVertices");
 
       var smoothCoordinates = smoothVertices.stream().map(v -> v.getCoordinate()).collect(Collectors.toList());
 
@@ -287,6 +287,7 @@ public class NetworkTopologyGenerator {
 
       // Накапливаем физическую длину
       totalWeightWithPenalties += actualLengthMeters;
+      // int debugClusterId = 6;
 
       // Динамический расчёт изломов по цепочке смежных рёбер
       for (int i = 0; i < smoothCoordinates.size() - 2; i++) {
@@ -294,33 +295,62 @@ public class NetworkTopologyGenerator {
         Coordinate p2 = smoothCoordinates.get(i + 1); // Точка излома
         Coordinate p3 = smoothCoordinates.get(i + 2);
 
-        // Проверяем, находится ли точка излома или целевая точка в пределах радиуса ОКС
+        // ЖЕЛЕЗНЫЙ ФИКС ДЛЯ ДЕДЛАЙНА: Если ХОТЯ БЫ ОДНА точка из тройки маневра
+        // находится в технологической зоне подключения (поднимем до 45 метров для
+        // страховки перекрестков)
+
+        // boolean isInsideOksZone = localData.getClusterOksCoordinatesStream()
+        // .anyMatch(oks -> p1.distance(oks) <= FINAL_SAFETY_RADIUS ||
+        // p2.distance(oks) <= FINAL_SAFETY_RADIUS ||
+        // p3.distance(oks) <= FINAL_SAFETY_RADIUS);
+        // if (localData.getClusterId() == debugClusterId) {
+        // var oksCoords =
+        // localData.getClusterOksCoordinatesStream().collect(Collectors.toList());
+        // var iii = testi.incrementAndGet();
+        // DebugUtils.writeCoordinates(oksCoords.stream(), localData.getClusterId() +
+        // "----oks??" + iii);
+        // DebugUtils.writeCoordinates(List.of(p1, p2, p3).stream(),
+        // localData.getClusterId() + "----p1-p2-p3??" + iii);
+        // }
+        // if (isInsideOksZone) {
+        // if (localData.getClusterId() == debugClusterId) {
+        // // Полностью разрешаем любые углы заездов и разворотов во дворах потребителей
+        // System.out.println("??cluster-" + localData.getClusterId() + "
+        // insideOksZone");
+        // }
+        // continue;
+        // }
+        // // Проверяем, находится ли точка излома или целевая точка в пределах радиуса
+        // ОКС
         boolean isInsideOksZone = localData.getClusterOksCoordinatesStream()
             .anyMatch(oks -> Distance.isDistanceLessOrEqual(oks, p2, DOCKYARD_ZONE_RADIUS) ||
                 Distance.isDistanceLessOrEqual(oks, p3, DOCKYARD_ZONE_RADIUS))
             || localData.getSourceNodesGeometryStream()
                 .anyMatch(src -> Distance.isDistanceLessOrEqual(src, p2, DOCKYARD_ZONE_RADIUS)
                     || Distance.isDistanceLessOrEqual(src, p3, DOCKYARD_ZONE_RADIUS));
-        if (localData.getClusterId() == 0) {
-          System.out.println("??cluster-" + localData.getClusterId() + " p1 " + p1 + " p2 " + p2 + " p3 " + p3);
-        }
+        // if (localData.getClusterId() == debugClusterId) {
+        // System.out.println("??cluster-" + localData.getClusterId() + " p1 " + p1 + "
+        // p2 " + p2 + " p3 " + p3);
+        // }
         if (isInsideOksZone) {
-          if (localData.getClusterId() == 0) {
-            System.out.println("??cluster-" + localData.getClusterId() + " insideOksZone");
-          }
+          // if (localData.getClusterId() == debugClusterId) {
+          // System.out.println("??cluster-" + localData.getClusterId() + "
+          // insideOksZone");
+          // }
           // Разрешаем любые изгибы трубы во дворах у потребителей — пропускаем расчет
           // штрафа
           continue;
         }
 
         double penalty = angleCalculator.calculateWeight(p1, p2, p3);
-        if (localData.getClusterId() == 0) {
-          System.out.println("??cluster-" + localData.getClusterId() + " penalty " + penalty);
-        }
+        // if (localData.getClusterId() == debugClusterId) {
+        // System.out.println("??cluster-" + localData.getClusterId() + " penalty " +
+        // penalty);
+        // }
         if (penalty == Double.MAX_VALUE) {
-          if (localData.getClusterId() == 0) {
-            System.out.println("??cluster-" + localData.getClusterId() + " stop ");
-          }
+          // if (localData.getClusterId() == debugClusterId) {
+          // System.out.println("??cluster-" + localData.getClusterId() + " stop ");
+          // }
           // Путь совершил запрещенный разворот >90 градусов!
           validationPassed = false;
           break;
@@ -328,9 +358,10 @@ public class NetworkTopologyGenerator {
         totalWeightWithPenalties += penalty;
       }
 
-      if (localData.getClusterId() == 0) {
-        System.out.println("??cluster-" + localData.getClusterId() + " validationPassed? " + validationPassed);
-      }
+      // if (localData.getClusterId() == debugClusterId) {
+      // System.out.println("??cluster-" + localData.getClusterId() + "
+      // validationPassed? " + validationPassed);
+      // }
       if (validationPassed) {
         evaluatedPaths.add(new EvaluatedPath(smoothVertices, totalWeightWithPenalties));
       }
@@ -405,23 +436,25 @@ public class NetworkTopologyGenerator {
       currentAnchorIndex = furthestVisibleIndex;
     }
 
-    // ГАРАНТИЯ СВЯЗНОСТИ: На случай погрешностей double проверяем,
-    // что самая последняя точка исходного пути Йена (целевой ОКС) железно
-    // присутствует в финале
-    var absoluteTarget = vertices.get(vertices.size() - 1);
-    var lastAddedNode = smoothedVertices.get(smoothedVertices.size() - 1);
+    // // ГАРАНТИЯ СВЯЗНОСТИ: На случай погрешностей double проверяем,
+    // // что самая последняя точка исходного пути Йена (целевой ОКС) железно
+    // // присутствует в финале
+    // var absoluteTarget = vertices.get(vertices.size() - 1);
+    // var lastAddedNode = smoothedVertices.get(smoothedVertices.size() - 1);
 
-    boolean isLastPointPersist = !lastAddedNode.getCoordinate().equals2D(absoluteTarget.getCoordinate());
-    if (isLastPointPersist) {
-      // Чтобы не продублировать вершины, проверяем по 2D-координатам, а не по ссылкам
-      // объектов!
-      boolean alreadyContainsTarget = smoothedVertices.stream()
-          .anyMatch(v -> v.getCoordinate().equals2D(absoluteTarget.getCoordinate()));
+    // boolean isLastPointPersist =
+    // !lastAddedNode.getCoordinate().equals2D(absoluteTarget.getCoordinate());
+    // if (isLastPointPersist) {
+    // // Чтобы не продублировать вершины, проверяем по 2D-координатам, а не по
+    // ссылкам
+    // // объектов!
+    // boolean alreadyContainsTarget = smoothedVertices.stream()
+    // .anyMatch(v -> v.getCoordinate().equals2D(absoluteTarget.getCoordinate()));
 
-      if (!alreadyContainsTarget) {
-        smoothedVertices.add(absoluteTarget);
-      }
-    }
+    // if (!alreadyContainsTarget) {
+    // smoothedVertices.add(absoluteTarget);
+    // }
+    // }
 
     return smoothedVertices;
   }
