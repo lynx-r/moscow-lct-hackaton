@@ -5,7 +5,9 @@ import { ref } from 'vue'
 import geojson from '../mock/dataset-default.json'
 
 export const useTracingDebugStore = defineStore('tracing-debug', () => {
-  const data = ref<FeatureCollection>(geojson as FeatureCollection)
+  const defaultGeojson = geojson as FeatureCollection
+
+  const data = ref<FeatureCollection>(defaultGeojson)
   const debugDataFileUrls = ref<string[]>([])
   const isCalculating = ref(false)
 
@@ -32,11 +34,18 @@ export const useTracingDebugStore = defineStore('tracing-debug', () => {
       } else {
         await trace(file)
       }
+
       debugDataFileUrls.value = await routingService.getDebugData()
     } finally {
       isCalculating.value = false
     }
   }
 
-  return { data, isCalculating, debugDataFileUrls, startTracing, mockTrace }
+  return {
+    data,
+    isCalculating,
+    debugDataFileUrls,
+    startTracing,
+    mockTrace,
+  }
 })

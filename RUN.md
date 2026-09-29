@@ -1,4 +1,4 @@
-# Локальный docker-compose-local.yml для docker-compose 1.29.2
+# Локальный docker-compose.yml для docker-compose 1.29.2
 
 ## Запуск
 
@@ -7,13 +7,13 @@
 1. Запустите приложение через docker-compose
 
 ```
-docker-compose -f docker-compose-local.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 ```
 
 ## Остановка
 
 ```
-docker-compose -f docker-compose-local.yml down
+docker-compose -f docker-compose.yml down
 ```
 
 ## Остановка и удаление данных и контейнеров
