@@ -19,7 +19,7 @@ export const useTracingDebugStore = defineStore('tracing-debug', () => {
     data.value = {
       ...geojson,
       features: [...geojson.features, ...res.features],
-    }
+    } as FeatureCollection
   }
 
   // Функция обработки клика по кнопке расчета
