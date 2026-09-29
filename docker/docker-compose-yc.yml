@@ -31,17 +31,3 @@ services:
     # Ограничения памяти в v1 пишутся напрямую в корень сервиса
     mem_limit: 512m
 
-  database:
-    image: postgres:18-alpine
-    container_name: database
-    restart: always
-    command: postgres -c random_page_cost=1.1 -c shared_buffers=128MB -c max_connections=100 -c work_mem=4MB
-    env_file:
-      - ../database/.env
-    ports:
-      - "5432"
-    volumes:
-      - ../database/backup/full_backup.sql:/backup/full_backup.sql
-      - ../database/pg_data:/var/lib/postgresql
-    # Ограничения памяти для базы
-    mem_limit: 512m

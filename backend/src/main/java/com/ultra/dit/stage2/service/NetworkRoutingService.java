@@ -14,8 +14,6 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.jgrapht.graph.DefaultWeightedEdge;
-import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +27,6 @@ import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
-import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.DebugUtils;
 
 import lombok.extern.log4j.Log4j2;
@@ -163,8 +160,8 @@ public class NetworkRoutingService {
           long durationCpuMs = (threadBean.getThreadCpuTime(threadId) - startCpu) / 1_000_000;
           long durationWallMs = (System.nanoTime() - startWall) / 1_000_000;
 
-          log.debug("cluster-" + clusterId + ": Затрачено CPU времени: " + durationCpuMs + " мс");
-          log.debug(
+          log.info("cluster-" + clusterId + ": Затрачено CPU времени: " + durationCpuMs + " мс");
+          log.info(
               "cluster-" + clusterId + ": Затрачено реального времени: " + durationWallMs + " мс");
 
           // Если реальное время сильно больше CPU времени — поток где-то простаивал или
@@ -201,7 +198,6 @@ public class NetworkRoutingService {
     return result;
 
   }
-
 
   private void debugLocalData(int clusterId, LocalIndexContainer localData) {
     if (log.isTraceEnabled()) {

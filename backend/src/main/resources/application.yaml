@@ -1,29 +1,13 @@
 spring:
   profiles:
     active:
-      - dev
+      - prod
   servlet:
     multipart:
       max-file-size: 64MB
       max-request-size: 65MB
   application:
     name: dit
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/dit_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        "[format_sql]": true
-  # TODO: проставить timeout ответа сервера
-  tomcat:
-    connection-timeout: 1000
 
 app:
   routing:
