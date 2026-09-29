@@ -130,13 +130,11 @@ public class NetworkRoutingService {
             return List.of(RoutingResult.empty(summary));
           }
 
-          debugLocalData(clusterId, localData);
-
           // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
           // Roadmap)
-          var roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster,
-              props.getConstraintOffsetMeters(), clusterId);
+          var roadmapBuilder = new DirectedRoadmapBuilder(localData, props);
           var graph = roadmapBuilder.build();
+          debugLocalData(clusterId, localData);
 
           // debugRoadmapGraph(clusterId, graph);
 
@@ -223,8 +221,8 @@ public class NetworkRoutingService {
 
       DebugUtils.writeFeaturesIn32637(localData.getConstraints().stream(), clusterId + "-cluster-data-constraints");
       DebugUtils.writeFeaturesIn32637(localData.getNetworks().stream(), clusterId + "-cluster-data-networks");
-      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-all-nodes");
-      DebugUtils.writeFeaturesIn32637(localData.getSourceNodes().stream(), clusterId + "-cluster-data-source-nodes");
+      DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-nodes-all");
+      DebugUtils.writeFeaturesIn32637(localData.getSourceNodes().stream(), clusterId + "-cluster-data-nodes-source");
       DebugUtils.writeFeaturesIn32637(localBoundList.stream(), clusterId + "-cluster-data-execution-envelop");
       // TODO: debug end
     }

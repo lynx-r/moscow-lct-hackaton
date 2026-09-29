@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
@@ -14,7 +15,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.jgrapht.Graph;
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.jgrapht.graph.SimpleWeightedGraph;
@@ -26,7 +26,6 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.geom.Polygonal;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.linearref.LinearLocation;
 import org.locationtech.jts.linearref.LocationIndexedLine;
@@ -34,6 +33,7 @@ import org.locationtech.jts.operation.buffer.BufferParameters;
 import org.locationtech.jts.operation.distance.DistanceOp;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
+import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer.ExistingSourceNode;
 import com.ultra.dit.stage2.model.LocalIndexContainer.TargeOksNode;
@@ -95,7 +95,7 @@ public class DirectedRoadmapBuilder {
   private final List<Geometry> constraintsWithoutOksBuildings;
   private final List<Coordinate> localConstraintCoordinates;
 
-  private final double constraintOffsetMeters;
+  private final Stage2Properties properties;
 
   // 2. Задаем шаг сетки для пустырей.
   // Шаг 40-50 метров идеален: он не перегрузит граф, но создаст полноценные
@@ -108,16 +108,15 @@ public class DirectedRoadmapBuilder {
 
   private int clusterId;
 
-  public DirectedRoadmapBuilder(LocalIndexContainer localData, List<OksObject> cluster,
-      double constraintOffsetMeters, int clusterId) {
+  public DirectedRoadmapBuilder(LocalIndexContainer localData, Stage2Properties properties) {
     this.localData = localData;
-    this.cluster = cluster;
-    this.clusterId = clusterId;
-    this.constraintOffsetMeters = constraintOffsetMeters;
+    this.cluster = localData.getCluster();
+    this.clusterId = localData.getClusterId();
+    this.properties = properties;
 
     // Запас безопасности от стен зданий (в метрах для EPSG:32637)
     // Виртуальная точка не должна стоять ближе этого расстояния к реальному дому
-    this.safetyBufferMeters = constraintOffsetMeters + 5.0;
+    this.safetyBufferMeters = properties.getConstraintOffsetMeters() + 5.0;
 
     this.graph = new DirectedWeightedMultigraph<>(DefaultWeightedEdge.class);
 
@@ -131,6 +130,7 @@ public class DirectedRoadmapBuilder {
     targetOksTree = localData.getTargetOksTree();
 
     sources = localData.getSourceNodesGeometry();
+
     targets = cluster.stream()
         .map(o -> o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
 
@@ -171,7 +171,6 @@ public class DirectedRoadmapBuilder {
 
     // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
     snap(skeletonEdges);
-    // snapMultiWithBuffer(skeletonEdges);
 
     // DebugUtils.writeLineStrings(skeletonEdges.stream(), clusterId +
     // "-00-skeleton");
@@ -187,6 +186,8 @@ public class DirectedRoadmapBuilder {
     populateUndirectedGraph(tempGraph, skeletonEdges);
 
     DebugUtils.writeGraph(tempGraph, clusterId + "-cluster-graph-build-1-temp");
+    // DebugUtils.writeVirtualNodes(new ArrayList<>(tempGraph.vertexSet()),
+    // clusterId + "-temp-9");
 
     // 6. ОЧИЩАЕМ НЕОРИЕНТИРОВАННЫЙ ГРАФ ОТ УСОВ И РАМОК
     // Передаем туда tempGraph. Он удалит внешнюю рамку и усы, но ОСТАВИТ
@@ -194,8 +195,10 @@ public class DirectedRoadmapBuilder {
     // потому что теперь синие аппендиксы удерживают их, как якоря, привязанные к
     // защищенным точкам!
     pruneUndirectedDeadEnds(tempGraph);
+    // DebugUtils.writeVirtualNodes(new ArrayList<>(tempGraph.vertexSet()),
+    // clusterId + "-prune-9");
 
-    DebugUtils.writeGraph(tempGraph, clusterId + "-cluster-graph-build--2-prune");
+    DebugUtils.writeGraph(tempGraph, clusterId + "-cluster-graph-build-2-prune");
 
     // 7. ПЕРЕНОСИМ ОЧИЩЕННУЮ ТОПОЛОГИЮ В ИТОГОВЫЙ НАПРАВЛЕННЫЙ ГРАФ
     // Теперь, когда в tempGraph остались ТОЛЬКО идеальные чистые трассы и
@@ -204,6 +207,8 @@ public class DirectedRoadmapBuilder {
     populateFinalOrientedGraph(tempGraph);
 
     DebugUtils.writeGraph(graph, clusterId + "-cluster-graph-build-3-final");
+    // DebugUtils.writeVirtualNodes(new ArrayList<>(graph.vertexSet()), clusterId +
+    // "-final-9");
 
     return graph;
   }
@@ -310,28 +315,30 @@ public class DirectedRoadmapBuilder {
     }
   }
 
-  private void removeIsolatedVoronoiIslands(SimpleWeightedGraph<VirtualNode, DefaultWeightedEdge> tempGraph) {
-    ConnectivityInspector<VirtualNode, DefaultWeightedEdge> inspector = new ConnectivityInspector<>(tempGraph);
-    List<Set<VirtualNode>> components = inspector.connectedSets();
+  // private void removeIsolatedVoronoiIslands(SimpleWeightedGraph<VirtualNode,
+  // DefaultWeightedEdge> tempGraph) {
+  // ConnectivityInspector<VirtualNode, DefaultWeightedEdge> inspector = new
+  // ConnectivityInspector<>(tempGraph);
+  // List<Set<VirtualNode>> components = inspector.connectedSets();
 
-    // На хакатоне главный признак живой магистрали — её размер.
-    // Изолированный микро-остров на углу дома состоит всего из 3-5 вершин.
-    // Настоящая уличная сеть содержит десятки и сотни вершин.
-    final int MIN_HIGHWAY_NODES = 10;
+  // // На хакатоне главный признак живой магистрали — её размер.
+  // // Изолированный микро-остров на углу дома состоит всего из 3-5 вершин.
+  // // Настоящая уличная сеть содержит десятки и сотни вершин.
+  // final int MIN_HIGHWAY_NODES = 10;
 
-    List<VirtualNode> toRemove = new ArrayList<>();
-    for (Set<VirtualNode> component : components) {
-      if (component.size() < MIN_HIGHWAY_NODES) {
-        // Этот кусок графа — изолированная петля Вороного, висящая в воздухе
-        toRemove.addAll(component);
-      }
-    }
+  // List<VirtualNode> toRemove = new ArrayList<>();
+  // for (Set<VirtualNode> component : components) {
+  // if (component.size() < MIN_HIGHWAY_NODES) {
+  // // Этот кусок графа — изолированная петля Вороного, висящая в воздухе
+  // toRemove.addAll(component);
+  // }
+  // }
 
-    // Удаляем мусорные микро-острова
-    for (VirtualNode node : toRemove) {
-      tempGraph.removeVertex(node);
-    }
-  }
+  // // Удаляем мусорные микро-острова
+  // for (VirtualNode node : toRemove) {
+  // tempGraph.removeVertex(node);
+  // }
+  // }
 
   /**
    * Собирает опорные точки (вершины полигонов ограничений) для генерации осей
@@ -394,7 +401,6 @@ public class DirectedRoadmapBuilder {
     // TODO: debug end
 
     // DebugUtils.writeCoordinates((sites).stream(), clusterId + "-00-sites");
-
     return new ArrayList<>(sites);
   }
 
@@ -444,9 +450,109 @@ public class DirectedRoadmapBuilder {
   private Stream<Coordinate> getLocalConstraintCoordinates() {
     // 1. Вершины локальных пространственных ограничений
     return localData.getConstraintsGeometryStream().flatMap(constraint -> {
+      if (isOwnClusterBuilding(constraint, cluster)) {
+        // ОСОБАЯ ЛОГИКА ДЛЯ ЦЕЛЕВОГО ЗДАНparentИЯ ОКС:
+        // Вместо расширения наружу, мы делаем ОКОННЫЙ или ВНУТРЕННИЙ буфер,
+        // чтобы освободить место для заезда трассы Вороного внутрь двора/фасада
+        return processTargetOksBuildingGeometry(constraint);
+      }
+      // Стандартный конвейер для всех остальных зданий-препятствий
       return processAndAddGeometry(constraint);
     });
   }
+
+  /**
+   * Конвейер оптимизации: Выпуклая оболочка -> Квадратный буфер -> Извлечение
+   * чистых координат.
+   * 
+   * @return
+   */
+  private Stream<Coordinate> processAndAddGeometry(Geometry geom) {
+    // Шаг А: Схлопываем сложную фасадную геометрию в выпуклый контур (Convex Hull)
+    var convexHull = geom.convexHull();
+
+    // Шаг Б: Строим вокруг него параллельный квадратный контур отступа
+    // Квадратные стыки углов без дуг BufferParameters.JOIN_MITRE
+    var squareBufferedGeom = convexHull.buffer(properties.getConstraintOffsetMeters(), QUADRANT_SEGMENTS,
+        BufferParameters.JOIN_MITRE);
+
+    Geometry densifiedGeom = Densifier.densify(squareBufferedGeom, distanceTolerance);
+
+    var boundary = densifiedGeom.getBoundary();
+    // Добавляем чистые вершины в набор сайтов Вороного
+    var densifiedCoordinates = Arrays.stream(boundary.getCoordinates());
+
+    // фильтрация точек, которые находятся ближе tempGraphGridSize 3-4 метров друг к
+    // другу.
+    var filteredPoints = new ArrayList<Coordinate>();
+    densifiedCoordinates.forEach(current -> {
+      var isTooClose = filteredPoints.stream()
+          .anyMatch(saved -> Distance.isDistanceLessOrEqual(current, saved, tempGraphGridSize));
+      if (!isTooClose) {
+        filteredPoints.add(current);
+      }
+    });
+
+    return filteredPoints.stream();
+  }
+
+  /**
+   * Конвейер оптимизации для целевого здания ОКС:
+   * Выпуклая оболочка -> Уменьшенный/Специальный буфер -> Извлечение редких
+   * координат.
+   */
+  private Stream<Coordinate> processTargetOksBuildingGeometry(Geometry geom) {
+    // Шаг А: Схлопываем сложную фасадную геометрию в выпуклый контур (Convex Hull)
+    var convexHull = geom.convexHull();
+
+    // Шаг Б: Строим вокруг него буфер отступа на базе
+    // oksConnectionPointBufferMeters
+    // Обычно этот буфер намного меньше стандартного obstacleOffsetMeters (например,
+    // 2.0-3.0 метра вместо 15.0),
+    // что освобождает "карман" улицы перед фасадом для заезда фиолетовой линии
+    // Вороного.
+    double targetOffset = properties.getOksConnectionPointBufferMeters();
+    var squareBufferedGeom = convexHull.buffer(targetOffset, QUADRANT_SEGMENTS,
+        BufferParameters.JOIN_MITRE);
+
+    // Шаг В: Забираем только внешнюю границу получившейся площадной фигуры
+    var boundary = squareBufferedGeom.getBoundary();
+
+    // Шаг Г: СТИМУЛЯЦИЯ СЕТКИ, но с БОЛЬШИМ шагом (например, 15 или 20 метров).
+    // Это критически важно: если нарезать точки на вводе слишком часто, Вороной
+    // построит частокол.
+    // Редкая нарезка (15.0 метров) заставит диаграмму сделать ОДИН красивый,
+    // плавный въезд к ОКС.
+    double rareDistanceTolerance = 15.0;
+    Geometry densifiedGeom = org.locationtech.jts.densify.Densifier.densify(boundary, rareDistanceTolerance);
+
+    // Добавляем чистые вершины в набор сайтов Вороного
+    return Arrays.stream(densifiedGeom.getCoordinates());
+  }
+  /**
+   * Специальная обработка целевого здания ОКС.
+   * Создает коридор безопасности для заезда сети непосредственно к точке врезки.
+   */
+  // private Stream<Coordinate> processTargetOksBuilding(Geometry buildingGeom) {
+  // var convexHull = buildingGeom.convexHull();
+
+  // // ИСПОЛЬЗУЕМ oksConnectionPointBufferMeters!
+  // // Вместо жесткого JOIN_MITRE наружу, мы делаем буфер с ОТРИЦАТЕЛЬНЫМ или
+  // // МИНИМАЛЬНЫМ сдвигом,
+  // // либо оставляем контур как есть, но вырезаем из него окрестность точки
+  // // подключения
+
+  // var customBufferedGeom = convexHull.buffer(oksConnectionPointBufferMeters,
+  // QUADRANT_SEGMENTS,
+  // BufferParameters.JOIN_MITRE);
+
+  // // Уплотняем более редко (шаг 15-20 метров), чтобы не создавать частокол на
+  // // входе
+  // Geometry densifiedGeom = Densifier.densify(customBufferedGeom, 15.0);
+
+  // var boundary = densifiedGeom.getBoundary();
+  // return Arrays.stream(boundary.getCoordinates());
+  // }
 
   /**
    * Список локальных ограничений без учета зданий кластера
@@ -470,46 +576,11 @@ public class DirectedRoadmapBuilder {
     });
   }
 
-  /**
-   * Конвейер оптимизации: Выпуклая оболочка -> Квадратный буфер -> Извлечение
-   * чистых координат.
-   * 
-   * @return
-   */
-  private Stream<Coordinate> processAndAddGeometry(Geometry geom) {
-    // Шаг А: Схлопываем сложную фасадную геометрию в выпуклый контур (Convex Hull)
-    var convexHull = geom.convexHull();
-
-    // Шаг Б: Строим вокруг него параллельный квадратный контур отступа
-    // Квадратные стыки углов без дуг BufferParameters.JOIN_MITRE
-    var squareBufferedGeom = convexHull.buffer(constraintOffsetMeters, QUADRANT_SEGMENTS,
-        BufferParameters.JOIN_MITRE);
-
-    Geometry densifiedGeom = Densifier.densify(squareBufferedGeom, distanceTolerance);
-
-    var boundary = densifiedGeom.getBoundary();
-    // Добавляем чистые вершины в набор сайтов Вороного
-    var densifiedCoordinates = Arrays.stream(boundary.getCoordinates());
-
-    // фильтрация точек, которые находятся ближе tempGraphGridSize 3-4 метров друг к
-    // другу.
-    var filteredPoints = new ArrayList<Coordinate>();
-    densifiedCoordinates.forEach(current -> {
-      var isTooClose = filteredPoints.stream()
-          .anyMatch(saved -> Distance.isDistanceLessOrEqual(current, saved, tempGraphGridSize));
-      if (!isTooClose) {
-        filteredPoints.add(current);
-      }
-    });
-
-    return filteredPoints.stream();
-  }
-
   private boolean isOwnClusterBuilding(Geometry constraint, List<OksObject> cluster) {
-    if (!(constraint instanceof Polygonal) || cluster == null) {
-      return false;
-    }
-    return cluster.stream().anyMatch((oks) -> oks.getBuildingPolygon().equalsExact(constraint));
+    return cluster.stream()
+        .map(oks -> oks.getBuildingPolygon()) // Метод получения полигона здания ОКС
+        .filter(Objects::nonNull)
+        .anyMatch((targetBldg) -> targetBldg.intersects(constraint) || targetBldg.equalsTopo(constraint));
   }
 
   /**
@@ -618,7 +689,8 @@ public class DirectedRoadmapBuilder {
       if (Distance.isDistanceLessOrEqual(c, source.getCoordinate(), SNAP_EPSILON_SQ)) {
         // привязка к выровненным координатам центра ячейки (или к оригинальной
         // координате)
-        return VirtualNode.withFeatureProperties(snappedCoord, NodeType.EXISTING_NETWORK_NODE, source.getProperties());
+        return VirtualNode.withFeatureProperties(source.getCoordinate(), NodeType.EXISTING_NETWORK_NODE,
+            source.getProperties());
       }
     }
 
@@ -628,7 +700,7 @@ public class DirectedRoadmapBuilder {
       if (Distance.isDistanceLessOrEqual(c, target.getCoordinate(), SNAP_EPSILON_SQ)) {
         // привязка к выровненным координатам центра ячейки (или к оригинальной
         // координате)
-        return VirtualNode.withOksObject(snappedCoord, NodeType.OKS_CONNECTION, target.getOks());
+        return VirtualNode.withOksObject(target.getCoordinate(), NodeType.OKS_CONNECTION, target.getOks());
       }
     }
 

@@ -264,14 +264,14 @@ public class NetworkTopologyGenerator {
         }
       }
 
-      // DebugUtils.writeVirtualNodes(cleanVertices, localData.getClusterId() +
-      // "-0-cleanVertices");
+      DebugUtils.writeVirtualNodes(cleanVertices, localData.getClusterId() +
+          "-0-cleanVertices");
 
       // 2. ВЫПРЯМЛЯЕМ ПУТЬ: убираем лесенки Вороного с помощью String Pulling
       List<VirtualNode> smoothVertices = pullString(cleanVertices, localData);
 
-      // DebugUtils.writeVirtualNodes(smoothVertices, localData.getClusterId() +
-      // "-0-smoothVertices");
+      DebugUtils.writeVirtualNodes(smoothVertices, localData.getClusterId() +
+          "-0-smoothVertices");
 
       var smoothCoordinates = smoothVertices.stream().map(v -> v.getCoordinate()).collect(Collectors.toList());
 
@@ -297,17 +297,30 @@ public class NetworkTopologyGenerator {
         // Проверяем, находится ли точка излома или целевая точка в пределах радиуса ОКС
         boolean isInsideOksZone = localData.getClusterOksCoordinatesStream()
             .anyMatch(oks -> Distance.isDistanceLessOrEqual(oks, p2, DOCKYARD_ZONE_RADIUS) ||
-                Distance.isDistanceLessOrEqual(oks, p3, DOCKYARD_ZONE_RADIUS));
-
+                Distance.isDistanceLessOrEqual(oks, p3, DOCKYARD_ZONE_RADIUS))
+            || localData.getSourceNodesGeometryStream()
+                .anyMatch(src -> Distance.isDistanceLessOrEqual(src, p2, DOCKYARD_ZONE_RADIUS)
+                    || Distance.isDistanceLessOrEqual(src, p3, DOCKYARD_ZONE_RADIUS));
+        if (localData.getClusterId() == 0) {
+          System.out.println("??cluster-" + localData.getClusterId() + " p1 " + p1 + " p2 " + p2 + " p3 " + p3);
+        }
         if (isInsideOksZone) {
+          if (localData.getClusterId() == 0) {
+            System.out.println("??cluster-" + localData.getClusterId() + " insideOksZone");
+          }
           // Разрешаем любые изгибы трубы во дворах у потребителей — пропускаем расчет
           // штрафа
           continue;
         }
 
         double penalty = angleCalculator.calculateWeight(p1, p2, p3);
-
+        if (localData.getClusterId() == 0) {
+          System.out.println("??cluster-" + localData.getClusterId() + " penalty " + penalty);
+        }
         if (penalty == Double.MAX_VALUE) {
+          if (localData.getClusterId() == 0) {
+            System.out.println("??cluster-" + localData.getClusterId() + " stop ");
+          }
           // Путь совершил запрещенный разворот >90 градусов!
           validationPassed = false;
           break;
@@ -315,6 +328,9 @@ public class NetworkTopologyGenerator {
         totalWeightWithPenalties += penalty;
       }
 
+      if (localData.getClusterId() == 0) {
+        System.out.println("??cluster-" + localData.getClusterId() + " validationPassed? " + validationPassed);
+      }
       if (validationPassed) {
         evaluatedPaths.add(new EvaluatedPath(smoothVertices, totalWeightWithPenalties));
       }
@@ -335,8 +351,7 @@ public class NetworkTopologyGenerator {
     // Начальная точка (якорь) всегда остается
     smoothedVertices.add(vertices.get(0));
 
-    // double clusterRadius = properties.getClusterSizeMeters();
-    double clusterRadius = 50.0;
+    double clusterRadius = properties.getClusterSizeMeters();
 
     int currentAnchorIndex = 0;
 
@@ -346,23 +361,22 @@ public class NetworkTopologyGenerator {
       // По умолчанию следующая точка — это просто соседняя точка по графу Вороного
       int furthestVisibleIndex = currentAnchorIndex + 1;
 
+      // ПРОВЕРКА 1: Входим ли мы в финишную зону ОКС или стартовую зону Источника?
+      // Если да — прекращаем оптимизацию лучами, чтобы сохранить точную дворовую
+      // геометрию Вороного
+      boolean isAnchorInTerminalZone = localData.getClusterOksCoordinatesStream()
+          .anyMatch(oks -> Distance.isDistanceLessOrEqual(oks, anchor, clusterRadius));
+
+      if (isAnchorInTerminalZone) {
+        // Выходим из for, принудительно делая шаг ровно +1 по вершинам Вороного во двор
+        smoothedVertices.add(vertices.get(currentAnchorIndex + 1));
+        currentAnchorIndex++;
+        continue;
+      }
+
       // Пытаемся заглянуть как можно дальше вперед по цепочке точек
       for (int i = currentAnchorIndex + 2; i < rawCoordinates.size(); i++) {
         Coordinate target = rawCoordinates.get(i);
-
-        // ПРОВЕРКА 1: Входим ли мы в финишную зону ОКС или стартовую зону Источника?
-        // Если да — прекращаем оптимизацию лучами, чтобы сохранить точную дворовую
-        // геометрию Вороного
-        boolean isTerminalZone = localData.getClusterOksCoordinatesStream()
-            .anyMatch(oks -> Distance.isDistanceLessOrEqual(oks, target, clusterRadius))
-            || localData.getSourceNodesGeometryStream()
-                .anyMatch(src -> Distance.isDistanceLessOrEqual(src, target, clusterRadius));
-
-        if (isTerminalZone) {
-          // Жесткий стоп выпрямления. Оставляем nextValidIndex как есть (шаг +1) и
-          // выходим из for
-          break;
-        }
 
         // Строим прямой луч от текущего якоря до удаленной точки
         LineString ray = geometryFactory.createLineString(new Coordinate[] { anchor, target });
@@ -528,6 +542,7 @@ public class NetworkTopologyGenerator {
       var fromId = from.getFeatureProperties().getId();
       var toId = to.getFeatureProperties().getId();
       switch (from.getFeatureProperties().getObjectType()) {
+        case SOURCE:
         case HEAT_CHAMBER:
         case OKS_CONNECTION_POINT:
           // TODO: debug start
