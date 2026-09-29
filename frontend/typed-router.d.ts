@@ -38,9 +38,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/debug': RouteRecordInfo<
-      '/debug',
-      '/debug',
+    '/alt': RouteRecordInfo<
+      '/alt',
+      '/alt',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -66,9 +66,9 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'src/pages/debug.vue': {
+    'src/pages/alt.vue': {
       routes:
-        | '/debug'
+        | '/alt'
       views:
         | never
       pathParamNames:
