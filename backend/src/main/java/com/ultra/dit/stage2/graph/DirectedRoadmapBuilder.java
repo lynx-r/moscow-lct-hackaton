@@ -2,21 +2,30 @@ package com.ultra.dit.stage2.graph;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
+import org.jgrapht.graph.SimpleWeightedGraph;
+import org.locationtech.jts.densify.Densifier;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.Polygonal;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.linearref.LinearLocation;
 import org.locationtech.jts.linearref.LocationIndexedLine;
@@ -24,16 +33,14 @@ import org.locationtech.jts.operation.buffer.BufferParameters;
 import org.locationtech.jts.operation.distance.DistanceOp;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 
-import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
+import com.ultra.dit.stage2.model.LocalIndexContainer.ExistingSourceNode;
+import com.ultra.dit.stage2.model.LocalIndexContainer.TargeOksNode;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.DebugUtils;
 import com.ultra.dit.util.Distance;
-
-import lombok.AllArgsConstructor;
 
 /**
  * Шаг 2.2. Класс-строитель безопасного ориентированного каркаса путей
@@ -47,13 +54,20 @@ public class DirectedRoadmapBuilder {
   private final List<OksObject> cluster;
 
   // Допуск в 5 сантиметров (0.05 метра) гарантирует сшивание при плавающей точке
-  private static final double EPSILON = 0.05;
-  private static final double EPSILON_SQ = EPSILON * EPSILON;
+  private static final double SNAP_EPSILON = 0.05;
+  private static final double SNAP_EPSILON_SQ = SNAP_EPSILON * SNAP_EPSILON;
 
   // 1. Задаем жесткий радиус поиска (в метрах для EPSG:32637)
   // Если магистраль дальше 50 метров, не нужно тянуть линию напролом
   private final double MAX_SNAP_DISTANCE = 50.0;
   private final double MAX_SNAP_DIST_SQ = MAX_SNAP_DISTANCE * MAX_SNAP_DISTANCE;
+
+  // СТИМУЛЯЦИЯ СЕТКИ: Искусственно уплотняем контур препятствия,
+  // добавляя точки вдоль каждой стены каждые 10 метров
+  private final double distanceTolerance = 10.0; // Шаг дискретизации в метрах
+
+  // Квантуем координаты с шагом 5.0 метров (Схлопываем микро-шум)
+  private final double tempGraphGridSize = 5.0;
 
   // 4. Валидация: проверяем, что получившиеся части имеют физическую длину
   // (защита от микро-сегментов из-за вычислительного шума double)
@@ -62,6 +76,9 @@ public class DirectedRoadmapBuilder {
   // Минимальное число сегментов
   private static int QUADRANT_SEGMENTS = 1;
 
+  // Оптимизированный хэш-индекс для склейки близких вершин
+  private final Map<String, VirtualNode> nodeCache = new HashMap<>();
+
   private final GeometryFactory geometryFactory = new GeometryFactory();
 
   // Граф JGrapht, типизированный виртуальными узлами VirtualNode
@@ -69,40 +86,54 @@ public class DirectedRoadmapBuilder {
 
   private final STRtree targetOksTree;
   private final STRtree sourceTree;
+  private final STRtree constraintsTree;
 
-  private List<Coordinate> sources;
-  private List<Coordinate> targets;
+  private final List<Coordinate> sources;
+  private final List<Coordinate> targets;
+
+  private final List<Geometry> constraintsWithoutOksBuildings;
+  private final List<Coordinate> localConstraintCoordinates;
 
   private final double obstacleOffsetMeters;
 
-  public DirectedRoadmapBuilder(LocalIndexContainer localData, List<OksObject> cluster, double obstacleOffsetMeters) {
+  // 2. Задаем шаг сетки для пустырей.
+  // Шаг 40-50 метров идеален: он не перегрузит граф, но создаст полноценные
+  // "виртуальные кварталы"
+  private double gridStepMeters = 40.0;
+
+  // Запас безопасности от стен зданий (в метрах для EPSG:32637)
+  // Виртуальная точка не должна стоять ближе этого расстояния к реальному дому
+  private double safetyBufferMeters;
+
+  private int clusterId;
+
+  public DirectedRoadmapBuilder(LocalIndexContainer localData, List<OksObject> cluster,
+      double obstacleOffsetMeters, int clusterId) {
     this.localData = localData;
     this.cluster = cluster;
+    this.clusterId = clusterId;
     this.obstacleOffsetMeters = obstacleOffsetMeters;
+    safetyBufferMeters = obstacleOffsetMeters + 5.0;
 
     this.graph = new DirectedWeightedMultigraph<>(DefaultWeightedEdge.class);
 
+    // 1. СТРОИМ ЛОКАЛЬНЫЙ ПРОСТРАНСТВЕННЫЙ ИНДЕКС ОГРАНИЧЕНИЙ И ПРЕПЯТСТВИЙ
+    constraintsTree = localData.getConstraintsTree();
+
     // Собираем все доступные целевые координаты существующих сетей (точки врезки)
-    sourceTree = new STRtree();
-    localData.getSourceNodes().forEach(node -> {
-      var c = node.getGeometry().getCoordinate();
-      sourceTree.insert(new Envelope(c), new ExistingSourceNode(c, node.getProperties()));
-    });
+    sourceTree = localData.getSourceTree();
 
     // Собираем целевые координаты точек подключения ОКС
-    targetOksTree = new STRtree();
-    for (OksObject oks : cluster) {
-      var c = oks.getConnectionPoint().getCoordinate();
-      targetOksTree.insert(new Envelope(c), new TargeOksNode(c, oks));
-    }
-
-    sourceTree.build();
-    targetOksTree.build();
+    targetOksTree = localData.getTargetOksTree();
 
     sources = localData.getSourceNodesGeometryStream()
         .flatMap(g -> Arrays.stream(g.getCoordinates())).collect(Collectors.toList());
     targets = cluster.stream()
         .map(o -> o.getConnectionPoint().getCoordinate()).collect(Collectors.toList());
+
+    constraintsWithoutOksBuildings = getConstraintsWithoutOksBuildings().collect(Collectors.toList());
+
+    localConstraintCoordinates = getLocalConstraintCoordinates().collect(Collectors.toList());
 
     // TODO: debug start
     // STRtreeVisualizer.writeSTRtreeToFile(sourceTree,
@@ -123,6 +154,9 @@ public class DirectedRoadmapBuilder {
     // 1. Извлекаем опорные точки геометрии для построения Скелета Вороного
     List<Coordinate> siteCoordinates = extractSkeletonSites();
 
+    // DebugUtils.writeCoordinates(siteCoordinates.stream(), clusterId +
+    // "-00-coordinates");
+
     // 2. Генерация Диаграммы Вороного через JTS
     VoronoiDiagramBuilder voronoiBuilder = new VoronoiDiagramBuilder();
     voronoiBuilder.setSites(siteCoordinates);
@@ -134,21 +168,45 @@ public class DirectedRoadmapBuilder {
 
     // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
     snap(skeletonEdges);
+    // snapMultiWithBuffer(skeletonEdges);
 
-    // 4. Наполнение графа вершинами и связями с учетом ориентации
-    // (ОТ существующих сетей К точкам подключения ОКС)
-    populateOrientedGraph(skeletonEdges);
+    // DebugUtils.writeLineStrings(skeletonEdges.stream(), clusterId +
+    // "-00-skeleton");
 
-    // 5. ФИНАЛЬНАЯ ОБРЕЗКА ТУПИКОВЫХ УСОВ
-    // (передаем списки оригинальных точек, которые нельзя удалять ни в коем случае)
-    pruneDeadEnds();
+    // СТРОИМ ВРЕМЕННЫЙ НЕОРИЕНТИРОВАННЫЙ ГРАФ ДЛЯ ОЧИСТКИ
+    // В неориентированном графе нет понятий outDegree/inDegree, там нет ошибок
+    // "Infinity" из-за направлений!
+    SimpleWeightedGraph<VirtualNode, DefaultWeightedEdge> tempGraph = new SimpleWeightedGraph<>(
+        DefaultWeightedEdge.class);
+
+    // Наполняем tempGraph всеми ребрами из skeletonEdges (просто добавляем вершины
+    // и ребра без направления)
+    populateUndirectedGraph(tempGraph, skeletonEdges);
+
+    DebugUtils.writeGraph(tempGraph, clusterId + "-0-graph-1-temp");
+
+    // 6. ОЧИЩАЕМ НЕОРИЕНТИРОВАННЫЙ ГРАФ ОТ УСОВ И РАМОК
+    // Передаем туда tempGraph. Он удалит внешнюю рамку и усы, но ОСТАВИТ
+    // магистрали,
+    // потому что теперь синие аппендиксы удерживают их, как якоря, привязанные к
+    // защищенным точкам!
+    pruneUndirectedDeadEnds(tempGraph);
+
+    DebugUtils.writeGraph(tempGraph, clusterId + "-0-graph-2-prune");
+
+    // 7. ПЕРЕНОСИМ ОЧИЩЕННУЮ ТОПОЛОГИЮ В ИТОГОВЫЙ НАПРАВЛЕННЫЙ ГРАФ
+    // Теперь, когда в tempGraph остались ТОЛЬКО идеальные чистые трассы и
+    // аппендиксы,
+    // мы переносим их в DirectedWeightedMultigraph и задаем направления.
+    populateFinalOrientedGraph(tempGraph);
+
+    DebugUtils.writeGraph(graph, clusterId + "-0-graph-3-final");
 
     return graph;
   }
 
   // ПРИНУДИТЕЛЬНОЕ СШИВАНИЕ (SNAP) ТОЧЕК К БЛИЖАЙШИМ ВЕРШИНАМ КАРКАСА
   private void snap(List<LineString> skeletonEdges) {
-
     // Объединяем целевые точки в один цикл для оптимизации
     List<Coordinate> pointsToConnect = new ArrayList<>();
     pointsToConnect.addAll(sources);
@@ -164,6 +222,12 @@ public class DirectedRoadmapBuilder {
 
       // Ищем ближайшую точку НА самом ребре (а не только его вершины!)
       for (LineString edge : skeletonEdges) {
+        // Чтобы не искать по удаленным ребрам, пропускаем те, чьи копии мы уже пометили
+        // на удаление
+        if (toRemove.contains(edge)) {
+          continue;
+        }
+
         // Исполняем поиск ближайшей точки на отрезке с помощью JTS DistanceOp
         Coordinate[] closestPoints = DistanceOp.nearestPoints(edge, geometryFactory.createPoint(targetPoint));
         Coordinate projected = closestPoints[0]; // Точка на ребре Вороного
@@ -183,14 +247,8 @@ public class DirectedRoadmapBuilder {
             new Coordinate[] { targetPoint, closestProjectedPoint });
 
         // Проверяем, не пересекает ли этот «аппендикс» здания
-        boolean intersectsBuilding = localData.getConstraintsGeometryStream()
+        boolean intersectsBuilding = constraintsWithoutOksBuildings.stream()
             .anyMatch((g) -> connectionSegment.intersects(g));
-        // for (Polygon building : localData.getConstraintsGeometryStream()) {
-        // if (connectionSegment.intersects(building)) {
-        // intersectsBuilding = true;
-        // break;
-        // }
-        // }
 
         // Если путь свободен — добавляем ребро
         if (!intersectsBuilding) {
@@ -215,11 +273,17 @@ public class DirectedRoadmapBuilder {
     LocationIndexedLine indexedLine = new LocationIndexedLine(edgeToSplit);
     LinearLocation loc = indexedLine.indexOf(splitPoint);
 
+    Coordinate start = edgeToSplit.getStartPoint().getCoordinate();
+    Coordinate end = edgeToSplit.getEndPoint().getCoordinate();
+
+    // Защита от создания микро-петель на концах ребер
+    if (splitPoint.distance(start) < MIN_EDGE_LENGTH || splitPoint.distance(end) < MIN_EDGE_LENGTH) {
+      return;
+    }
+
     // 2. Проверяем, не попала ли точка на самые концы ребра (с учетом погрешности)
     // Если она совпадает со стартом или концом, разбиение не требуется
     if (loc.isVertex()) {
-      Coordinate start = edgeToSplit.getStartPoint().getCoordinate();
-      Coordinate end = edgeToSplit.getEndPoint().getCoordinate();
       if (splitPoint.equals2D(start) || splitPoint.equals2D(end)) {
         return;
       }
@@ -247,39 +311,42 @@ public class DirectedRoadmapBuilder {
    * свободных коридоров.
    */
   private List<Coordinate> extractSkeletonSites() {
-    Set<Coordinate> sites = new HashSet<>();
+    // Правильный компаратор для TreeSet
+    TreeSet<Coordinate> sites = new TreeSet<>(Distance.CoordinateComparator);
 
     // 1. Вершины локальных пространственных ограничений
-    var constraintCoordinates = localData.getConstraintsGeometryStream().flatMap(constraint -> {
-      if (constraint == null || constraint.isEmpty()) {
-        return Stream.of();
-      }
+    var constraintCoordinates = localConstraintCoordinates.stream();
 
-      // Пропускаем собственные полигоны ОКС текущего кластера из общей жесткой
-      // блокировки
-      if (isOwnClusterBuilding(constraint, cluster)) {
-        return Stream.of();
-      }
-
-      return processAndAddGeometry(constraint);
-    });
+    // 2. Генерируем мертвые точки для пустырей
+    Stream<Coordinate> dummyConstraints = generateDummyObstacleSites().stream();
 
     // 2. ДОБАВЛЯЕМ ТОЧКИ СУЩЕСТВУЮЩЕЙ СЕТИ КАК СТИМУЛЫ ДЛЯ ВОРОНОГО
     var networkCoordinates = localData.getNetworksGeometryStream()
         .flatMap(network -> Arrays.stream(network.getCoordinates()));
 
+    // DebugUtils.writeCoordinates(localData.getNetworksGeometryStream()
+    // .flatMap(network -> Arrays.stream(network.getCoordinates())), clusterId +
+    // "-00-sites-networkCoordinates");
+
     // ДОБАВЛЯЕМ ТОЧКИ СУЩЕСТВУЮЩЕЙ ИСТОЧНИКОВ СЕТИ КАК СТИМУЛЫ ДЛЯ ВОРОНОГО
     var sourceNodesCoordinates = sources.stream();
+
+    // DebugUtils.writeCoordinates(sources.stream(), clusterId +
+    // "-00-sites-sourceNodesCoordinates");
 
     // 3. ДОБАВЛЯЕМ ТОЧКИ ПОДКЛЮЧЕНИЯ ОКС
     var oksCoordinates = cluster.stream().map(oks -> oks.getConnectionPoint().getCoordinate());
 
     var executionEnvelop = localData.getExecutionEnvelope();
     // TODO: parallel?
-    var coordinates = Stream.of(constraintCoordinates, networkCoordinates, sourceNodesCoordinates, oksCoordinates)
+    var coordinates = Stream
+        .of(constraintCoordinates, networkCoordinates, sourceNodesCoordinates, oksCoordinates, dummyConstraints)
         .parallel().flatMap(s -> s)
         .filter(c -> executionEnvelop.contains(c))
         .collect(Collectors.toList());
+
+    // DebugUtils.writeCoordinates(coordinates.stream(), clusterId +
+    // "-00-sites-all");
 
     sites.addAll(coordinates);
 
@@ -290,14 +357,90 @@ public class DirectedRoadmapBuilder {
     sites.addAll(executionEnvelopCoords);
 
     // TODO: debug
-    Stream<Feature<? extends FeatureProperties>> geoms = sites.stream().map(c -> geometryFactory.createPoint(c))
-        .map(g -> Feature.withDefaultProperties(g));
+    // Stream<Feature<? extends FeatureProperties>> geoms = sites.stream().map(c ->
+    // geometryFactory.createPoint(c))
+    // .map(g -> Feature.withDefaultProperties(g));
     // Stream<Feature<? extends FeatureProperties>> features =
     // Stream.of(Feature.withDefaultProperties(geom));
-    DebugUtils.writeFeaturesIn32637(geoms, "000???-skeleton-" + localData.hashCode());
+    // DebugUtils.writeFeaturesIn32637(geoms, "000???-skeleton-" +
+    // localData.hashCode());
     // TODO: debug end
 
+    // DebugUtils.writeCoordinates((sites).stream(), clusterId + "-00-sites");
+
     return new ArrayList<>(sites);
+  }
+
+  private List<Coordinate> generateDummyObstacleSites() {
+    List<Coordinate> dummySites = new ArrayList<>();
+
+    // 1. Берем границы текущей зоны выполнения (Execution Envelope)
+    Envelope envelope = localData.getExecutionEnvelope();
+
+    for (double x = envelope.getMinX(); x <= envelope.getMaxX(); x += gridStepMeters) {
+      for (double y = envelope.getMinY(); y <= envelope.getMaxY(); y += gridStepMeters) {
+
+        Coordinate candidate = new Coordinate(x, y);
+
+        // Быстрая проверка: попала ли точка внутрь или вплотную к реальному зданию?
+        // Строим микро-конверт вокруг точки кандидата для запроса к STRtree
+        Envelope searchEnv = new Envelope(
+            x - safetyBufferMeters, x + safetyBufferMeters,
+            y - safetyBufferMeters, y + safetyBufferMeters);
+
+        @SuppressWarnings("unchecked")
+        List<Geometry> suspectConstraints = constraintsTree.query(searchEnv);
+
+        Point candidatePoint = geometryFactory.createPoint(candidate);
+
+        boolean isInsideOrTooClose = suspectConstraints.stream().anyMatch((building) -> {
+          // Если точка внутри здания или слишком близко к его фасаду — отбрасываем её
+          return (candidatePoint.within(building) || candidatePoint.distance(building) < safetyBufferMeters);
+        });
+
+        // Если точка упала на чистый пустырь или широкую площадь — фиксируем её как
+        // новый "глухой сайт"
+        if (!isInsideOrTooClose) {
+          dummySites.add(candidate);
+        }
+      }
+    }
+
+    return dummySites;
+  }
+
+  /**
+   * Вершины локальных пространственных ограничений
+   * 
+   * @return
+   */
+  private Stream<Coordinate> getLocalConstraintCoordinates() {
+    // 1. Вершины локальных пространственных ограничений
+    return localData.getConstraintsGeometryStream().flatMap(constraint -> {
+      return processAndAddGeometry(constraint);
+    });
+  }
+
+  /**
+   * Список локальных ограничений без учета зданий кластера
+   * 
+   * @return
+   */
+  private Stream<Geometry> getConstraintsWithoutOksBuildings() {
+    // 1. Вершины локальных пространственных ограничений
+    return localData.getConstraintsGeometryStream().filter(constraint -> {
+      if (constraint == null || constraint.isEmpty()) {
+        return false;
+      }
+
+      // Пропускаем собственные полигоны ОКС текущего кластера из общей жесткой
+      // блокировки
+      if (isOwnClusterBuilding(constraint, cluster)) {
+        return false;
+      }
+
+      return true;
+    });
   }
 
   /**
@@ -315,28 +458,18 @@ public class DirectedRoadmapBuilder {
     var squareBufferedGeom = convexHull.buffer(obstacleOffsetMeters, QUADRANT_SEGMENTS,
         BufferParameters.JOIN_MITRE);
 
-    // Шаг В: Забираем только внешнюю границу (Boundary) получившейся площадной
-    // фигуры
-    var boundary = squareBufferedGeom.getBoundary();
+    Geometry densifiedGeom = Densifier.densify(squareBufferedGeom, distanceTolerance);
 
+    var boundary = densifiedGeom.getBoundary();
     // Добавляем чистые вершины в набор сайтов Вороного
-    // for (Coordinate coord : boundary.getCoordinates()) {
-    // targetSites.add(coord);
-    // }
     return Arrays.stream(boundary.getCoordinates());
   }
 
   private boolean isOwnClusterBuilding(Geometry constraint, List<OksObject> cluster) {
-    if (!(constraint instanceof Polygon) || cluster == null) {
+    if (!(constraint instanceof Polygonal) || cluster == null) {
       return false;
     }
     return cluster.stream().anyMatch((oks) -> oks.getBuildingPolygon().equalsExact(constraint));
-    // for (OksObject oks : cluster) {
-    // if (oks.getBuildingPolygon().equalsExact(constraint)) {
-    // return true;
-    // }
-    // }
-    // return false;
   }
 
   /**
@@ -360,8 +493,9 @@ public class DirectedRoadmapBuilder {
         Coordinate p2 = exteriorRing.getCoordinateN(j + 1);
 
         // Пропускаем вырожденные отрезки-точки
-        if (p1.equals2D(p2))
+        if (p1.equals2D(p2)) {
           continue;
+        }
 
         LineString segment = geometryFactory.createLineString(new Coordinate[] { p1, p2 });
 
@@ -388,30 +522,7 @@ public class DirectedRoadmapBuilder {
         }
 
       }
-      // // Извлекаем внешнюю границу полигона Вороного
-      // Coordinate[] coords = polygon.getCoordinates();
-      // // ограничения берутся из локального набора данных. не со всей карты. также
-      // // диаграмма фильтруется после построения
-      // // boolean intersectsConstraint = localData.getConstraintsGeometryStream()
-      // // .anyMatch(constraint -> segment.intersects(constraint));
-      // // if (!intersectsConstraint) {
-      // // validEdges.add(segment);
-      // // }
 
-      // for (int j = 0; j < coords.length - 1; j++) {
-      // Coordinate from = coords[j];
-      // Coordinate to = coords[j + 1];
-      // LineString segment = geometryFactory.createLineString(new Coordinate[] {
-      // from, to });
-
-      // // Первичный быстрый пре-фильтр пересечений с ограничениями.
-      // // Строгая валидация с буфером 2.0м будет происходить на Шаге 2.4.
-      // boolean intersectsConstraint = localData.getConstraintsGeometryStream()
-      // .anyMatch(constraint -> segment.intersects(constraint));
-      // if (!intersectsConstraint) {
-      // validEdges.add(segment);
-      // }
-      // }
     }
     return validEdges;
   }
@@ -420,64 +531,100 @@ public class DirectedRoadmapBuilder {
    * Строит топологические связи в JGrapht, направляя ребра строго ОТ источников К
    * потребителям.
    */
-  private void populateOrientedGraph(List<LineString> skeletonEdges) {
-
+  private void populateUndirectedGraph(Graph<VirtualNode, DefaultWeightedEdge> graph, List<LineString> skeletonEdges) {
     // Для каждого отрезка безопасного каркаса генерируем ориентированные ребра
     for (LineString edge : skeletonEdges) {
       Coordinate c1 = edge.getStartPoint().getCoordinate();
       Coordinate c2 = edge.getEndPoint().getCoordinate();
 
-      // Создаем виртуальные узлы со стоянием захода. NodeType выставляется как
-      // VORONOI_SKELETON.
-      // При необходимости, если координаты совпадают с точками врезки или ОКС, тип
-      // переопределяется.
       VirtualNode node1_in = createVirtualNode(c1);
       VirtualNode node2_out = createVirtualNode(c2);
 
-      // По ТЗ: Ориентация строго ОТ существующих сетей К ОКС.
-      // Рассчитываем, какое направление приближает нас к потребителям и отдаляет от
-      // источников.
-      double dist1ToSources = minDistToCoordinates(c1);
-      double dist2ToSources = minDistToCoordinates(c2);
-
-      // Если движение от c1 к c2 удаляет нас от источников существующей сети,
-      // направляем ребро c1 -> c2
-      if (dist2ToSources >= dist1ToSources) {
-        addEdgeWithNodes(node1_in, node2_out, edge);
-      } else {
-        addEdgeWithNodes(node2_out, node1_in, edge);
+      boolean isLoop = node1_in.equals(node2_out);
+      if (graph.containsEdge(node1_in, node2_out) || isLoop) {
+        continue;
       }
+
+      graph.addVertex(node1_in);
+      graph.addVertex(node2_out);
+
+      var newEdge = graph.addEdge(node1_in, node2_out);
+      if (edge != null) {
+        // Инициализируем базовым весом (физическая длина)
+        graph.setEdgeWeight(newEdge, edge.getLength());
+      }
+
     }
   }
 
   private VirtualNode createVirtualNode(Coordinate c) {
+    long gridX = Math.round(c.x / tempGraphGridSize);
+    long gridY = Math.round(c.y / tempGraphGridSize);
+
+    // Создаем уникальный текстовый ключ для этой ячейки сетки
+    String gridKey = gridX + "_" + gridY;
+
+    // Если в этой ячейке 5х5 метров уже есть вершина — переиспользуем её!
+    if (nodeCache.containsKey(gridKey)) {
+      return nodeCache.get(gridKey);
+    }
+
+    // Если ячейка пустая, создаем новую вершину, но привязываем её
+    // к ОВЫРАВНЕННЫМ координатам центра ячейки (или к оригинальной координате)
+    Coordinate snappedCoord = new Coordinate(gridX * tempGraphGridSize, gridY * tempGraphGridSize);
+
     // Ищем кандидатов среди sources
     List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, sourceTree);
     for (var source : sourceCandidates) {
-      if (Distance.distanceSq(c, source.coordinate) <= EPSILON_SQ) {
-        return VirtualNode.withFeatureProperties(c, NodeType.EXISTING_NETWORK_NODE, source.properties);
+      if (Distance.distanceSq(c, source.getCoordinate()) <= SNAP_EPSILON_SQ) {
+        // привязка к выровненным координатам центра ячейки (или к оригинальной
+        // координате)
+        return VirtualNode.withFeatureProperties(snappedCoord, NodeType.EXISTING_NETWORK_NODE, source.getProperties());
       }
     }
 
     // Ищем кандидатов среди targets
     List<TargeOksNode> targetCandidates = getSearchCandidates(c, targetOksTree);
     for (var target : targetCandidates) {
-      if (Distance.distanceSq(c, target.coordinate) <= EPSILON_SQ) {
-        return VirtualNode.withOksObject(c, NodeType.OKS_CONNECTION, target.oks);
+      if (Distance.distanceSq(c, target.getCoordinate()) <= SNAP_EPSILON_SQ) {
+        // привязка к выровненным координатам центра ячейки (или к оригинальной
+        // координате)
+        return VirtualNode.withOksObject(snappedCoord, NodeType.OKS_CONNECTION, target.getOks());
       }
     }
 
-    return VirtualNode.asVoronoiSkeleton(c);
+    // привязка к выровненным координатам центра ячейки (или к оригинальной
+    // координате)
+    return VirtualNode.asVoronoiSkeleton(snappedCoord);
   }
 
-  private void pruneDeadEnds() {
+  private void pruneUndirectedDeadEnds(Graph<VirtualNode, DefaultWeightedEdge> graph) {
     // 1. Быстрый поиск: хэшируем координаты целевых точек (камер и источников),
     // чтобы моментально проверять, является ли узел важным терминалом.
-    Set<Coordinate> protectedCoordinates = new HashSet<>();
+    TreeSet<Coordinate> protectedCoordinates = new TreeSet<>(Distance.CoordinateComparator);
     protectedCoordinates.addAll(sources);
     protectedCoordinates.addAll(targets);
 
+    // Перед чисткой помечаем все узлы каркаса, куда воткнулись синие аппендиксы,
+    // как ЗАЩИЩЕННЫЕ
+    Set<VirtualNode> anchorNodes = new HashSet<>();
+    for (DefaultWeightedEdge edge : graph.edgeSet()) {
+      VirtualNode src = graph.getEdgeSource(edge);
+      VirtualNode trg = graph.getEdgeTarget(edge);
+
+      // Если один из узлов — защищенный источник/цель, то второй узел (перекресток)
+      // тоже защищаем!
+      if (src.getType() == NodeType.EXISTING_NETWORK_NODE || src.getType() == NodeType.OKS_CONNECTION) {
+        anchorNodes.add(trg);
+      }
+      if (trg.getType() == NodeType.EXISTING_NETWORK_NODE || trg.getType() == NodeType.OKS_CONNECTION) {
+        anchorNodes.add(src);
+      }
+    }
+
     boolean graphChanged;
+
+    var l = new ArrayList<VirtualNode>();
 
     // 2. Запускаем итеративный процесс. Удаление одного тупика может сделать
     // тупиком предыдущую вершину, поэтому чистим до тех пор, пока граф не
@@ -487,20 +634,22 @@ public class DirectedRoadmapBuilder {
       VirtualNode nodeToRemove = null;
 
       for (VirtualNode vertex : graph.vertexSet()) {
-        // Защищенные терминалы (камеры, источники) не трогаем, даже если они
-        // тупиковые
-        if (protectedCoordinates.contains(vertex.getCoordinate())) {
+        // Защищенные камеры и ОКС удалять нельзя!
+        boolean isProtectedVertex = vertex.getType() == NodeType.EXISTING_NETWORK_NODE
+            || vertex.getType() == NodeType.OKS_CONNECTION || protectedCoordinates.contains(vertex.getCoordinate());
+        if (isProtectedVertex) {
           continue;
         }
 
-        // Настоящий геометрический тупик имеет всего ОДНО примыкающее ребро
-        // (неважно, входящее оно или исходящее)
-        int totalConnections = graph.inDegreeOf(vertex) + graph.outDegreeOf(vertex);
-
-        // Также ловим полностью изолированные узлы (0 соединений)
-        if (totalConnections <= 1) {
+        if (anchorNodes.contains(vertex)) {
+          continue; // Запрещаем удалять точки стыковки аппендиксов с магистралями!
+        }
+        // В неориентированном графе у истинного тупика (край рамки или пустой ус)
+        // количество смежных ребер (степень узла) <= 1
+        if (graph.degreeOf(vertex) <= 1) {
           nodeToRemove = vertex;
-          break; // Прерываем итератор, чтобы безопасно удалить узел
+          l.add(vertex);
+          break;
         }
       }
 
@@ -511,89 +660,98 @@ public class DirectedRoadmapBuilder {
       }
 
     } while (graphChanged);
+  }
 
-    // --- ФИНАЛЬНЫЙ СУПЕР-КЛИНЕР: УДАЛЕНИЕ ИЗОЛИРОВАННЫХ ЦИКЛОВ И ПЕТЕЛЬ ---
+  private void populateFinalOrientedGraph(SimpleWeightedGraph<VirtualNode, DefaultWeightedEdge> tempGraph) {
+    // 2. Сначала переносим ВСЕ вершины из временного графа в финальный
+    for (VirtualNode vertex : tempGraph.vertexSet()) {
+      graph.addVertex(vertex);
+    }
 
-    // 1. Создаем копию графа как ненаправленного для инспектора связности
-    // (это позволит найти изолированные треугольники Вороного, даже если они
-    // зациклены)
-    ConnectivityInspector<VirtualNode, DefaultWeightedEdge> inspector = new ConnectivityInspector<>(graph);
-    List<Set<VirtualNode>> connectedComponents = inspector.connectedSets();
+    // Очередь для волнового обхода (BFS) и Set для отслеживания посещенных вершин
+    Queue<VirtualNode> queue = new LinkedList<>();
+    Set<VirtualNode> visitedNodes = new HashSet<>();
 
-    // 2. Хэшируем ключевые терминалы, которые ОБЯЗАНЫ быть в живом графе
-    Set<Coordinate> essentialCoordinates = new HashSet<>();
-    essentialCoordinates.addAll(sources);
-    essentialCoordinates.addAll(targets);
-
-    List<VirtualNode> nodesToClean = new ArrayList<>();
-
-    // 3. Проверяем каждый изолированный подграф
-    for (Set<VirtualNode> component : connectedComponents) {
-      boolean hasEssentialTerminal = false;
-
-      for (VirtualNode vertex : component) {
-        if (essentialCoordinates.contains(vertex.getCoordinate())) {
-          hasEssentialTerminal = true;
-          break;
-        }
-      }
-
-      // Если в этом изолированном кусочке/треугольнике нет ни источника, ни камеры
-      // подключения,
-      // значит вся эта группа ребер — паразитный замкнутый цикл Вороного внутри
-      // квартала
-      if (!hasEssentialTerminal) {
-        nodesToClean.addAll(component);
+    // 3. Находим все стартовые вершины (источники) в tempGraph и помещаем их в
+    // очередь
+    for (VirtualNode vertex : tempGraph.vertexSet()) {
+      if (vertex.getType() == NodeType.EXISTING_NETWORK_NODE || sources.contains(vertex.getCoordinate())) {
+        queue.add(vertex);
+        visitedNodes.add(vertex);
       }
     }
 
-    // 4. Физически удаляем паразитные полигоны из графа
-    for (VirtualNode deadNode : nodesToClean) {
-      graph.removeVertex(deadNode);
+    // 4. Основной волновой алгоритм трассировки направлений
+    while (!queue.isEmpty()) {
+      VirtualNode currentNode = queue.poll();
+
+      // Находим все смежные ребра в неориентированном графе
+      Set<DefaultWeightedEdge> edges = tempGraph.edgesOf(currentNode);
+
+      for (DefaultWeightedEdge edge : edges) {
+        VirtualNode sourceCandidate = tempGraph.getEdgeSource(edge);
+        VirtualNode targetCandidate = tempGraph.getEdgeTarget(edge);
+
+        // Определяем, какой из узлов является следующим шагом "вниз по течению"
+        VirtualNode nextNode = (sourceCandidate.equals(currentNode)) ? targetCandidate : sourceCandidate;
+
+        // Если узел еще не был посещен нашей волной направления
+        if (!visitedNodes.contains(nextNode)) {
+          addToDirectGraph(tempGraph, currentNode, edge, nextNode);
+
+          visitedNodes.add(nextNode);
+          queue.add(nextNode);
+        }
+        // Если узел уже посещен (альтернативный путь/петля), но ребра между ними в
+        // направленном графе еще нет
+        else if (!graph.containsEdge(currentNode, nextNode) && !graph.containsEdge(nextNode, currentNode)) {
+          addToDirectGraph(tempGraph, currentNode, edge, nextNode);
+        }
+      }
+    }
+
+    // 5. КРИТИЧЕСКИЙ ФОЛБЕК ДЛЯ АППЕНДИКСОВ ОКС
+    // Если ОКС стоял слишком изолированно и волна BFS от ТЭЦ до него не дошла через
+    // фиолетовый каркас,
+    // принудительно восстанавливаем его ребро snap в правильном направлении
+    for (VirtualNode vertex : tempGraph.vertexSet()) {
+      if (vertex.getType() == NodeType.OKS_CONNECTION || targets.contains(vertex.getCoordinate())) {
+        // Если к этому ОКС в финальном графе так и не пришло ни одного входящего ребра
+        if (graph.inDegreeOf(vertex) == 0) {
+          // Находим, с кем он был соединен в tempGraph
+          Set<DefaultWeightedEdge> connections = tempGraph.edgesOf(vertex);
+          for (DefaultWeightedEdge edge : connections) {
+            VirtualNode sourceCandidate = tempGraph.getEdgeSource(edge);
+            VirtualNode targetCandidate = tempGraph.getEdgeTarget(edge);
+
+            // Определяем, какой из узлов является следующим шагом "вниз по течению"
+            VirtualNode networkNode = (sourceCandidate.equals(vertex)) ? targetCandidate : sourceCandidate;
+
+            // Добавляем ребро строго НАПРАВЛЕННОЕ В СТОРОНУ ОКС: networkNode -> ОКС
+            if (!graph.containsEdge(networkNode, vertex)) {
+              addToDirectGraph(tempGraph, networkNode, edge, vertex);
+            }
+          }
+        }
+      }
     }
   }
 
-  private double minDistToCoordinates(Coordinate c) {
-    List<ExistingSourceNode> sourceCandidates = getSearchCandidates(c, sourceTree);
-    double minDist = Double.MAX_VALUE;
-    for (var source : sourceCandidates) {
-      double d = Distance.distanceSq(c, source.coordinate);
-      if (d < minDist) {
-        minDist = d;
-      }
+  private void addToDirectGraph(Graph<VirtualNode, DefaultWeightedEdge> tempGraph,
+      VirtualNode currentNode,
+      DefaultWeightedEdge edge, VirtualNode nextNode) {
+    // Направление строго по ходу движения волны: от текущего узла к следующему
+    double weight = tempGraph.getEdgeWeight(edge);
+
+    DefaultWeightedEdge directedEdge = graph.addEdge(currentNode, nextNode);
+    if (directedEdge != null) {
+      graph.setEdgeWeight(directedEdge, weight);
     }
-    return Math.sqrt(minDist);
   }
 
   @SuppressWarnings("unchecked")
   private <R> List<R> getSearchCandidates(Coordinate c, STRtree searchTree) {
-    var searchEnv = new Envelope(c.x - EPSILON, c.x + EPSILON, c.y - EPSILON, c.y + EPSILON);
+    var searchEnv = new Envelope(c.x - SNAP_EPSILON, c.x + SNAP_EPSILON, c.y - SNAP_EPSILON, c.y + SNAP_EPSILON);
     return searchTree.query(searchEnv);
-  }
-
-  private void addEdgeWithNodes(VirtualNode from, VirtualNode to, LineString edgeGeometry) {
-    graph.addVertex(from);
-    graph.addVertex(to);
-
-    // Добавляем ребро. Расчет весов с учетом углов поворота (Шаг 2.3)
-    // и коллизий с буфером 2.0м (Шаг 2.4) будет навешан на калькулятор весов
-    // JGrapht.
-    DefaultWeightedEdge edge = graph.addEdge(from, to);
-    if (edge != null) {
-      // Инициализируем базовым весом (физическая длина)
-      graph.setEdgeWeight(edge, edgeGeometry.getLength());
-    }
-  }
-
-  @AllArgsConstructor
-  private static class ExistingSourceNode {
-    final Coordinate coordinate;
-    final FeatureProperties properties;
-  }
-
-  @AllArgsConstructor
-  private static class TargeOksNode {
-    final Coordinate coordinate;
-    final OksObject oks;
   }
 }

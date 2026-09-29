@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.Polygonal;
 import org.springframework.stereotype.Service;
 
 import com.ultra.dit.aop.LogExecutionTime;
@@ -107,7 +107,8 @@ public class CollisionDetectionService {
    * с полигоном одного из ОКС в текущем обрабатываемом кластере.
    */
   private OksObject findMatchingOks(Geometry constraint, List<OksObject> activeCluster) {
-    if (!(constraint instanceof Polygon) || activeCluster == null) {
+    // TODO: !(constraint instanceof Polygon) не работает
+    if (!(constraint instanceof Polygonal) || activeCluster == null) {
       return null;
     }
 

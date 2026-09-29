@@ -121,7 +121,7 @@ public class NetworkRoutingService {
           // Шаг 2.1: Вычисление Bounding Box кластера и локализация выборки данных
           // (+500м)
           var localEnvelope = boundingBoxService.calculateLocalEnvelope(cluster);
-          var localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes);
+          var localData = boundingBoxService.extractLocalData(localEnvelope, globalIndexes, cluster, clusterId);
 
           if (localData.isInvalid()) {
             log.info("cluster-" + clusterId + ": Invalid Local Data");
@@ -135,8 +135,11 @@ public class NetworkRoutingService {
 
           // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
           // Roadmap)
-          var roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster, props.getObstacleOffsetMeters());
+          var roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster,
+              props.getObstacleOffsetMeters(), clusterId);
           var graph = roadmapBuilder.build();
+
+          debugRoadmapGraph(clusterId, graph);
 
           // Шаг 2.3 и 2.4: Калькуляция весов ребер с учетом изломов и 2D-буферизации
           // (габарит 2.0м)
@@ -156,9 +159,9 @@ public class NetworkRoutingService {
           // graph.setEdgeWeight(edge, calculatedWeight);
           // }
 
-          debugRoadmapGraph(clusterId, graph);
+          var result = topologyGenerator.generateNetworkVariants(localData, graph);
 
-          var result = topologyGenerator.generateNetworkVariants(clusterId, cluster, graph);
+          DebugUtils.writeClusterResults(result, clusterId + "");
 
           long durationCpuMs = (threadBean.getThreadCpuTime(threadId) - startCpu) / 1_000_000;
           long durationWallMs = (System.nanoTime() - startWall) / 1_000_000;
@@ -179,6 +182,7 @@ public class NetworkRoutingService {
 
     var pipelineResults = IntStream.range(0, clusters.size())
         .mapToObj((clusterId) -> findClusterVariants.apply(clusterId).exceptionally(throwable -> {
+          throwable.printStackTrace();
           log.error(throwable);
           return null;
         })).collect(Collectors.toList());
@@ -221,6 +225,7 @@ public class NetworkRoutingService {
       DebugUtils.writeFeaturesIn32637(localData.getConstraints().stream(), clusterId + "-cluster-data-constraints");
       DebugUtils.writeFeaturesIn32637(localData.getNetworks().stream(), clusterId + "-cluster-data-networks");
       DebugUtils.writeFeaturesIn32637(localData.getNodes().stream(), clusterId + "-cluster-data-nodes");
+      DebugUtils.writeFeaturesIn32637(localData.getSourceNodes().stream(), clusterId + "-cluster-data-source-nodes");
       DebugUtils.writeFeaturesIn32637(localBoundList.stream(), clusterId + "-cluster-data-execution-envelop");
       // TODO: debug end
     }

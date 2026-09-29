@@ -22,6 +22,7 @@ import org.jgrapht.graph.AsSubgraph;
 import org.jgrapht.nio.graphml.GraphMLExporter;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 import org.n52.jackson.datatype.jts.JtsModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.stereotype.Component;
@@ -33,8 +34,11 @@ import com.ultra.dit.config.DebugProperties;
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.FeatureCollection;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
+import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.stage1.TransformService;
+import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
+import com.ultra.dit.stage2_test.FeatureMapper;
 
 @Component
 public class DebugUtils {
@@ -129,10 +133,8 @@ public class DebugUtils {
     }
 
     var debugFileName = getDebugFolder().resolve(DEBUG_SESSION_FILENAMES_FILENAME);
-    System.out.println(debugFileName);
     try {
       ConcurrentLinkedQueue<String> fileNames = activeSessions.remove(sessionId);
-      System.out.println(fileNames.size());
       if (fileNames != null && !fileNames.isEmpty()) {
 
         var staticDebugFilesUrl = debugConfig.getStaticDebugFilesUrl();
@@ -187,6 +189,17 @@ public class DebugUtils {
     String fileNamePath = getGeoJsonFolder().resolve(fileName).toString();
     var rawFeatures = featureStream.collect(Collectors.toList());
     writeFeaturesToFile(rawFeatures, fileNamePath);
+  }
+
+  public static void writeCoordinates(Stream<Coordinate> coordinates, String fileName) {
+    Stream<Feature<? extends FeatureProperties>> features = coordinates.map(c -> geometryFactory.createPoint(c))
+        .map(g -> Feature.withDefaultProperties(g));
+    DebugUtils.writeFeaturesIn32637(features, fileName + "-coordinates");
+  }
+
+  public static void writeLineStrings(Stream<LineString> lines, String fileName) {
+    Stream<Feature<? extends FeatureProperties>> features = lines.map(c -> Feature.withDefaultProperties(c));
+    DebugUtils.writeFeaturesIn32637(features, fileName + "-line-strings");
   }
 
   private static void writeFeaturesToFile(
@@ -263,6 +276,13 @@ public class DebugUtils {
         });
 
     writeFeaturesIn32637(graphEdgeFeatures, fileName);
+
+    // Stream<Feature<? extends FeatureProperties>> graphPointsFeatures =
+    // graph.vertexSet().stream()
+    // .map(v -> Feature.of(geometryFactory.createPoint(v.getCoordinate()),
+    // v.getFeatureProperties()));
+
+    // writeFeaturesIn32637(graphPointsFeatures, fileName + "-points");
   }
 
   private static <V, E> void exportToGraphML(Graph<V, E> graph,
@@ -341,5 +361,26 @@ public class DebugUtils {
       // Если папка уже есть — ничего не произойдет.
       Files.createDirectory(path);
     }
+  }
+
+  public static void writeClusterResults(List<RoutingResult> results, String fileName) {
+
+    var pathId = new AtomicInteger(0);
+    results.stream().map(FeatureMapper::mapRoutingResultToFeatures).forEach(features -> {
+      var l = features.collect(Collectors.toList());
+      var status = "-0-success--";
+      var isEmpty = l.isEmpty() || l.stream().anyMatch(s -> {
+        var p = s.getProperties();
+        if (p instanceof VariantSummaryProperties) {
+          return !((VariantSummaryProperties) p).isConnected();
+        }
+        return false;
+      });
+      if (isEmpty) {
+        status = "-0-empty--";
+      }
+      String fn = fileName + status + "-" + pathId.incrementAndGet() + "-variant";
+      writeFeaturesIn32637(l.stream(), fn);
+    });
   }
 }

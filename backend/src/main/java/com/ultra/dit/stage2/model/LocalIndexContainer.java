@@ -5,14 +5,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.index.strtree.STRtree;
 
 import com.ultra.dit.dto.geojson.Feature;
-import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 
 import lombok.Getter;
+import lombok.Value;
 
 /**
  * Контейнер для локализованной микро-выборки пространственных данных.
@@ -37,18 +39,46 @@ public final class LocalIndexContainer {
   private final List<Feature<? extends FeatureProperties>> nodes;
 
   /**
+   * Источники без точек подключения
+   * 
+   * @return
+   */
+  private final List<Feature<? extends FeatureProperties>> sourceNodes;
+
+  /**
    * Общий минимальный охватывающий прямоугольник (Envelope) для
    * кластера ОКС с учетом технологического буфера clusterBufferMeters.
    */
   private final Envelope executionEnvelope;
 
-  public LocalIndexContainer(List<Feature<? extends FeatureProperties>> constraints,
+  private final STRtree targetOksTree;
+  private final STRtree sourceTree;
+  private final STRtree constraintsTree;
+
+  private final List<OksObject> cluster;
+  private final int clusterId;
+
+  public LocalIndexContainer(
+      List<Feature<? extends FeatureProperties>> constraints,
       List<Feature<? extends FeatureProperties>> networks,
-      List<Feature<? extends FeatureProperties>> nodes, Envelope executionEnvelope) {
+      List<Feature<? extends FeatureProperties>> nodes,
+      List<Feature<? extends FeatureProperties>> sourceNodes,
+      STRtree constraintsTree,
+      STRtree sourceTree,
+      STRtree targetOksTree,
+      Envelope executionEnvelope,
+      List<OksObject> cluster,
+      int clusterId) {
     this.constraints = Collections.unmodifiableList(constraints);
     this.networks = Collections.unmodifiableList(networks);
     this.nodes = Collections.unmodifiableList(nodes);
+    this.sourceNodes = Collections.unmodifiableList(sourceNodes);
     this.executionEnvelope = executionEnvelope;
+    this.targetOksTree = targetOksTree;
+    this.sourceTree = sourceTree;
+    this.constraintsTree = constraintsTree;
+    this.cluster = cluster;
+    this.clusterId = clusterId;
   }
 
   public boolean isInvalid() {
@@ -80,21 +110,19 @@ public final class LocalIndexContainer {
     return getNodesGeometryStream().collect(Collectors.toList());
   }
 
-  /**
-   * Источники без точек подключения
-   * 
-   * @return
-   */
-  public Stream<Feature<? extends FeatureProperties>> getSourceNodesStream() {
-    return nodes.stream().filter((n) -> n.getProperties().getObjectType() != ObjectType.OKS_CONNECTION_POINT);
-  }
-
-  public List<Feature<? extends FeatureProperties>> getSourceNodes() {
-    return getSourceNodesStream().collect(Collectors.toList());
-  }
-
   public Stream<Geometry> getSourceNodesGeometryStream() {
-    return getSourceNodesStream().map(c -> c.getGeometry());
+    return sourceNodes.stream().map(c -> c.getGeometry());
   }
 
+  @Value
+  public static class ExistingSourceNode {
+    private final Coordinate coordinate;
+    private final FeatureProperties properties;
+  }
+
+  @Value
+  public static class TargeOksNode {
+    private final Coordinate coordinate;
+    private final OksObject oks;
+  }
 }

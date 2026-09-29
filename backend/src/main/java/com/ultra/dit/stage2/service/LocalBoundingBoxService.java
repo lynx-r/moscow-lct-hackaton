@@ -1,16 +1,22 @@
 package com.ultra.dit.stage2.service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.index.strtree.STRtree;
 
 import com.ultra.dit.aop.LogExecutionTime;
 import com.ultra.dit.dto.geojson.Feature;
+import com.ultra.dit.dto.geojson.enums.ObjectType;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
 import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.model.IndexContainer;
 import com.ultra.dit.stage2.model.LocalIndexContainer;
+import com.ultra.dit.stage2.model.LocalIndexContainer.TargeOksNode;
 import com.ultra.dit.stage2.model.OksObject;
+import com.ultra.dit.util.Distance;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,10 +53,13 @@ public class LocalBoundingBoxService {
   /**
    * Выполняет пространственную фильтрацию через R-Tree (STRtree.query)
    * и формирует изолированный контекст данных для текущего шага трассировки.
+   * 
+   * @param clusterId
    */
   @LogExecutionTime
   @SuppressWarnings("unchecked")
-  public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes) {
+  public LocalIndexContainer extractLocalData(Envelope localEnvelope, IndexContainer globalIndexes,
+      List<OksObject> cluster, int clusterId) {
     // Извлекаем пространственные ограничения (Зоны запрета, дороги, здания)
     List<Feature<? extends FeatureProperties>> localConstraints = globalIndexes.getConstraintsTree()
         .query(localEnvelope);
@@ -62,7 +71,48 @@ public class LocalBoundingBoxService {
     // объекты)
     List<Feature<? extends FeatureProperties>> localNodes = globalIndexes.getNodesTree().query(localEnvelope);
 
-    return new LocalIndexContainer(localConstraints, localNetworks, localNodes, localEnvelope);
+    // Оставляем только топ-5 геометрически ближайших камер врезки к потребителям
+    // кластера
+    var clusterCenter = cluster.get(0).getConnectionPoint().getCoordinate();
+    List<Feature<? extends FeatureProperties>> sourceNodes = localNodes.stream()
+        .filter((n) -> n.getProperties().getObjectType() != ObjectType.OKS_CONNECTION_POINT)
+        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getGeometry().getCoordinate(), clusterCenter)))
+        // TODO: ?????? limit ClosesSourcesCount
+        // .limit(properties.getClosesSourcesCount())
+        .collect(Collectors.toList());
+
+    // 1. СТРОИМ ЛОКАЛЬНЫЙ ПРОСТРАНСТВЕННЫЙ ИНДЕКС ОГРАНИЧЕНИЙ И ПРЕПЯТСТВИЙ
+    var constraintsTree = new STRtree();
+
+    // Вкачиваем в дерево все здания/ограничения из вашего стрима
+    localConstraints.stream().map(c -> c.getGeometry()).forEach(geom -> {
+      constraintsTree.insert(geom.getEnvelopeInternal(), geom);
+    });
+
+    // Собираем все доступные целевые координаты существующих сетей (точки врезки)
+    var sourceTree = new STRtree();
+    sourceNodes.stream().forEach(node -> {
+      var geometry = node.getGeometry();
+      var c = geometry.getCoordinate();
+      sourceTree.insert(new Envelope(c), new LocalIndexContainer.ExistingSourceNode(c, node.getProperties()));
+      constraintsTree.insert(geometry.getEnvelopeInternal(), geometry);
+    });
+
+    // Собираем целевые координаты точек подключения ОКС
+    var targetOksTree = new STRtree();
+    cluster.forEach((oks) -> {
+      var geometry = oks.getConnectionPoint();
+      var c = geometry.getCoordinate();
+      targetOksTree.insert(new Envelope(c), new TargeOksNode(c, oks));
+      constraintsTree.insert(geometry.getEnvelopeInternal(), geometry);
+    });
+
+    constraintsTree.build();
+    sourceTree.build();
+    targetOksTree.build();
+
+    return new LocalIndexContainer(localConstraints, localNetworks, localNodes, sourceNodes, constraintsTree,
+        sourceTree, targetOksTree, localEnvelope, cluster, clusterId);
   }
 
 }

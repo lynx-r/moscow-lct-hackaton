@@ -76,7 +76,7 @@ class NetworkRoutingServiceTest extends BaseTest {
 
   @BeforeEach
   void setUp() {
-    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, true, "");
+    var debugConfig = new DebugProperties(DebugUtils.DEFAULT_DEBUG_FOLDER, true, false, "");
     new DebugUtils(debugConfig);
 
     // SpatialIndexService

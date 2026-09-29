@@ -13,7 +13,9 @@ import org.jgrapht.alg.shortestpath.YenKShortestPath;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.DirectedWeightedMultigraph;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 
 import com.ultra.dit.dto.geojson.Feature;
 import com.ultra.dit.dto.geojson.properties.FeatureProperties;
@@ -21,12 +23,12 @@ import com.ultra.dit.dto.geojson.properties.HeatNetworkProperties;
 import com.ultra.dit.dto.geojson.properties.VariantSummaryProperties;
 import com.ultra.dit.stage2.config.Stage2Properties;
 import com.ultra.dit.stage2.graph.EdgeWeightCalculator;
+import com.ultra.dit.stage2.model.LocalIndexContainer;
 import com.ultra.dit.stage2.model.NodeType;
 import com.ultra.dit.stage2.model.OksObject;
 import com.ultra.dit.stage2.model.RoutingResult;
 import com.ultra.dit.stage2.model.VirtualNode;
 import com.ultra.dit.util.DebugUtils;
-import com.ultra.dit.util.Distance;
 import com.ultra.dit.util.Id;
 
 import lombok.AllArgsConstructor;
@@ -53,16 +55,12 @@ public class NetworkTopologyGenerator {
    */
   @SuppressWarnings("null")
   public List<RoutingResult> generateNetworkVariants(
-      int clusterId,
-      List<OksObject> cluster,
+      LocalIndexContainer localData,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph) {
 
+    var cluster = localData.getCluster();
+    var clusterId = localData.getClusterId();
     log(clusterId, "Generate Network Variants");
-
-    // Оставляем только топ-5 геометрически ближайших камер врезки к потребителям
-    // кластера
-    OksObject firstOks = cluster.get(0);
-    var clusterCenter = firstOks.getConnectionPoint().getCoordinate();
 
     // Находим все потенциальные стартовые узлы (точки существующей сети) и финишные
     // (ОКС)
@@ -81,7 +79,7 @@ public class NetworkTopologyGenerator {
         log(clusterId, "Source Nodes Not Found");
       }
       if (targetNodes.isEmpty()) {
-        debugSourceNodes(clusterId, firstOks, sourceNodes);
+        debugSourceNodes(clusterId, sourceNodes);
         log(clusterId, "Target Nodes Not Found");
       }
       var unconnectedOksIds = cluster.stream().map(oks -> oks.getId()).collect(Collectors.toList());
@@ -89,24 +87,19 @@ public class NetworkTopologyGenerator {
       return List.of(RoutingResult.empty(summary));
     }
     debugTarget(clusterId, targetNodes);
-    debugSourceNodes(clusterId, firstOks, sourceNodes);
+    debugSourceNodes(clusterId, sourceNodes);
 
-    List<VirtualNode> closestSources = sourceNodes.stream()
-        .sorted(Comparator.comparingDouble(v -> Distance.distanceSq(v.getCoordinate(), clusterCenter)))
-        .limit(properties.getClosesSourcesCount())
-        .collect(Collectors.toList());
-
-    // TODO: если generateForSources вернет Empty попробовать взять другие sources
-    // IntStream.range(0, )
-    debugClosestSources(clusterId, closestSources);
-
-    var variants = generateNetworkVariants(clusterId, cluster, graph, targetNodes, closestSources);
+    var variants = generateNetworkVariants(localData, graph, targetNodes, sourceNodes);
     return variants;
   }
 
-  private List<RoutingResult> generateNetworkVariants(int clusterId, List<OksObject> cluster,
+  private List<RoutingResult> generateNetworkVariants(
+      LocalIndexContainer localData,
       DirectedWeightedMultigraph<VirtualNode, DefaultWeightedEdge> graph, List<VirtualNode> targetNodes,
       List<VirtualNode> sourceNodes) {
+    var cluster = localData.getCluster();
+    var clusterId = localData.getClusterId();
+
     log(clusterId, "Source Nodes Count: " + sourceNodes.size());
     log(clusterId, "Target Nodes Count: " + targetNodes.size());
 
@@ -124,7 +117,7 @@ public class NetworkTopologyGenerator {
     debugRawPaths(clusterId, rawPaths);
 
     // Динамическая фильтрация и ранжирование путей с учётом геометрии углов
-    var evaluatedPaths = getEvaluatedPaths(rawPaths);
+    var evaluatedPaths = getEvaluatedPaths(localData, rawPaths);
 
     if (evaluatedPaths.isEmpty()) {
       logNoVariants(clusterId);
@@ -134,9 +127,6 @@ public class NetworkTopologyGenerator {
     }
     log(clusterId, "Paths Passed Validation Count: " + evaluatedPaths.size());
     debugEvaluatedPaths(clusterId, evaluatedPaths);
-
-    // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
-    evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
 
     var distinctPaths = filterDistinctVariants(evaluatedPaths);
     if (evaluatedPaths.isEmpty()) {
@@ -193,58 +183,107 @@ public class NetworkTopologyGenerator {
     return rawPaths;
   }
 
-  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId,
-      List<String> unconnectedOksIds) {
-    int maxVariants = properties.getMaxVariants();
-    var finalVariants = new ArrayList<RoutingResult>();
-    for (var variantIdx = 0; variantIdx < distinctPaths.size(); variantIdx++) {
-      var evalPath = distinctPaths.get(variantIdx);
-      var result = buildTopologicalResult(evalPath.path, clusterId, variantIdx, unconnectedOksIds);
-      if (result.isConnected()) {
-        finalVariants.add(result);
-        if (finalVariants.size() >= maxVariants) {
-          break;
-        }
-      }
-    }
-
-    return finalVariants;
-  }
-
-  private List<EvaluatedPath> getEvaluatedPaths(List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
+  private List<EvaluatedPath> getEvaluatedPaths(
+      LocalIndexContainer localData,
+      List<GraphPath<VirtualNode, DefaultWeightedEdge>> rawPaths) {
     List<EvaluatedPath> evaluatedPaths = new ArrayList<>();
+
     for (var path : rawPaths) {
       List<VirtualNode> vertices = path.getVertexList();
-      if (vertices.size() < 2)
+      if (vertices.size() < 2) {
         continue;
+      }
+
+      // 2. ВЫПРЯМЛЯЕМ ПУТЬ: убираем лесенки Вороного с помощью String Pulling
+      List<VirtualNode> smoothVertices = pullString(vertices, localData);
+      var smoothCoordinates = smoothVertices.stream().map(v -> v.getCoordinate()).collect(Collectors.toList());
 
       double totalWeightWithPenalties = 0.0;
       boolean validationPassed = true;
 
+      // 3. Рассчитываем НОВУЮ физическую длину выпрямленной трассы в метрах
+      // (EPSG:32637)
+      double actualLengthMeters = 0.0;
+      for (int i = 0; i < smoothCoordinates.size() - 1; i++) {
+        actualLengthMeters += smoothCoordinates.get(i).distance(smoothCoordinates.get(i + 1));
+      }
+
       // Накапливаем физическую длину
-      totalWeightWithPenalties += path.getWeight();
+      totalWeightWithPenalties += actualLengthMeters;
 
       // Динамический расчёт изломов по цепочке смежных рёбер
-      for (int i = 0; i < vertices.size() - 2; i++) {
-        Coordinate p1 = vertices.get(i).getCoordinate();
-        Coordinate p2 = vertices.get(i + 1).getCoordinate(); // Точка излома
-        Coordinate p3 = vertices.get(i + 2).getCoordinate();
+      for (int i = 0; i < smoothCoordinates.size() - 2; i++) {
+        Coordinate p1 = smoothCoordinates.get(i);
+        Coordinate p2 = smoothCoordinates.get(i + 1); // Точка излома
+        Coordinate p3 = smoothCoordinates.get(i + 2);
 
         double penalty = angleCalculator.calculateWeight(p1, p2, p3);
 
         if (penalty == Double.MAX_VALUE) {
-          validationPassed = false; // Путь совершил запрещенный разворот >90 градусов!
+          // Путь совершил запрещенный разворот >90 градусов!
+          validationPassed = false;
           break;
         }
         totalWeightWithPenalties += penalty;
       }
 
       if (validationPassed) {
-        evaluatedPaths.add(new EvaluatedPath(path, totalWeightWithPenalties));
+        evaluatedPaths.add(new EvaluatedPath(smoothVertices, totalWeightWithPenalties));
       }
     }
 
+    // Сортируем варианты по итоговой стоимости (Длина + Штрафы за углы)
+    evaluatedPaths.sort(Comparator.comparingDouble(p -> p.totalCost));
+
     return evaluatedPaths;
+  }
+
+  private List<VirtualNode> pullString(List<VirtualNode> vertices, LocalIndexContainer localData) {
+
+    // 1. Извлекаем сырые извилистые координаты из пути Йена
+    List<Coordinate> rawCoordinates = vertices.stream().map(v -> v.getCoordinate()).collect(Collectors.toList());
+
+    List<VirtualNode> smoothedVertices = new ArrayList<>();
+    smoothedVertices.add(vertices.get(0)); // Начальная точка (якорь) всегда остается
+
+    int currentAnchorIndex = 0;
+
+    while (currentAnchorIndex < rawCoordinates.size() - 1) {
+      Coordinate anchor = rawCoordinates.get(currentAnchorIndex);
+      int furthestVisibleIndex = currentAnchorIndex + 1;
+
+      // Пытаемся заглянуть как можно дальше вперед по цепочке точек
+      for (int i = currentAnchorIndex + 2; i < rawCoordinates.size(); i++) {
+        Coordinate target = rawCoordinates.get(i);
+
+        // Строим прямой луч от текущего якоря до удаленной точки
+        LineString ray = geometryFactory.createLineString(new Coordinate[] { anchor, target });
+
+        // Быстрая проверка пересечений со зданиями через STRtree
+        @SuppressWarnings("unchecked")
+        List<Geometry> suspects = localData.getConstraintsTree().query(ray.getEnvelopeInternal());
+
+        boolean hitObstacle = suspects.stream().anyMatch((constraint) -> ray.intersects(constraint));
+
+        // Если препятствий на пути луча нет — эта точка нам "видна" напрямую!
+        if (!hitObstacle) {
+          furthestVisibleIndex = i;
+        } else {
+          // Как только наткнулись на стену — дальше смотреть по прямой нельзя,
+          // нужно поворачивать за угол
+          break;
+        }
+      }
+
+      // Фиксируем самую дальнюю видимую точку как новый опорный поворот трассы
+      var nextPoint = vertices.get(furthestVisibleIndex);
+      smoothedVertices.add(nextPoint);
+
+      // Смещаем наш якорь вперед
+      currentAnchorIndex = furthestVisibleIndex;
+    }
+
+    return smoothedVertices;
   }
 
   /**
@@ -259,17 +298,16 @@ public class NetworkTopologyGenerator {
     List<EvaluatedPath> distinct = new ArrayList<>();
     for (var candidate : paths) {
       boolean isSimilar = false;
-      Set<Coordinate> candidateCoords = candidate.path.getVertexList().stream()
-          .map(VirtualNode::getCoordinate).collect(Collectors.toSet());
+      Set<Coordinate> candidateCoords = candidate.getSmoothCoordinates().stream().collect(Collectors.toSet());
 
       for (var accepted : distinct) {
-        long sharedVertices = accepted.path.getVertexList().stream()
-            .filter(v -> candidateCoords.contains(v.getCoordinate())).count();
+        long sharedVertices = accepted.getSmoothCoordinates().stream()
+            .filter(v -> candidateCoords.contains(v)).count();
 
         // Критерий уникальности: если более 70% вершин совпадают, считаем варианты
         // идентичными
         double overlap = (double) sharedVertices
-            / Math.max(candidate.path.getVertexList().size(), accepted.path.getVertexList().size());
+            / Math.max(candidate.smoothVertices.size(), accepted.smoothVertices.size());
         if (overlap > properties.getPathUniquePercent()) {
           isSimilar = true;
           break;
@@ -282,6 +320,24 @@ public class NetworkTopologyGenerator {
     return distinct;
   }
 
+  private List<RoutingResult> getFinalVariants(List<EvaluatedPath> distinctPaths, int clusterId,
+      List<String> unconnectedOksIds) {
+    int maxVariants = properties.getMaxVariants();
+    var finalVariants = new ArrayList<RoutingResult>();
+    for (var variantIdx = 0; variantIdx < distinctPaths.size(); variantIdx++) {
+      var evalPath = distinctPaths.get(variantIdx);
+      var result = buildTopologicalResult(evalPath, clusterId, variantIdx, unconnectedOksIds);
+      if (result.isConnected()) {
+        finalVariants.add(result);
+        if (finalVariants.size() >= maxVariants) {
+          break;
+        }
+      }
+    }
+
+    return finalVariants;
+  }
+
   /**
    * Строит итоговый валидный граф трассы, проверяет валентность и расставляет
    * камеры.
@@ -292,25 +348,24 @@ public class NetworkTopologyGenerator {
    * 
    */
   private RoutingResult buildTopologicalResult(
-      GraphPath<VirtualNode, DefaultWeightedEdge> path, int clusterIdx, int variantIdx,
+      EvaluatedPath evaluatedPath, int clusterIdx, int variantIdx,
       List<String> unconnectedOksIds) {
 
     var id = Id.idForTypeVariantSummary(clusterIdx, variantIdx);
     var variantId = Id.idForTypeVariantSummary(clusterIdx, variantIdx);
-    var summary = VariantSummaryProperties.emptyVariant(id, variantId, unconnectedOksIds);
 
-    var vertices = path.getVertexList();
+    var vertices = evaluatedPath.smoothVertices;
 
     var pipelines = new ArrayList<Feature<? extends FeatureProperties>>();
     // Карта для подсчета валентности узлов (degree) в рамках выбранного решения
     var nodeValence = new HashMap<Coordinate, Integer>();
     // Сборка линейных объектов и первичный подсчет степеней вершин
     for (int i = 0; i < vertices.size() - 1; i++) {
+      Coordinate c1 = vertices.get(i).getCoordinate();
+      Coordinate c2 = vertices.get(i + 1).getCoordinate();
+
       VirtualNode from = vertices.get(i);
       VirtualNode to = vertices.get(i + 1);
-
-      Coordinate c1 = from.getCoordinate();
-      Coordinate c2 = to.getCoordinate();
 
       nodeValence.put(c1, nodeValence.getOrDefault(c1, 0) + 1);
       nodeValence.put(c2, nodeValence.getOrDefault(c2, 0) + 1);
@@ -325,7 +380,8 @@ public class NetworkTopologyGenerator {
       // TODO: if (valenceMap.get(c1) > 4 || valenceMap.get(c2) > 4) {
       if (totalValence > properties.getMaxValence()) {
         log(clusterIdx, "No Topology Built (From " + c1 + ", To " + c2);
-        return RoutingResult.empty(summary);
+        var summaryEmpty = VariantSummaryProperties.emptyVariant(id, variantId, unconnectedOksIds);
+        return RoutingResult.empty(summaryEmpty);
       }
 
       var line = geometryFactory.createLineString(new Coordinate[] { c1, c2 });
@@ -403,6 +459,8 @@ public class NetworkTopologyGenerator {
     log(clusterIdx, "Pipelines Count: " + pipelines.size());
     log(clusterIdx, "Chambers Count: " + chambers.size());
 
+    var summary = VariantSummaryProperties.builder().id(id).variantId(variantId).unconnectedOksIds(unconnectedOksIds)
+        .build();
     return RoutingResult.of(pipelines, chambers, summary, true);
   }
 
@@ -432,8 +490,8 @@ public class NetworkTopologyGenerator {
   private void debugDistinctPaths(int clusterId, List<EvaluatedPath> distinctPaths) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      var distPaths = distinctPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(distPaths, clusterId + "-cluster-graph-2-distinct");
+      Stream<Coordinate> distPaths = distinctPaths.stream().flatMap(p -> p.getSmoothCoordinates().stream());
+      DebugUtils.writeCoordinates(distPaths, clusterId + "-cluster-graph-2-distinct");
       // TODO: debug stop
     }
   }
@@ -441,8 +499,8 @@ public class NetworkTopologyGenerator {
   private void debugEvaluatedPaths(int clusterId, List<EvaluatedPath> evaluatedPaths) {
     if (log.isTraceEnabled()) {
       // TODO: debug start
-      var evalPaths = evaluatedPaths.stream().map(p -> p.path).collect(Collectors.toList());
-      DebugUtils.writeGraphPaths(evalPaths, clusterId + "-cluster-graph-1-evaluated");
+      Stream<Coordinate> evalPaths = evaluatedPaths.stream().flatMap(p -> p.getSmoothCoordinates().stream());
+      DebugUtils.writeCoordinates(evalPaths, clusterId + "-cluster-graph-1-evaluated");
       // TODO: debug stop
     }
   }
@@ -476,25 +534,9 @@ public class NetworkTopologyGenerator {
     }
   }
 
-  private void debugClosestSources(int clusterId, List<VirtualNode> closestSources) {
-    if (log.isTraceEnabled()) {
-      var closestCoords = closestSources.stream()
-          .map(s -> formatVirtualNode(s))
-          .collect(Collectors.toList());
-      log(clusterId, "Closest Coordinates: " + closestCoords);
-
-      Stream<Feature<? extends FeatureProperties>> closestSourceF = closestSources.stream()
-          .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
-      DebugUtils.writeFeaturesIn32637(closestSourceF, clusterId + "-cluster-nodes-source-closest");
-    }
-  }
-
-  private void debugSourceNodes(int clusterId, OksObject firstOks, List<VirtualNode> sourceNodes) {
+  private void debugSourceNodes(int clusterId, List<VirtualNode> sourceNodes) {
     if (log.isTraceEnabled() && !sourceNodes.isEmpty()) {
       // TODO: debug start
-      log(clusterId, "Cluster First Item Id: " + firstOks.getId());
-      DebugUtils.writeFeaturesIn32637(Stream.of(firstOks.getFeature()), clusterId + "-cluster-center");
-
       Stream<Feature<? extends FeatureProperties>> sourceF = sourceNodes.stream()
           .map(n -> Feature.of(geometryFactory.createPoint(n.getCoordinate()), n.getFeatureProperties()));
       DebugUtils.writeFeaturesIn32637(sourceF, clusterId + "-cluster-nodes-source");
@@ -513,7 +555,11 @@ public class NetworkTopologyGenerator {
 
   @AllArgsConstructor
   private static class EvaluatedPath {
-    final GraphPath<VirtualNode, DefaultWeightedEdge> path;
+    final List<VirtualNode> smoothVertices;
     final double totalCost;
+
+    List<Coordinate> getSmoothCoordinates() {
+      return smoothVertices.stream().map(v -> v.getCoordinate()).collect(Collectors.toList());
+    }
   }
 }
