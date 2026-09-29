@@ -66,6 +66,7 @@ function updateRoutingLayers(geoJsonData: FeatureCollection) {
 
   // Динамически обновляем или добавляем источник данных предложенных маршрутов
   if (map.value.getSource(DATA_SOURCE_NAME)) {
+    console.log('????', geoJsonData)
     const source = map.value.getSource(DATA_SOURCE_NAME)
     if (source instanceof GeoJSONSource) {
       source.setData(geoJsonData)

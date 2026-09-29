@@ -15,7 +15,11 @@ export const useTracingDebugStore = defineStore('tracing-debug', () => {
 
   const mockTrace = async () => {
     console.log('Используем GeoJson по-умолчанию')
-    data.value = await routingService.traceRouteMockDebug()
+    const res = await routingService.traceRouteMockDebug()
+    data.value = {
+      ...geojson,
+      features: [...geojson.features, ...res.features],
+    }
   }
 
   // Функция обработки клика по кнопке расчета
