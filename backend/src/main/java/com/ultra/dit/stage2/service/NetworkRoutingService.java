@@ -136,7 +136,7 @@ public class NetworkRoutingService {
           // Шаг 2.2: Скелетизация Вороного и сборка ориентированного графа (Directed
           // Roadmap)
           var roadmapBuilder = new DirectedRoadmapBuilder(localData, cluster,
-              props.getObstacleOffsetMeters(), clusterId);
+              props.getConstraintOffsetMeters(), clusterId);
           var graph = roadmapBuilder.build();
 
           debugRoadmapGraph(clusterId, graph);

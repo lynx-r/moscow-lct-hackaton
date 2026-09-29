@@ -13,6 +13,10 @@ public class Distance {
     return dx * dx + dy * dy;
   }
 
+  public static boolean isDistanceLessOrEqual(Coordinate c1, Coordinate c2, double minDistanceMeters) {
+    return distanceSq(c1, c2) <= minDistanceMeters;
+  }
+
   public static Comparator<? super Coordinate> CoordinateComparator = (c1, c2) -> {
     // ВАЖНО: COORDINATE_COMPARATOR_EPSILON должен быть, например, 1E-6
     // Округляем до фиксированной сетки (например, делением на эпсилон)

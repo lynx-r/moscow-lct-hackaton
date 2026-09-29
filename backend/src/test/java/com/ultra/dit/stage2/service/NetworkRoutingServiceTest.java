@@ -99,7 +99,7 @@ class NetworkRoutingServiceTest extends BaseTest {
     Mockito.when(properties.getParallelClusterCount()).thenReturn(PARALLEL_CLUSTER_COUNT);
 
     // DirectedRoadmapBuilder
-    Mockito.when(properties.getObstacleOffsetMeters()).thenReturn(OBSTACLE_OFFSET_METERS);
+    Mockito.when(properties.getConstraintOffsetMeters()).thenReturn(OBSTACLE_OFFSET_METERS);
 
     // properties.copy() в NetworkRoutingService::executeRoutingPipeline
     Stage2Properties copy = new Stage2Properties();
@@ -113,7 +113,7 @@ class NetworkRoutingServiceTest extends BaseTest {
     copy.setPathUniquePercent(PATH_UNIQUE_PERCENT);
     copy.setClosesSourcesCount(CLOSES_SOURCES_COUNT);
 
-    copy.setObstacleOffsetMeters(OBSTACLE_OFFSET_METERS);
+    copy.setConstraintOffsetMeters(OBSTACLE_OFFSET_METERS);
 
     Mockito.when(properties.copy()).thenReturn(copy);
 

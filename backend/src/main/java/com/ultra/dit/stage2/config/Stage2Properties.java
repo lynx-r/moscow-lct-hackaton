@@ -35,7 +35,7 @@ public class Stage2Properties {
   // 5 ближайших точек врезки при построении сети кластера
   private int closesSourcesCount = 5;
   // Шаг дискретизации (нормативный отступ от препятствий в метрах)
-  private double obstacleOffsetMeters = 3.0;
+  private double constraintOffsetMeters = 3.0;
 
   public Stage2Properties copy() {
     Stage2Properties copy = new Stage2Properties();
@@ -49,7 +49,7 @@ public class Stage2Properties {
     copy.setParallelClusterCount(parallelClusterCount);
     copy.setPathUniquePercent(pathUniquePercent);
     copy.setClosesSourcesCount(closesSourcesCount);
-    copy.setObstacleOffsetMeters(obstacleOffsetMeters);
+    copy.setConstraintOffsetMeters(constraintOffsetMeters);
     return copy;
   }
 }
